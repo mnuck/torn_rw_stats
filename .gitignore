@@ -1,0 +1,52 @@
+# Binaries
+torn_rw_stats
+torn_rw_stats.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+vendor/
+*.test
+*.out
+
+# Configuration and credentials
+.env
+.env.local
+.env.*.local
+credentials.json
+*.json.bak
+
+# Logs
+*.log
+logs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Go module cache
+go.sum
