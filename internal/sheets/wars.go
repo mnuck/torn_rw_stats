@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -204,7 +203,7 @@ func (c *Client) UpdateWarSummary(ctx context.Context, spreadsheetID string, con
 
 // ExistingRecordsInfo contains information about existing attack records in the sheet
 type ExistingRecordsInfo struct {
-	AttackIDs      map[int64]bool
+	AttackCodes     map[string]bool
 	LatestTimestamp int64
 	RecordCount     int
 }
@@ -223,21 +222,21 @@ func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetNa
 	}
 
 	info := &ExistingRecordsInfo{
-		AttackIDs:       make(map[int64]bool),
+		AttackCodes:     make(map[string]bool),
 		LatestTimestamp: 0,
 		RecordCount:     len(values),
 	}
 
+	validRows := 0
 	for _, row := range values {
-		if len(row) < 3 { // Need at least AttackID and Started timestamp
+		if len(row) < 3 { // Need at least Code and Started timestamp
 			continue
 		}
 
-		// Parse Attack ID (column A)
-		if attackIDStr, ok := row[0].(string); ok {
-			if attackID, err := strconv.ParseInt(attackIDStr, 10, 64); err == nil {
-				info.AttackIDs[attackID] = true
-			}
+		// Parse Attack Code (column B) - always a string
+		if codeStr, ok := row[1].(string); ok && codeStr != "" {
+			info.AttackCodes[codeStr] = true
+			validRows++
 		}
 
 		// Parse Started timestamp (column C) to find latest
@@ -251,12 +250,23 @@ func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetNa
 		}
 	}
 
+	// Update record count to reflect valid rows only
+	info.RecordCount = validRows
+
 	log.Debug().
-		Int("existing_records", info.RecordCount).
-		Int("unique_attack_ids", len(info.AttackIDs)).
+		Int("total_rows_read", len(values)).
+		Int("valid_records", info.RecordCount).
+		Int("unique_attack_codes", len(info.AttackCodes)).
 		Int64("latest_timestamp", info.LatestTimestamp).
 		Str("latest_time", time.Unix(info.LatestTimestamp, 0).Format("2006-01-02 15:04:05")).
 		Msg("Analyzed existing records")
+
+	// Validation: warn if no attack codes were parsed from non-empty sheet
+	if len(values) > 0 && len(info.AttackCodes) == 0 {
+		log.Warn().
+			Int("rows_in_sheet", len(values)).
+			Msg("No attack codes parsed from existing sheet - possible column mismatch")
+	}
 
 	return info, nil
 }
@@ -317,9 +327,9 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 func (c *Client) filterAndSortRecords(records []app.AttackRecord, existing *ExistingRecordsInfo) []app.AttackRecord {
 	var newRecords []app.AttackRecord
 
-	// Filter out duplicates
+	// Filter out duplicates using attack codes (guaranteed unique strings)
 	for _, record := range records {
-		if !existing.AttackIDs[record.AttackID] {
+		if !existing.AttackCodes[record.Code] {
 			newRecords = append(newRecords, record)
 		}
 	}
