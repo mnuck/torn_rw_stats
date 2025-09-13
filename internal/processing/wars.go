@@ -667,7 +667,7 @@ func (wp *WarProcessor) calculateTravelTimes(ctx context.Context, userID int, de
 	// Calculate countdown
 	timeRemaining := arrivalTime.Sub(currentTime)
 	countdown := wp.formatTravelTime(timeRemaining)
-	
+
 	// If they've already arrived, show as completed
 	if timeRemaining <= 0 {
 		countdown = "00:00:00"
@@ -682,16 +682,16 @@ func (wp *WarProcessor) calculateTravelTimes(ctx context.Context, userID int, de
 		Msg("Calculated travel times")
 	
 	return &TravelTimeData{
-		Departure: estimatedDepartureTime.Format("2006-01-02 15:04:05"),
-		Arrival:   arrivalTime.Format("2006-01-02 15:04:05"),
+		Departure: estimatedDepartureTime.UTC().Format("2006-01-02 15:04:05"),
+		Arrival:   arrivalTime.UTC().Format("2006-01-02 15:04:05"),
 		Countdown: countdown,
 	}
 }
 
 // calculateTravelTimesFromDeparture calculates arrival and countdown based on existing departure time
-func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr string, travelType string, currentTime time.Time) *TravelTimeData {
-	// Parse existing departure time
-	departureTime, err := time.Parse("2006-01-02 15:04:05", departureStr)
+func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time) *TravelTimeData {
+	// Parse existing departure time as UTC to match how times are stored
+	departureTime, err := time.ParseInLocation("2006-01-02 15:04:05", departureStr, time.UTC)
 	if err != nil {
 		log.Warn().
 			Err(err).
@@ -701,17 +701,33 @@ func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, u
 		return nil
 	}
 
-	// Get travel destination for calculation (handle return journeys)
-	travelDestination := wp.getTravelDestinationForCalculation("", destination) // Don't have original description, use parsed location
-	
-	// Get travel duration based on destination and travel type
-	travelDuration := wp.getTravelTime(travelDestination, travelType)
-	arrivalTime := departureTime.Add(travelDuration)
+	var arrivalTime time.Time
+	var travelDuration time.Duration
+
+	// If we have an existing arrival time, use it instead of recalculating
+	if existingArrivalStr != "" {
+		if parsedArrival, err := time.ParseInLocation("2006-01-02 15:04:05", existingArrivalStr, time.UTC); err == nil {
+			arrivalTime = parsedArrival
+			travelDuration = arrivalTime.Sub(departureTime)
+		} else {
+			log.Warn().
+				Err(err).
+				Str("existing_arrival_str", existingArrivalStr).
+				Msg("Failed to parse existing arrival time, falling back to calculation")
+		}
+	}
+
+	// If no existing arrival time or parsing failed, calculate from travel duration
+	if arrivalTime.IsZero() {
+		travelDestination := wp.getTravelDestinationForCalculation("", destination)
+		travelDuration = wp.getTravelTime(travelDestination, travelType)
+		arrivalTime = departureTime.Add(travelDuration)
+	}
 	
 	// Calculate countdown
 	timeRemaining := arrivalTime.Sub(currentTime)
 	countdown := wp.formatTravelTime(timeRemaining)
-	
+
 	// If they've already arrived, show as completed
 	if timeRemaining <= 0 {
 		countdown = "00:00:00"
@@ -719,16 +735,17 @@ func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, u
 	
 	log.Debug().
 		Int("user_id", userID).
-		Str("destination", travelDestination).
+		Str("destination", destination).
 		Str("travel_type", travelType).
 		Dur("travel_duration", travelDuration).
 		Str("departure", departureStr).
+		Str("arrival", arrivalTime.UTC().Format("2006-01-02 15:04:05")).
 		Str("countdown", countdown).
 		Msg("Recalculated travel times from existing departure")
 	
 	return &TravelTimeData{
 		Departure: departureStr, // Keep original departure time
-		Arrival:   arrivalTime.Format("2006-01-02 15:04:05"),
+		Arrival:   arrivalTime.UTC().Format("2006-01-02 15:04:05"),
 		Countdown: countdown,
 	}
 }
@@ -889,7 +906,7 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 	}
 
 	// Convert faction members to travel records with travel time tracking
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 	var travelRecords []app.TravelRecord
 	
 	for userIDStr, member := range factionData.Members {
@@ -960,8 +977,8 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 					record.Departure = existingRecord.Departure
 					record.Arrival = existingRecord.Arrival
 
-					// Recalculate only the countdown
-					if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, location, existingRecord.Departure, member.Status.TravelType, currentTime); travelData != nil {
+					// Recalculate only the countdown using existing arrival time
+					if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, location, existingRecord.Departure, existingRecord.Arrival, member.Status.TravelType, currentTime); travelData != nil {
 						record.Countdown = travelData.Countdown
 					}
 
@@ -1089,7 +1106,7 @@ func (wp *WarProcessor) processStateChanges(ctx context.Context, factionID int, 
 		return fmt.Errorf("failed to ensure state change records sheet: %w", err)
 	}
 
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 	stateChanges := 0
 
 	// Check each current member against previous state
