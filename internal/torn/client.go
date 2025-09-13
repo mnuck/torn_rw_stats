@@ -167,24 +167,24 @@ func (c *Client) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromT
 	}
 
 	var allAttacks []app.Attack
-	
+
 	// Determine time range based on whether we're doing full population or incremental update
 	var actualFromTime, actualToTime int64
 	updateMode := "full"
-	
+
 	if latestExistingTimestamp != nil && *latestExistingTimestamp > 0 {
 		// Incremental update mode - only fetch new attacks
 		updateMode = "incremental"
-		
+
 		// Add 1-hour buffer to handle timing discrepancies
 		bufferTime := int64(3600) // 1 hour in seconds
 		actualFromTime = *latestExistingTimestamp - bufferTime
-		
+
 		// Ensure we don't go before war start
 		if actualFromTime < war.Start {
 			actualFromTime = war.Start
 		}
-		
+
 		// Set end time
 		if war.End != nil {
 			actualToTime = *war.End
@@ -214,40 +214,40 @@ func (c *Client) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromT
 	if updateMode == "incremental" {
 		timeRange := actualToTime - actualFromTime
 		const maxSimpleRange = 24 * 60 * 60 // 24 hours
-		
+
 		if timeRange <= maxSimpleRange {
 			log.Debug().Msg("Using simple API call for incremental update")
-			
+
 			attackResp, err := c.GetFactionAttacks(ctx, actualFromTime, actualToTime)
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch incremental attacks: %w", err)
 			}
-			
+
 			// Filter and return relevant attacks
 			for _, attack := range attackResp.Attacks {
 				if c.isAttackRelevantToWar(attack, war) {
 					allAttacks = append(allAttacks, attack)
 				}
 			}
-			
+
 			// Sort chronologically for consistent output
 			sort.Slice(allAttacks, func(i, j int) bool {
 				return allAttacks[i].Started < allAttacks[j].Started
 			})
-			
+
 			log.Info().
 				Int("total_relevant_attacks", len(allAttacks)).
 				Int("war_id", war.ID).
 				Str("mode", "incremental_simple").
 				Msg("Completed fetching attacks for war")
-			
+
 			return allAttacks, nil
 		}
 	}
 
 	// Use paginated approach for full population or large incremental updates
 	currentTo := actualToTime
-	
+
 	for {
 		log.Debug().
 			Int64("current_to", currentTo).
@@ -272,12 +272,12 @@ func (c *Client) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromT
 		// Filter attacks to only include those involving war participants
 		var relevantAttacks []app.Attack
 		var oldestAttackTime int64 = currentTo
-		
+
 		for _, attack := range attackResp.Attacks {
 			if c.isAttackRelevantToWar(attack, war) {
 				relevantAttacks = append(relevantAttacks, attack)
 			}
-			
+
 			// Track the oldest attack timestamp for next pagination
 			if attack.Started < oldestAttackTime {
 				oldestAttackTime = attack.Started
@@ -311,7 +311,7 @@ func (c *Client) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromT
 
 		// Set up next page: use oldest attack time minus 1 second as new "to" time
 		currentTo = oldestAttackTime - 1
-		
+
 		log.Debug().
 			Int64("next_to", currentTo).
 			Str("next_to_str", time.Unix(currentTo, 0).Format("2006-01-02 15:04:05")).
@@ -383,7 +383,6 @@ func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.Facti
 
 	return &factionResponse, nil
 }
-
 
 // GetOwnFaction gets the current user's faction information
 func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {

@@ -135,7 +135,7 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 
 	currentRows := int(targetSheet.Properties.GridProperties.RowCount)
 	currentCols := int(targetSheet.Properties.GridProperties.ColumnCount)
-	
+
 	needsResize := false
 	newRows := currentRows
 	newCols := currentCols

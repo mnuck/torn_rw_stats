@@ -66,10 +66,10 @@ func (c *Client) EnsureWarSheets(ctx context.Context, spreadsheetID string, war 
 	}
 
 	return &app.SheetConfig{
-		WarID:           war.ID,
-		SummaryTabName:  summaryTabName,
-		RecordsTabName:  recordsTabName,
-		SpreadsheetID:   spreadsheetID,
+		WarID:          war.ID,
+		SummaryTabName: summaryTabName,
+		RecordsTabName: recordsTabName,
+		SpreadsheetID:  spreadsheetID,
 	}, nil
 }
 
@@ -296,9 +296,9 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 		Int("existing_attack_codes", len(existingInfo.AttackCodes)).
 		Int("existing_record_count", existingInfo.RecordCount).
 		Msg("Starting deduplication")
-	
+
 	newRecords := c.filterAndSortRecords(records, existingInfo)
-	
+
 	if len(newRecords) == 0 {
 		log.Info().Msg("=== EXITING UpdateAttackRecords - No new records after deduplication ===")
 		return nil
@@ -326,7 +326,7 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 
 	// Append new rows to the sheet
 	range_ := fmt.Sprintf("'%s'!A%d:AF%d", config.RecordsTabName, startRow, endRow)
-	
+
 	// Log first few rows being written to detect duplicates at write time
 	sampleRows := make([]string, 0, 3)
 	for i, row := range rows {
@@ -338,13 +338,13 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 			}
 		}
 	}
-	
+
 	log.Info().
 		Str("range", range_).
 		Int("rows_to_write", len(rows)).
 		Strs("sample_rows", sampleRows).
 		Msg("=== WRITING TO SHEET ===")
-	
+
 	err = c.UpdateRange(ctx, spreadsheetID, range_, rows)
 	if err != nil {
 		return fmt.Errorf("failed to append attack records: %w", err)
@@ -376,7 +376,7 @@ func (c *Client) filterAndSortRecords(records []app.AttackRecord, existing *Exis
 				Msg("Filtered duplicate attack")
 		}
 	}
-	
+
 	// Log some example attack codes for debugging
 	sampleCodes := make([]string, 0, 3)
 	for i, record := range newRecords {
@@ -409,7 +409,7 @@ func (c *Client) filterAndSortRecords(records []app.AttackRecord, existing *Exis
 // convertRecordsToRows converts AttackRecord structs to sheet row format
 func (c *Client) convertRecordsToRows(records []app.AttackRecord) [][]interface{} {
 	var rows [][]interface{}
-	
+
 	for _, record := range records {
 		// Helper function to safely convert nullable int pointers
 		factionID := func(id *int) interface{} {
@@ -535,7 +535,7 @@ func (c *Client) UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetNam
 
 	// Calculate required sheet dimensions
 	requiredRows := len(rows) + 1 // +1 for header
-	requiredCols := 7 // A-G columns
+	requiredCols := 7             // A-G columns
 
 	// Ensure sheet has sufficient capacity
 	if err := c.EnsureSheetCapacity(ctx, spreadsheetID, sheetName, requiredRows, requiredCols); err != nil {
@@ -555,7 +555,7 @@ func (c *Client) UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetNam
 // convertTravelRecordsToRows converts TravelRecord structs to sheet row format
 func (c *Client) convertTravelRecordsToRows(records []app.TravelRecord) [][]interface{} {
 	var rows [][]interface{}
-	
+
 	for _, record := range records {
 		row := []interface{}{
 			record.Name,
@@ -611,7 +611,7 @@ func (c *Client) initializeStateChangeRecordsSheet(ctx context.Context, spreadsh
 		{
 			"Timestamp",
 			"Member Name",
-			"Member ID", 
+			"Member ID",
 			"Faction Name",
 			"Faction ID",
 			"Last Action Status",
@@ -780,7 +780,7 @@ func (c *Client) LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sh
 		for len(row) < 15 {
 			row = append(row, "")
 		}
-		
+
 		if len(row) < 15 {
 			log.Warn().
 				Int("row", i+2).
@@ -809,13 +809,13 @@ func (c *Client) LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sh
 				Relative:  parseStringValue(row[7]),
 			},
 			Status: app.MemberStatus{
-				Description:     parseStringValue(row[8]),
-				State:           parseStringValue(row[9]),
-				Color:           parseStringValue(row[10]),
-				Details:         parseStringValue(row[11]),
-				Until:           parseInt64PointerValue(row[12]),
-				TravelType:      parseStringValue(row[13]),
-				PlaneImageType:  parseStringValue(row[14]),
+				Description:    parseStringValue(row[8]),
+				State:          parseStringValue(row[9]),
+				Color:          parseStringValue(row[10]),
+				Details:        parseStringValue(row[11]),
+				Until:          parseInt64PointerValue(row[12]),
+				TravelType:     parseStringValue(row[13]),
+				PlaneImageType: parseStringValue(row[14]),
 			},
 		}
 

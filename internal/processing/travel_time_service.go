@@ -18,30 +18,30 @@ type TravelTimeService struct {
 func NewTravelTimeService() *TravelTimeService {
 	return &TravelTimeService{
 		regularTimes: map[string]int{
-			"Mexico":          26,
-			"Cayman Islands":  35,
-			"Canada":          41,
-			"Hawaii":          134, // 2h 14m
-			"United Kingdom":  159, // 2h 39m
-			"Argentina":       167, // 2h 47m
-			"Switzerland":     175, // 2h 55m
-			"Japan":           225, // 3h 45m
-			"China":           242, // 4h 2m
-			"UAE":             271, // 4h 31m
-			"South Africa":    297, // 4h 57m
+			"Mexico":         26,
+			"Cayman Islands": 35,
+			"Canada":         41,
+			"Hawaii":         134, // 2h 14m
+			"United Kingdom": 159, // 2h 39m
+			"Argentina":      167, // 2h 47m
+			"Switzerland":    175, // 2h 55m
+			"Japan":          225, // 3h 45m
+			"China":          242, // 4h 2m
+			"UAE":            271, // 4h 31m
+			"South Africa":   297, // 4h 57m
 		},
 		airstripTimes: map[string]int{
-			"Mexico":          18,
-			"Cayman Islands":  25,
-			"Canada":          29,
-			"Hawaii":          94,  // 1h 34m
-			"United Kingdom":  111, // 1h 51m
-			"Argentina":       117, // 1h 57m
-			"Switzerland":     123, // 2h 3m
-			"Japan":           158, // 2h 38m
-			"China":           169, // 2h 49m
-			"UAE":             190, // 3h 10m
-			"South Africa":    208, // 3h 28m
+			"Mexico":         18,
+			"Cayman Islands": 25,
+			"Canada":         29,
+			"Hawaii":         94,  // 1h 34m
+			"United Kingdom": 111, // 1h 51m
+			"Argentina":      117, // 1h 57m
+			"Switzerland":    123, // 2h 3m
+			"Japan":          158, // 2h 38m
+			"China":          169, // 2h 49m
+			"UAE":            190, // 3h 10m
+			"South Africa":   208, // 3h 28m
 		},
 	}
 }
@@ -121,7 +121,7 @@ func (tts *TravelTimeService) CalculateTravelTimes(ctx context.Context, userID i
 }
 
 // CalculateTravelTimesFromDeparture calculates arrival and countdown based on existing departure time
-func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService *LocationService) *TravelTimeData {
+func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService LocationServiceInterface) *TravelTimeData {
 	// Parse existing departure time as UTC to match how times are stored
 	departureTime, err := time.ParseInLocation("2006-01-02 15:04:05", departureStr, time.UTC)
 	if err != nil {

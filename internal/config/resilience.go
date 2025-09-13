@@ -13,9 +13,9 @@ type RetryConfig struct {
 
 // ResilienceConfig contains all retry configurations
 type ResilienceConfig struct {
-	APIRequest   RetryConfig
-	SheetRead    RetryConfig
-	SheetWrite   RetryConfig
+	APIRequest RetryConfig
+	SheetRead  RetryConfig
+	SheetWrite RetryConfig
 }
 
 // DefaultResilienceConfig provides sensible defaults

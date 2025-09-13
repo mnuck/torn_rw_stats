@@ -8,10 +8,7 @@ import (
 
 // TestNormalizeHospitalDescription tests hospital description normalization for state change detection
 func TestNormalizeHospitalDescription(t *testing.T) {
-	wp := &WarProcessor{
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	service := NewStateChangeDetectionService(nil)
 
 	tests := []struct {
 		name        string
@@ -92,9 +89,9 @@ func TestNormalizeHospitalDescription(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wp.normalizeHospitalDescription(tt.description)
+			result := service.NormalizeHospitalDescription(tt.description)
 			if result != tt.expected {
-				t.Errorf("normalizeHospitalDescription(%q) = %q, expected %q",
+				t.Errorf("NormalizeHospitalDescription(%q) = %q, expected %q",
 					tt.description, result, tt.expected)
 			}
 		})
@@ -103,10 +100,7 @@ func TestNormalizeHospitalDescription(t *testing.T) {
 
 // TestHospitalCountdownStateChangeIgnored tests that hospital countdown changes don't trigger state changes
 func TestHospitalCountdownStateChangeIgnored(t *testing.T) {
-	wp := &WarProcessor{
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	service := NewStateChangeDetectionService(nil)
 
 	// Create two member states representing the bug scenario
 	oldMember := app.FactionMember{
@@ -138,7 +132,7 @@ func TestHospitalCountdownStateChangeIgnored(t *testing.T) {
 	}
 
 	// This should NOT be considered a status change
-	hasChanged := wp.hasStatusChanged(oldMember, newMember)
+	hasChanged := service.HasStatusChanged(oldMember, newMember)
 	if hasChanged {
 		t.Error("Expected no status change for hospital countdown progression, but got change detected")
 	}
@@ -146,15 +140,12 @@ func TestHospitalCountdownStateChangeIgnored(t *testing.T) {
 
 // TestActualHospitalStateChangesDetected tests that real hospital state changes are still detected
 func TestActualHospitalStateChangesDetected(t *testing.T) {
-	wp := &WarProcessor{
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	service := NewStateChangeDetectionService(nil)
 
 	tests := []struct {
-		name      string
-		oldMember app.FactionMember
-		newMember app.FactionMember
+		name         string
+		oldMember    app.FactionMember
+		newMember    app.FactionMember
 		expectChange bool
 	}{
 		{
@@ -219,9 +210,9 @@ func TestActualHospitalStateChangesDetected(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hasChanged := wp.hasStatusChanged(tt.oldMember, tt.newMember)
+			hasChanged := service.HasStatusChanged(tt.oldMember, tt.newMember)
 			if hasChanged != tt.expectChange {
-				t.Errorf("Expected hasStatusChanged = %v, got %v", tt.expectChange, hasChanged)
+				t.Errorf("Expected HasStatusChanged = %v, got %v", tt.expectChange, hasChanged)
 			}
 		})
 	}

@@ -10,14 +10,8 @@ import (
 // Test the parseLocation function - this is critical business logic that needs comprehensive testing
 func TestParseLocation(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
-	wp := &WarProcessor{
-		tornClient:        nil, // Not needed for parseLocation tests
-		sheetsClient:      nil, // Not needed for parseLocation tests
-		config:            config,
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(config)
+	wp.ourFactionID = 12345
 
 	tests := []struct {
 		name        string
@@ -121,14 +115,8 @@ func TestParseLocation(t *testing.T) {
 // Test hospital countdown parsing
 func TestParseHospitalCountdown(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            config,
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(config)
+	wp.ourFactionID = 12345
 
 	tests := []struct {
 		name        string
@@ -226,14 +214,8 @@ func TestGetTravelTime(t *testing.T) {
 // Test travel destination calculation logic
 func TestGetTravelDestinationForCalculation(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            config,
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(config)
+	wp.ourFactionID = 12345
 
 	tests := []struct {
 		name           string

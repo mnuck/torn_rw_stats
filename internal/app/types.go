@@ -4,12 +4,12 @@ import "time"
 
 // War represents a faction war from the API
 type War struct {
-	ID       int        `json:"war_id"`
-	Start    int64      `json:"start"`
-	End      *int64     `json:"end"`
-	Target   int        `json:"target"`
-	Winner   *int       `json:"winner"`
-	Factions []Faction  `json:"factions"`
+	ID       int       `json:"war_id"`
+	Start    int64     `json:"start"`
+	End      *int64    `json:"end"`
+	Target   int       `json:"target"`
+	Winner   *int      `json:"winner"`
+	Factions []Faction `json:"factions"`
 }
 
 // Faction represents a faction participating in a war
@@ -24,30 +24,30 @@ type Faction struct {
 type WarResponse struct {
 	Pacts []interface{} `json:"pacts"`
 	Wars  struct {
-		Ranked    *War   `json:"ranked"`
-		Raids     []War  `json:"raids"`
-		Territory []War  `json:"territory"`
+		Ranked    *War  `json:"ranked"`
+		Raids     []War `json:"raids"`
+		Territory []War `json:"territory"`
 	} `json:"wars"`
 }
 
 // Attack represents an attack from the API
 type Attack struct {
-	ID                  int64                   `json:"id"`
-	Code                string                  `json:"code"`
-	Started             int64                   `json:"started"`
-	Ended               int64                   `json:"ended"`
-	Attacker            User                    `json:"attacker"`
-	Defender            User                    `json:"defender"`
-	Result              string                  `json:"result"`
-	RespectGain         float64                 `json:"respect_gain"`
-	RespectLoss         float64                 `json:"respect_loss"`
-	Chain               int                     `json:"chain"`
-	IsInterrupted       bool                    `json:"is_interrupted"`
-	IsStealthed         bool                    `json:"is_stealthed"`
-	IsRaid              bool                    `json:"is_raid"`
-	IsRankedWar         bool                    `json:"is_ranked_war"`
-	Modifiers           AttackModifiers         `json:"modifiers"`
-	FinishingHitEffects []FinishingHitEffect    `json:"finishing_hit_effects"`
+	ID                  int64                `json:"id"`
+	Code                string               `json:"code"`
+	Started             int64                `json:"started"`
+	Ended               int64                `json:"ended"`
+	Attacker            User                 `json:"attacker"`
+	Defender            User                 `json:"defender"`
+	Result              string               `json:"result"`
+	RespectGain         float64              `json:"respect_gain"`
+	RespectLoss         float64              `json:"respect_loss"`
+	Chain               int                  `json:"chain"`
+	IsInterrupted       bool                 `json:"is_interrupted"`
+	IsStealthed         bool                 `json:"is_stealthed"`
+	IsRaid              bool                 `json:"is_raid"`
+	IsRankedWar         bool                 `json:"is_ranked_war"`
+	Modifiers           AttackModifiers      `json:"modifiers"`
+	FinishingHitEffects []FinishingHitEffect `json:"finishing_hit_effects"`
 }
 
 // AttackModifiers represents the modifiers applied to an attack
@@ -82,10 +82,10 @@ type AttackResponse struct {
 
 // SheetConfig represents configuration for a war's sheets
 type SheetConfig struct {
-	WarID           int
-	SummaryTabName  string
-	RecordsTabName  string
-	SpreadsheetID   string
+	WarID          int
+	SummaryTabName string
+	RecordsTabName string
+	SpreadsheetID  string
 }
 
 // WarSummary represents aggregated war statistics
@@ -107,51 +107,51 @@ type WarSummary struct {
 
 // AttackRecord represents a single attack for the records sheet
 type AttackRecord struct {
-	AttackID              int64
-	Code                  string
-	Started               time.Time
-	Ended                 time.Time
-	Direction             string // "Outgoing" or "Incoming"
-	AttackerID            int
-	AttackerName          string
-	AttackerLevel         int
-	AttackerFactionID     *int
-	AttackerFactionName   string
-	DefenderID            int
-	DefenderName          string
-	DefenderLevel         int
-	DefenderFactionID     *int
-	DefenderFactionName   string
-	Result                string
-	RespectGain           float64
-	RespectLoss           float64
-	Chain                 int
-	IsInterrupted         bool
-	IsStealthed           bool
-	IsRaid                bool
-	IsRankedWar           bool
-	ModifierFairFight     float64
-	ModifierWar           float64
-	ModifierRetaliation   float64
-	ModifierGroup         float64
-	ModifierOverseas      float64
-	ModifierChain         float64
-	ModifierWarlord       float64
-	FinishingHitName      string
-	FinishingHitValue     float64
+	AttackID            int64
+	Code                string
+	Started             time.Time
+	Ended               time.Time
+	Direction           string // "Outgoing" or "Incoming"
+	AttackerID          int
+	AttackerName        string
+	AttackerLevel       int
+	AttackerFactionID   *int
+	AttackerFactionName string
+	DefenderID          int
+	DefenderName        string
+	DefenderLevel       int
+	DefenderFactionID   *int
+	DefenderFactionName string
+	Result              string
+	RespectGain         float64
+	RespectLoss         float64
+	Chain               int
+	IsInterrupted       bool
+	IsStealthed         bool
+	IsRaid              bool
+	IsRankedWar         bool
+	ModifierFairFight   float64
+	ModifierWar         float64
+	ModifierRetaliation float64
+	ModifierGroup       float64
+	ModifierOverseas    float64
+	ModifierChain       float64
+	ModifierWarlord     float64
+	FinishingHitName    string
+	FinishingHitValue   float64
 }
 
 // FactionInfoResponse represents response from /faction/?selections=basic (own faction)
 type FactionInfoResponse struct {
-	ID        int                      `json:"ID"`
-	Name      string                   `json:"name"`
-	Tag       string                   `json:"tag"`
-	TagImage  string                   `json:"tag_image"`
-	Leader    int                      `json:"leader"`
-	CoLeader  int                      `json:"co-leader"`
-	Respect   int                      `json:"respect"`
-	Age       int                      `json:"age"`
-	Members   map[string]FactionMember `json:"members"`
+	ID       int                      `json:"ID"`
+	Name     string                   `json:"name"`
+	Tag      string                   `json:"tag"`
+	TagImage string                   `json:"tag_image"`
+	Leader   int                      `json:"leader"`
+	CoLeader int                      `json:"co-leader"`
+	Respect  int                      `json:"respect"`
+	Age      int                      `json:"age"`
+	Members  map[string]FactionMember `json:"members"`
 }
 
 // FactionBasicResponse represents response from /faction/{id}?selections=basic
@@ -178,13 +178,13 @@ type LastAction struct {
 
 // MemberStatus represents a member's current status/location
 type MemberStatus struct {
-	Description     string `json:"description"`
-	State           string `json:"state"`
-	Color           string `json:"color"`
-	Details         string `json:"details"`
-	Until           *int64 `json:"until"`
-	TravelType      string `json:"travel_type"`      // For traveling status
-	PlaneImageType  string `json:"plane_image_type"` // For traveling status
+	Description    string `json:"description"`
+	State          string `json:"state"`
+	Color          string `json:"color"`
+	Details        string `json:"details"`
+	Until          *int64 `json:"until"`
+	TravelType     string `json:"travel_type"`      // For traveling status
+	PlaneImageType string `json:"plane_image_type"` // For traveling status
 }
 
 // TravelRecord represents a member's travel status record
@@ -200,21 +200,21 @@ type TravelRecord struct {
 
 // StateChangeRecord represents a member's state change record
 type StateChangeRecord struct {
-	Timestamp              time.Time `json:"timestamp"`
-	MemberID               int       `json:"member_id"`
-	MemberName             string    `json:"member_name"`
-	FactionName            string    `json:"faction_name"`
-	FactionID              int       `json:"faction_id"`
-	LastActionStatus       string    `json:"last_action_status"`
-	StatusDescription      string    `json:"status_description"`
-	StatusState            string    `json:"status_state"`
-	StatusColor            string    `json:"status_color"`
-	StatusDetails          string    `json:"status_details"`
-	StatusUntil            string    `json:"status_until"`
-	StatusTravelType       string    `json:"status_travel_type"`
-	StatusPlaneImageType   string    `json:"status_plane_image_type"`
-	OldState               string    `json:"old_state"`
-	NewState               string    `json:"new_state"`
-	OldLastAction          string    `json:"old_last_action"`
-	NewLastAction          string    `json:"new_last_action"`
+	Timestamp            time.Time `json:"timestamp"`
+	MemberID             int       `json:"member_id"`
+	MemberName           string    `json:"member_name"`
+	FactionName          string    `json:"faction_name"`
+	FactionID            int       `json:"faction_id"`
+	LastActionStatus     string    `json:"last_action_status"`
+	StatusDescription    string    `json:"status_description"`
+	StatusState          string    `json:"status_state"`
+	StatusColor          string    `json:"status_color"`
+	StatusDetails        string    `json:"status_details"`
+	StatusUntil          string    `json:"status_until"`
+	StatusTravelType     string    `json:"status_travel_type"`
+	StatusPlaneImageType string    `json:"status_plane_image_type"`
+	OldState             string    `json:"old_state"`
+	NewState             string    `json:"new_state"`
+	OldLastAction        string    `json:"old_last_action"`
+	NewLastAction        string    `json:"new_last_action"`
 }

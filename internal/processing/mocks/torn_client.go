@@ -32,13 +32,13 @@ type MockTornClient struct {
 	FactionBasicError        error
 
 	// Call tracking
-	GetOwnFactionCalled            bool
-	GetFactionWarsCalled           bool
-	GetAllAttacksForWarCalled      bool
-	GetAttacksForTimeRangeCalled   bool
-	GetFactionBasicCalled          bool
-	GetFactionBasicCalledWithID    int
-	GetAllAttacksForWarCalledWith  *app.War
+	GetOwnFactionCalled              bool
+	GetFactionWarsCalled             bool
+	GetAllAttacksForWarCalled        bool
+	GetAttacksForTimeRangeCalled     bool
+	GetFactionBasicCalled            bool
+	GetFactionBasicCalledWithID      int
+	GetAllAttacksForWarCalledWith    *app.War
 	GetAttacksForTimeRangeCalledWith struct {
 		War                     *app.War
 		FromTime                int64

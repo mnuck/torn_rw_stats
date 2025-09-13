@@ -26,41 +26,41 @@ type SheetsClient interface {
 // MockSheetsClient is a test double for the sheets.Client
 type MockSheetsClient struct {
 	// Responses to return
-	EnsureWarSheetsResponse         *app.SheetConfig
-	ReadExistingRecordsResponse     *sheets.ExistingRecordsInfo
-	ReadSheetResponse               [][]interface{}
-	EnsureTravelStatusSheetResponse string
-	EnsurePreviousStateSheetResponse string
-	LoadPreviousMemberStatesResponse map[string]app.FactionMember
+	EnsureWarSheetsResponse               *app.SheetConfig
+	ReadExistingRecordsResponse           *sheets.ExistingRecordsInfo
+	ReadSheetResponse                     [][]interface{}
+	EnsureTravelStatusSheetResponse       string
+	EnsurePreviousStateSheetResponse      string
+	LoadPreviousMemberStatesResponse      map[string]app.FactionMember
 	EnsureStateChangeRecordsSheetResponse string
 
 	// Errors to return
-	EnsureWarSheetsError         error
-	ReadExistingRecordsError     error
-	UpdateWarSummaryError        error
-	UpdateAttackRecordsError     error
-	ReadSheetError               error
-	EnsureTravelStatusSheetError error
-	EnsurePreviousStateSheetError error
-	LoadPreviousMemberStatesError error
-	StorePreviousMemberStatesError error
-	UpdateTravelStatusError      error
+	EnsureWarSheetsError               error
+	ReadExistingRecordsError           error
+	UpdateWarSummaryError              error
+	UpdateAttackRecordsError           error
+	ReadSheetError                     error
+	EnsureTravelStatusSheetError       error
+	EnsurePreviousStateSheetError      error
+	LoadPreviousMemberStatesError      error
+	StorePreviousMemberStatesError     error
+	UpdateTravelStatusError            error
 	EnsureStateChangeRecordsSheetError error
-	AddStateChangeRecordError    error
+	AddStateChangeRecordError          error
 
 	// Call tracking
-	EnsureWarSheetsCalled         bool
-	ReadExistingRecordsCalled     bool
-	UpdateWarSummaryCalled        bool
-	UpdateAttackRecordsCalled     bool
-	ReadSheetCalled               bool
-	EnsureTravelStatusSheetCalled bool
-	EnsurePreviousStateSheetCalled bool
-	LoadPreviousMemberStatesCalled bool
-	StorePreviousMemberStatesCalled bool
-	UpdateTravelStatusCalled      bool
+	EnsureWarSheetsCalled               bool
+	ReadExistingRecordsCalled           bool
+	UpdateWarSummaryCalled              bool
+	UpdateAttackRecordsCalled           bool
+	ReadSheetCalled                     bool
+	EnsureTravelStatusSheetCalled       bool
+	EnsurePreviousStateSheetCalled      bool
+	LoadPreviousMemberStatesCalled      bool
+	StorePreviousMemberStatesCalled     bool
+	UpdateTravelStatusCalled            bool
 	EnsureStateChangeRecordsSheetCalled bool
-	AddStateChangeRecordCalled    bool
+	AddStateChangeRecordCalled          bool
 
 	// Call parameters tracking
 	EnsureWarSheetsCalledWith struct {

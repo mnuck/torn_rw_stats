@@ -120,24 +120,24 @@ func TestTravelTimeServiceCalculateTravelTimes(t *testing.T) {
 	updateInterval := 5 * time.Minute
 
 	tests := []struct {
-		name         string
-		userID       int
-		destination  string
-		travelType   string
+		name             string
+		userID           int
+		destination      string
+		travelType       string
 		expectedDuration time.Duration
 	}{
 		{
-			name:         "Mexico regular travel",
-			userID:       123,
-			destination:  "Mexico",
-			travelType:   "regular",
+			name:             "Mexico regular travel",
+			userID:           123,
+			destination:      "Mexico",
+			travelType:       "regular",
 			expectedDuration: 26 * time.Minute,
 		},
 		{
-			name:         "UK airstrip travel",
-			userID:       456,
-			destination:  "United Kingdom",
-			travelType:   "airstrip",
+			name:             "UK airstrip travel",
+			userID:           456,
+			destination:      "United Kingdom",
+			travelType:       "airstrip",
 			expectedDuration: 111 * time.Minute,
 		},
 	}
@@ -188,13 +188,13 @@ func TestTravelTimeServiceCalculateTravelTimesFromDeparture(t *testing.T) {
 	currentTime := time.Date(2022, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name                string
-		userID              int
-		destination         string
-		departureStr        string
-		existingArrivalStr  string
-		travelType          string
-		expectNil           bool
+		name               string
+		userID             int
+		destination        string
+		departureStr       string
+		existingArrivalStr string
+		travelType         string
+		expectNil          bool
 	}{
 		{
 			name:               "Valid departure with existing arrival",

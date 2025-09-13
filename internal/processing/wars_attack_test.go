@@ -8,14 +8,8 @@ import (
 
 // Test attack processing into records
 func TestProcessAttacksIntoRecords(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
 
 	// Create test war data
 	war := &app.War{
@@ -65,7 +59,7 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 		},
 	}
 
-	records := wp.processAttacksIntoRecords(attacks, war)
+	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war)
 
 	// Verify we got the expected number of records
 	if len(records) != 1 {
@@ -100,14 +94,8 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 
 // Test war summary generation
 func TestGenerateWarSummary(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
 
 	// Create test war data
 	war := &app.War{
@@ -152,7 +140,7 @@ func TestGenerateWarSummary(t *testing.T) {
 		},
 	}
 
-	summary := wp.generateWarSummary(war, attacks)
+	summary := wp.summaryService.GenerateWarSummary(war, attacks)
 
 	// Verify basic info
 	if summary.WarID != 2001 {
@@ -198,14 +186,8 @@ func TestGenerateWarSummary(t *testing.T) {
 
 // Test faction ID helper functions
 func TestGetOurFactionID(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
 
 	war := &app.War{
 		Factions: []app.Faction{
@@ -221,14 +203,8 @@ func TestGetOurFactionID(t *testing.T) {
 }
 
 func TestGetEnemyFactionID(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
 
 	war := &app.War{
 		Factions: []app.Faction{
@@ -244,14 +220,8 @@ func TestGetEnemyFactionID(t *testing.T) {
 }
 
 func TestGetFactionName(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
 
 	war := &app.War{
 		Factions: []app.Faction{
@@ -275,14 +245,7 @@ func TestGetFactionName(t *testing.T) {
 
 // Test status change detection
 func TestHasStatusChanged(t *testing.T) {
-	wp := &WarProcessor{
-		tornClient:        nil,
-		sheetsClient:      nil,
-		config:            &app.Config{},
-		ourFactionID:      12345,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
-	}
+	service := NewStateChangeDetectionService(nil)
 
 	// Test identical members - no change
 	member1 := app.FactionMember{
@@ -298,13 +261,13 @@ func TestHasStatusChanged(t *testing.T) {
 	}
 	member2 := member1 // Identical
 
-	if wp.hasStatusChanged(member1, member2) {
+	if service.HasStatusChanged(member1, member2) {
 		t.Error("Expected no status change for identical members")
 	}
 
 	// Test different last action status
 	member2.LastAction.Status = "Offline"
-	if !wp.hasStatusChanged(member1, member2) {
+	if !service.HasStatusChanged(member1, member2) {
 		t.Error("Expected status change when LastAction.Status differs")
 	}
 
@@ -312,13 +275,13 @@ func TestHasStatusChanged(t *testing.T) {
 	member2 = member1 // Reset
 	member2.Status.Description = "In hospital for 30mins"
 	member1.Status.Description = "In hospital for 25mins"
-	if wp.hasStatusChanged(member1, member2) {
+	if service.HasStatusChanged(member1, member2) {
 		t.Error("Expected no status change for hospital countdown differences")
 	}
 
 	// Test actual status description change
 	member2.Status.Description = "Traveling to Mexico"
-	if !wp.hasStatusChanged(member1, member2) {
+	if !service.HasStatusChanged(member1, member2) {
 		t.Error("Expected status change for different status descriptions")
 	}
 }

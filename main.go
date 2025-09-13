@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Initialize war processor
-	warProcessor := processing.NewWarProcessor(tornClient, sheetsClient, config)
+	warProcessor := processing.NewWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
 
 	// Define the main processing function
 	processWars := func() {

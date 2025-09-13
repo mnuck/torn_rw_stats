@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/processing/mocks"
+	"torn_rw_stats/internal/sheets"
 )
 
 // TestMockTornClient demonstrates torn client mock usage
@@ -135,5 +137,173 @@ func TestMockReset(t *testing.T) {
 	}
 }
 
-// TODO: Create comprehensive integration tests once WarProcessor supports dependency injection with interfaces
-// This would allow testing the full war processing flow with controlled mock responses
+// TestProcessWarIntegrationWithMocks demonstrates full integration testing using mocks
+func TestProcessWarIntegrationWithMocks(t *testing.T) {
+	// Setup mocks
+	mockTornClient := mocks.NewMockTornClient()
+	mockSheetsClient := mocks.NewMockSheetsClient()
+
+	// Create WarProcessor with mocks using new interface-based constructor
+	wp := newTestWarProcessorWithMocks(
+		mockTornClient,
+		mockSheetsClient,
+		&app.Config{SpreadsheetID: "test-spreadsheet"},
+	)
+	wp.ourFactionID = 12345
+
+	// Setup test data
+	testWar := &app.War{
+		ID:    1001,
+		Start: time.Now().Unix() - 3600, // 1 hour ago
+		Factions: []app.Faction{
+			{ID: 12345, Name: "Our Faction", Score: 150},
+			{ID: 67890, Name: "Enemy Faction", Score: 120},
+		},
+	}
+
+	testAttacks := []app.Attack{
+		{
+			ID:      100001,
+			Code:    "attack1abc",
+			Started: time.Now().Unix() - 1800, // 30 minutes ago
+			Ended:   time.Now().Unix() - 1740, // 29 minutes ago
+			Attacker: app.User{
+				ID:    123,
+				Name:  "TestAttacker",
+				Level: 50,
+				Faction: &app.Faction{
+					ID:   12345,
+					Name: "Our Faction",
+				},
+			},
+			Defender: app.User{
+				ID:    456,
+				Name:  "TestDefender",
+				Level: 45,
+				Faction: &app.Faction{
+					ID:   67890,
+					Name: "Enemy Faction",
+				},
+			},
+			Result:      "Hospitalized",
+			RespectGain: 2.5,
+			RespectLoss: 0.0,
+			Chain:       10,
+		},
+	}
+
+	// Configure mock responses
+	mockSheetsClient.EnsureWarSheetsResponse = &app.SheetConfig{
+		SummaryTabName: "Summary - 1001",
+		RecordsTabName: "Records - 1001",
+	}
+
+	mockSheetsClient.ReadExistingRecordsResponse = &sheets.ExistingRecordsInfo{
+		AttackCodes:     make(map[string]bool),
+		RecordCount:     0,
+		LatestTimestamp: 0,
+	}
+
+	mockTornClient.AllAttacksForWarResponse = testAttacks
+
+	// Setup mocks for travel status processing (which runs after attack processing)
+	mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel Status - 12345"
+	mockSheetsClient.ReadSheetResponse = [][]interface{}{} // Empty existing travel data
+
+	mockTornClient.FactionBasicResponse = &app.FactionBasicResponse{
+		Members: map[string]app.FactionMember{
+			"123": {
+				Name:  "TestMember",
+				Level: 50,
+				Status: app.MemberStatus{
+					Description: "Okay",
+					State:       "Okay",
+					Color:       "green",
+				},
+				LastAction: app.LastAction{
+					Status: "Online",
+				},
+			},
+		},
+	}
+
+	mockSheetsClient.EnsurePreviousStateSheetResponse = "Previous State - 12345"
+	mockSheetsClient.LoadPreviousMemberStatesResponse = map[string]app.FactionMember{} // No previous states
+
+	// Do the same setup for enemy faction travel status
+	mockSheetsClient.EnsureStateChangeRecordsSheetResponse = "State Changes - 67890"
+
+	// Execute the method under test
+	ctx := context.Background()
+	err := wp.processWar(ctx, testWar)
+
+	// Assertions
+	if err != nil {
+		t.Fatalf("processWar failed: %v", err)
+	}
+
+	// Verify torn client calls
+	if !mockTornClient.GetAllAttacksForWarCalled {
+		t.Error("Expected GetAllAttacksForWar to be called")
+	}
+
+	if mockTornClient.GetAllAttacksForWarCalledWith != testWar {
+		t.Error("GetAllAttacksForWar called with wrong war")
+	}
+
+	// Verify sheets client calls
+	expectedSheetsCalls := []struct {
+		called bool
+		name   string
+	}{
+		{mockSheetsClient.EnsureWarSheetsCalled, "EnsureWarSheets"},
+		{mockSheetsClient.ReadExistingRecordsCalled, "ReadExistingRecords"},
+		{mockSheetsClient.UpdateWarSummaryCalled, "UpdateWarSummary"},
+		{mockSheetsClient.UpdateAttackRecordsCalled, "UpdateAttackRecords"},
+	}
+
+	for _, call := range expectedSheetsCalls {
+		if !call.called {
+			t.Errorf("Expected %s to be called", call.name)
+		}
+	}
+
+	// Verify parameter passing
+	if mockSheetsClient.EnsureWarSheetsCalledWith.SpreadsheetID != "test-spreadsheet" {
+		t.Errorf("Expected spreadsheet ID 'test-spreadsheet', got %q",
+			mockSheetsClient.EnsureWarSheetsCalledWith.SpreadsheetID)
+	}
+
+	// Verify attack records processing
+	if len(mockSheetsClient.UpdateAttackRecordsCalledWith.Records) != 1 {
+		t.Errorf("Expected 1 attack record, got %d",
+			len(mockSheetsClient.UpdateAttackRecordsCalledWith.Records))
+	}
+
+	record := mockSheetsClient.UpdateAttackRecordsCalledWith.Records[0]
+	if record.AttackID != 100001 {
+		t.Errorf("Expected attack ID 100001, got %d", record.AttackID)
+	}
+
+	if record.Direction != "Outgoing" {
+		t.Errorf("Expected direction 'Outgoing', got %q", record.Direction)
+	}
+
+	// Verify war summary generation
+	summary := mockSheetsClient.UpdateWarSummaryCalledWith.Summary
+	if summary.WarID != 1001 {
+		t.Errorf("Expected war ID 1001, got %d", summary.WarID)
+	}
+
+	if summary.TotalAttacks != 1 {
+		t.Errorf("Expected 1 total attack, got %d", summary.TotalAttacks)
+	}
+
+	if summary.AttacksWon != 1 {
+		t.Errorf("Expected 1 attack won, got %d", summary.AttacksWon)
+	}
+
+	if summary.RespectGained != 2.5 {
+		t.Errorf("Expected 2.5 respect gained, got %f", summary.RespectGained)
+	}
+}

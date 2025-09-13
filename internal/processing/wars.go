@@ -18,35 +18,71 @@ import (
 
 // WarProcessor handles war detection and processing
 type WarProcessor struct {
-	tornClient         *torn.Client
-	sheetsClient       *sheets.Client
+	tornClient         TornClientInterface
+	sheetsClient       SheetsClientInterface
 	config             *app.Config
 	ourFactionID       int // Cached faction ID from API
-	locationService    *LocationService
-	travelTimeService  *TravelTimeService
+	locationService    LocationServiceInterface
+	travelTimeService  TravelTimeServiceInterface
+	attackService      AttackProcessingServiceInterface
+	summaryService     WarSummaryServiceInterface
+	stateChangeService StateChangeDetectionServiceInterface
 }
 
-func NewWarProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *WarProcessor {
+// NewWarProcessor creates a WarProcessor with interface dependencies for testability
+func NewWarProcessor(
+	tornClient TornClientInterface,
+	sheetsClient SheetsClientInterface,
+	locationService LocationServiceInterface,
+	travelTimeService TravelTimeServiceInterface,
+	attackService AttackProcessingServiceInterface,
+	summaryService WarSummaryServiceInterface,
+	stateChangeService StateChangeDetectionServiceInterface,
+	config *app.Config,
+) *WarProcessor {
 	return &WarProcessor{
-		tornClient:        tornClient,
-		sheetsClient:      sheetsClient,
-		config:            config,
-		ourFactionID:      0, // Will be initialized on first use
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
+		tornClient:         tornClient,
+		sheetsClient:       sheetsClient,
+		config:             config,
+		ourFactionID:       0, // Will be initialized on first use
+		locationService:    locationService,
+		travelTimeService:  travelTimeService,
+		attackService:      attackService,
+		summaryService:     summaryService,
+		stateChangeService: stateChangeService,
 	}
+}
+
+// NewWarProcessorWithConcreteDependencies creates a WarProcessor with concrete implementations
+// This is a convenience constructor for production use
+func NewWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *WarProcessor {
+	// Create the attack processing service
+	attackService := NewAttackProcessingService(config.OurFactionID)
+	summaryService := NewWarSummaryService(attackService)
+	stateChangeService := NewStateChangeDetectionService(sheetsClient)
+
+	return NewWarProcessor(
+		tornClient,
+		sheetsClient,
+		NewLocationService(),
+		NewTravelTimeService(),
+		attackService,
+		summaryService,
+		stateChangeService,
+		config,
+	)
 }
 
 // ensureOurFactionID fetches and caches our faction ID if not already set
 func (wp *WarProcessor) ensureOurFactionID(ctx context.Context) error {
 	if wp.ourFactionID == 0 {
 		log.Debug().Msg("Fetching our faction ID from API")
-		
+
 		factionInfo, err := wp.tornClient.GetOwnFaction(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get own faction info: %w", err)
 		}
-		
+
 		wp.ourFactionID = factionInfo.ID
 		log.Info().
 			Int("faction_id", wp.ourFactionID).
@@ -163,7 +199,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 			Msg("Using incremental update mode - existing records found")
 		attacks, err = wp.tornClient.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to fetch attacks for war: %w", err)
 	}
@@ -174,8 +210,8 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		Msg("Fetched attacks for war")
 
 	// Process attack data into records
-	records := wp.processAttacksIntoRecords(attacks, war)
-	
+	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war)
+
 	// Check for duplicates in processed records
 	codeCount := make(map[string]int)
 	var duplicateRecords []string
@@ -185,7 +221,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 			duplicateRecords = append(duplicateRecords, fmt.Sprintf("ID:%d Code:%s", record.AttackID, record.Code))
 		}
 	}
-	
+
 	if len(duplicateRecords) > 0 {
 		log.Error().
 			Int("total_records", len(records)).
@@ -195,7 +231,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	}
 
 	// Generate war summary
-	summary := wp.generateWarSummary(war, attacks)
+	summary := wp.summaryService.GenerateWarSummary(war, attacks)
 
 	// Update sheets
 	if err := wp.sheetsClient.UpdateWarSummary(ctx, wp.config.SpreadsheetID, sheetConfig, summary); err != nil {
@@ -209,7 +245,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	// Process travel status for both factions
 	ourFactionID := wp.getOurFactionID(war)
 	enemyFactionID := wp.getEnemyFactionID(war)
-	
+
 	// Process our faction travel status
 	if ourFactionID > 0 {
 		if err := wp.processTravelStatus(ctx, war, ourFactionID, wp.config.SpreadsheetID); err != nil {
@@ -220,7 +256,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 				Msg("Failed to process our faction travel status - continuing with war processing")
 		}
 	}
-	
+
 	// Process enemy faction travel status
 	if enemyFactionID > 0 {
 		if err := wp.processTravelStatus(ctx, war, enemyFactionID, wp.config.SpreadsheetID); err != nil {
@@ -404,14 +440,14 @@ func (wp *WarProcessor) getOurFactionID(war *app.War) int {
 // getEnemyFactionID determines which faction is the enemy in the war
 func (wp *WarProcessor) getEnemyFactionID(war *app.War) int {
 	ourFactionID := wp.getOurFactionID(war)
-	
+
 	// Return the faction ID that is not ours
 	for _, faction := range war.Factions {
 		if faction.ID != ourFactionID {
 			return faction.ID
 		}
 	}
-	
+
 	return 0
 }
 
@@ -425,7 +461,6 @@ func (wp *WarProcessor) getFactionName(war *app.War, factionID int) string {
 	return fmt.Sprintf("Faction %d", factionID) // fallback
 }
 
-
 // parseHospitalCountdown parses hospital countdown from status description
 func (wp *WarProcessor) parseHospitalCountdown(description string) string {
 	if description == "" {
@@ -438,7 +473,7 @@ func (wp *WarProcessor) parseHospitalCountdown(description string) string {
 		Msg("Parsing hospital countdown")
 
 	var hours, minutes int
-	
+
 	// Look for hours pattern: "2h", "12h", "1hrs", "2 hrs", etc.
 	hoursRe := regexp.MustCompile(`(\d+)\s*hrs?`)
 	if hoursMatch := hoursRe.FindStringSubmatch(description); len(hoursMatch) > 1 {
@@ -446,7 +481,7 @@ func (wp *WarProcessor) parseHospitalCountdown(description string) string {
 			hours = h
 		}
 	}
-	
+
 	// Look for minutes pattern: "15m", "45m", "35mins", etc.
 	minutesRe := regexp.MustCompile(`(\d+)\s*mins?`)
 	if minutesMatch := minutesRe.FindStringSubmatch(description); len(minutesMatch) > 1 {
@@ -473,9 +508,6 @@ func (wp *WarProcessor) parseHospitalCountdown(description string) string {
 	return ""
 }
 
-
-
-
 // calculateTravelTimes calculates travel departure, arrival and countdown for a user
 func (wp *WarProcessor) calculateTravelTimes(ctx context.Context, userID int, destination string, travelType string, currentTime time.Time) *TravelTimeData {
 	return wp.travelTimeService.CalculateTravelTimes(ctx, userID, destination, travelType, currentTime, wp.config.UpdateInterval)
@@ -496,7 +528,7 @@ func (wp *WarProcessor) readExistingTravelData(ctx context.Context, spreadsheetI
 	}
 
 	existingData := make(map[string]app.TravelRecord)
-	
+
 	for _, row := range values {
 		if len(row) < 7 { // Need all 7 columns: Name, Level, Location, State, Departure, Arrival, Countdown
 			continue
@@ -615,7 +647,7 @@ func (wp *WarProcessor) handleStateChangeDetection(ctx context.Context, war *app
 					Int("current_members", len(factionData.Members)).
 					Msg("Processing state changes")
 
-				if err := wp.processStateChanges(ctx, factionID, factionName, previousMembers, factionData.Members, spreadsheetID); err != nil {
+				if err := wp.stateChangeService.ProcessStateChanges(ctx, factionID, factionName, previousMembers, factionData.Members, spreadsheetID); err != nil {
 					log.Error().
 						Err(err).
 						Int("faction_id", factionID).
@@ -842,129 +874,3 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 	return nil
 }
 
-// normalizeHospitalDescription removes countdown from hospital descriptions for comparison
-func (wp *WarProcessor) normalizeHospitalDescription(description string) string {
-	// Match "In hospital for X hrs Y mins" and "In a [Country/Countries] hospital for X mins" patterns
-	// Handles single words (British, Mexican) and multi-word countries (South African)
-	hospitalRegex := regexp.MustCompile(`(?i)^in\s+(a\s+[\w\s]+\s+)?hospital(\s+for\s+.*)?$`)
-	if hospitalRegex.MatchString(description) {
-		return "In hospital"
-	}
-	return description
-}
-
-// hasStatusChanged compares two member states to detect changes, ignoring hospital countdown changes
-func (wp *WarProcessor) hasStatusChanged(oldMember, newMember app.FactionMember) bool {
-	// Check LastAction.Status changes
-	if oldMember.LastAction.Status != newMember.LastAction.Status {
-		return true
-	}
-
-	// Check Status fields, normalizing hospital descriptions
-	oldDesc := wp.normalizeHospitalDescription(oldMember.Status.Description)
-	newDesc := wp.normalizeHospitalDescription(newMember.Status.Description)
-	
-	if oldDesc != newDesc ||
-		oldMember.Status.State != newMember.Status.State ||
-		oldMember.Status.Color != newMember.Status.Color ||
-		oldMember.Status.Details != newMember.Status.Details ||
-		oldMember.Status.TravelType != newMember.Status.TravelType ||
-		oldMember.Status.PlaneImageType != newMember.Status.PlaneImageType {
-		return true
-	}
-
-	// Check Until field (but be careful with nil pointers)
-	if (oldMember.Status.Until == nil) != (newMember.Status.Until == nil) {
-		return true
-	}
-	if oldMember.Status.Until != nil && newMember.Status.Until != nil {
-		if *oldMember.Status.Until != *newMember.Status.Until {
-			return true
-		}
-	}
-
-	return false
-}
-
-// processStateChanges detects and records state changes for faction members
-func (wp *WarProcessor) processStateChanges(ctx context.Context, factionID int, factionName string, oldMembers, newMembers map[string]app.FactionMember, spreadsheetID string) error {
-	// Ensure state change records sheet exists
-	sheetName, err := wp.sheetsClient.EnsureStateChangeRecordsSheet(ctx, spreadsheetID, factionID)
-	if err != nil {
-		return fmt.Errorf("failed to ensure state change records sheet: %w", err)
-	}
-
-	currentTime := time.Now().UTC()
-	stateChanges := 0
-
-	// Check each current member against previous state
-	for userIDStr, newMember := range newMembers {
-		userID, err := strconv.Atoi(userIDStr)
-		if err != nil {
-			log.Warn().
-				Str("user_id_str", userIDStr).
-				Str("member_name", newMember.Name).
-				Msg("Failed to parse user ID for state change tracking")
-			continue
-		}
-
-		// Check if we have previous state for this member
-		if oldMember, exists := oldMembers[userIDStr]; exists {
-			// Compare states
-			if wp.hasStatusChanged(oldMember, newMember) {
-				// Create state change record
-				record := app.StateChangeRecord{
-					Timestamp:            currentTime,
-					MemberName:           newMember.Name,
-					MemberID:             userID,
-					FactionName:          factionName,
-					FactionID:            factionID,
-					LastActionStatus:     newMember.LastAction.Status,
-					StatusDescription:    newMember.Status.Description,
-					StatusState:          newMember.Status.State,
-					StatusColor:          newMember.Status.Color,
-					StatusDetails:        newMember.Status.Details,
-					StatusUntil:          func() string {
-						if newMember.Status.Until != nil {
-							return strconv.FormatInt(*newMember.Status.Until, 10)
-						}
-						return ""
-					}(),
-					StatusTravelType:     newMember.Status.TravelType,
-					StatusPlaneImageType: newMember.Status.PlaneImageType,
-				}
-
-				// Add record to sheet
-				if err := wp.sheetsClient.AddStateChangeRecord(ctx, spreadsheetID, sheetName, record); err != nil {
-					log.Error().
-						Err(err).
-						Str("member_name", newMember.Name).
-						Int("member_id", userID).
-						Msg("Failed to add state change record")
-				} else {
-					stateChanges++
-					log.Debug().
-						Str("member_name", newMember.Name).
-						Int("member_id", userID).
-						Str("old_state", oldMember.Status.State).
-						Str("new_state", newMember.Status.State).
-						Str("old_last_action", oldMember.LastAction.Status).
-						Str("new_last_action", newMember.LastAction.Status).
-						Msg("Recorded state change")
-				}
-			}
-		}
-		// Note: We don't record first-time appearances as state changes
-	}
-
-	if stateChanges > 0 {
-		log.Info().
-			Int("faction_id", factionID).
-			Str("faction_name", factionName).
-			Int("state_changes", stateChanges).
-			Str("sheet_name", sheetName).
-			Msg("Processed member state changes")
-	}
-
-	return nil
-}
