@@ -358,8 +358,26 @@ func (wsm *WarStateManager) getNextTuesdayMatchmaking(now time.Time) time.Time {
 
 // ShouldProcessNow determines if processing should happen now
 func (wsm *WarStateManager) ShouldProcessNow() bool {
-	nextCheck := wsm.GetNextCheckTime()
-	return time.Now().After(nextCheck.Add(-30 * time.Second)) // 30 second tolerance
+	// Always process for states that require immediate/real-time monitoring
+	switch wsm.currentState {
+	case ActiveWar:
+		// Real-time monitoring - always process
+		return true
+	case PreWar:
+		// Reconnaissance monitoring - always process
+		return true
+	case PostWar:
+		// Always process briefly after war ends
+		return true
+	case NoWars:
+		// Only process if it's time for matchmaking check
+		nextCheck := wsm.GetNextCheckTime()
+		return time.Now().After(nextCheck.Add(-30 * time.Second)) // 30 second tolerance
+	default:
+		// Default to time-based check
+		nextCheck := wsm.GetNextCheckTime()
+		return time.Now().After(nextCheck.Add(-30 * time.Second))
+	}
 }
 
 // GetCurrentState returns the current war state
