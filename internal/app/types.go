@@ -140,3 +140,49 @@ type AttackRecord struct {
 	FinishingHitName      string
 	FinishingHitValue     float64
 }
+
+// FactionInfoResponse represents response from /faction/?selections=basic (own faction)
+type FactionInfoResponse struct {
+	ID        int                      `json:"ID"`
+	Name      string                   `json:"name"`
+	Tag       string                   `json:"tag"`
+	TagImage  string                   `json:"tag_image"`
+	Leader    int                      `json:"leader"`
+	CoLeader  int                      `json:"co-leader"`
+	Respect   int                      `json:"respect"`
+	Age       int                      `json:"age"`
+	Members   map[string]FactionMember `json:"members"`
+}
+
+// FactionBasicResponse represents response from /faction/{id}?selections=basic
+type FactionBasicResponse struct {
+	Members map[string]FactionMember `json:"members"`
+}
+
+// FactionMember represents a faction member's data
+type FactionMember struct {
+	Name          string       `json:"name"`
+	Level         int          `json:"level"`
+	DaysInFaction int          `json:"days_in_faction"`
+	LastAction    LastAction   `json:"last_action"`
+	Status        MemberStatus `json:"status"`
+	Position      string       `json:"position"`
+}
+
+// LastAction represents a member's last action
+type LastAction struct {
+	Status    string `json:"status"`
+	Timestamp int64  `json:"timestamp"`
+	Relative  string `json:"relative"`
+}
+
+// MemberStatus represents a member's current status/location
+type MemberStatus struct {
+	Description     string `json:"description"`
+	State           string `json:"state"`
+	Color           string `json:"color"`
+	Details         string `json:"details"`
+	Until           *int64 `json:"until"`
+	TravelType      string `json:"travel_type"`      // For traveling status
+	PlaneImageType  string `json:"plane_image_type"` // For traveling status
+}

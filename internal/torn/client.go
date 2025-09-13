@@ -351,3 +351,68 @@ func (c *Client) isAttackRelevantToWar(attack app.Attack, war *app.War) bool {
 
 	return false
 }
+
+// GetFactionBasic fetches faction basic data from the API
+func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
+	url := fmt.Sprintf("https://api.torn.com/faction/%d?selections=basic&key=%s", factionID, c.apiKey)
+
+	log.Debug().
+		Str("url", url).
+		Int("faction_id", factionID).
+		Msg("Fetching faction basic data")
+
+	resp, err := c.makeAPIRequest(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := c.handleAPIResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var factionResponse app.FactionBasicResponse
+	if err := json.Unmarshal(body, &factionResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode faction response: %w", err)
+	}
+
+	log.Debug().
+		Int("faction_id", factionID).
+		Int("members_count", len(factionResponse.Members)).
+		Msg("Successfully fetched faction basic data")
+
+	return &factionResponse, nil
+}
+
+
+// GetOwnFaction gets the current user's faction information
+func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {
+	url := fmt.Sprintf("https://api.torn.com/faction/?selections=basic&key=%s", c.apiKey)
+
+	log.Debug().
+		Str("url", url).
+		Msg("Fetching own faction data")
+
+	resp, err := c.makeAPIRequest(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := c.handleAPIResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var factionResponse app.FactionInfoResponse
+	if err := json.Unmarshal(body, &factionResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode faction response: %w", err)
+	}
+
+	log.Debug().
+		Int("faction_id", factionResponse.ID).
+		Str("faction_name", factionResponse.Name).
+		Str("faction_tag", factionResponse.Tag).
+		Msg("Successfully fetched own faction data")
+
+	return &factionResponse, nil
+}
