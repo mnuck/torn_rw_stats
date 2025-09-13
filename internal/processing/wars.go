@@ -18,18 +18,20 @@ import (
 
 // WarProcessor handles war detection and processing
 type WarProcessor struct {
-	tornClient   *torn.Client
-	sheetsClient *sheets.Client
-	config       *app.Config
-	ourFactionID int // Cached faction ID from API
+	tornClient      *torn.Client
+	sheetsClient    *sheets.Client
+	config          *app.Config
+	ourFactionID    int // Cached faction ID from API
+	locationService *LocationService
 }
 
 func NewWarProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *WarProcessor {
 	return &WarProcessor{
-		tornClient:   tornClient,
-		sheetsClient: sheetsClient,
-		config:       config,
-		ourFactionID: 0, // Will be initialized on first use
+		tornClient:      tornClient,
+		sheetsClient:    sheetsClient,
+		config:          config,
+		ourFactionID:    0, // Will be initialized on first use
+		locationService: NewLocationService(),
 	}
 }
 
@@ -421,122 +423,6 @@ func (wp *WarProcessor) getFactionName(war *app.War, factionID int) string {
 	return fmt.Sprintf("Faction %d", factionID) // fallback
 }
 
-// parseLocation extracts standardized location from status description
-func (wp *WarProcessor) parseLocation(description string) string {
-	if description == "" {
-		return ""
-	}
-
-	// Hospital location mappings (adjective -> location name)
-	hospitalMappings := map[string]string{
-		"british":       "United Kingdom",
-		"caymanian":     "Cayman Islands",
-		"chinese":       "China",
-		"mexican":       "Mexico",
-		"swiss":         "Switzerland",
-		"japanese":      "Japan",
-		"canadian":      "Canada",
-		"hawaiian":      "Hawaii",
-		"emirati":       "UAE",
-		"south african": "South Africa",
-		"argentinian":   "Argentina",
-	}
-
-	descLower := strings.ToLower(description)
-
-	// Check for hospital patterns first (handle both "a" and "an")
-	for adjective, location := range hospitalMappings {
-		if strings.Contains(descLower, "in a "+adjective+" hospital") || 
-		   strings.Contains(descLower, "in an "+adjective+" hospital") {
-			return location
-		}
-	}
-
-	// Direct location patterns
-	locations := []string{
-		"Mexico", "Cayman Islands", "Canada", "Hawaii", "United Kingdom",
-		"Argentina", "Switzerland", "Japan", "China", "UAE",
-		"South Africa",
-	}
-
-	// Check "Traveling to X" pattern
-	if strings.HasPrefix(descLower, "traveling to ") {
-		for _, location := range locations {
-			if strings.Contains(descLower, strings.ToLower(location)) {
-				return location
-			}
-		}
-	}
-
-	// Check "In X" pattern
-	if strings.HasPrefix(descLower, "in ") && !strings.Contains(descLower, "hospital") {
-		for _, location := range locations {
-			if strings.Contains(descLower, strings.ToLower(location)) {
-				return location
-			}
-		}
-	}
-
-	// Check "Returning to Torn from X" pattern
-	if strings.Contains(descLower, "returning to torn from") {
-		return "Torn"
-	}
-
-	// Default cases
-	if strings.Contains(descLower, "okay") || strings.Contains(descLower, "torn") {
-		return "Torn"
-	}
-
-	// Hospital without location qualifier defaults to Torn
-	if strings.Contains(descLower, "in hospital for") {
-		// Check if it's NOT one of the specific country hospitals
-		isCountryHospital := false
-		for adjective := range hospitalMappings {
-			if strings.Contains(descLower, "in a "+adjective+" hospital") {
-				isCountryHospital = true
-				break
-			}
-		}
-		if !isCountryHospital {
-			return "Torn"
-		}
-	}
-
-	// Return original description if no pattern matches
-	return description
-}
-
-// getTravelDestinationForCalculation returns the destination to use for travel time calculations
-// For "Returning to Torn from X", returns X (the origin country)
-// For other travel, returns the parsed location
-func (wp *WarProcessor) getTravelDestinationForCalculation(description, parsedLocation string) string {
-	if parsedLocation != "Torn" {
-		return parsedLocation // Normal travel to foreign country
-	}
-	
-	// For "Returning to Torn from X" cases, extract X for travel time calculation
-	descLower := strings.ToLower(description)
-	if strings.Contains(descLower, "returning to torn from") {
-		// Extract the country name after "from "
-		locations := []string{
-			"Mexico", "Cayman Islands", "Canada", "Hawaii", "United Kingdom",
-			"Argentina", "Switzerland", "Japan", "China", "UAE",
-			"South Africa",
-		}
-		
-		for _, location := range locations {
-			if strings.Contains(descLower, strings.ToLower(location)) {
-				log.Debug().
-					Str("description", description).
-					Str("origin_country", location).
-					Msg("Detected return journey, using origin for travel time")
-				return location
-			}
-		}
-	}
-	
-	return parsedLocation
-}
 
 // parseHospitalCountdown parses hospital countdown from status description
 func (wp *WarProcessor) parseHospitalCountdown(description string) string {
@@ -719,7 +605,7 @@ func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, u
 
 	// If no existing arrival time or parsing failed, calculate from travel duration
 	if arrivalTime.IsZero() {
-		travelDestination := wp.getTravelDestinationForCalculation("", destination)
+		travelDestination := wp.locationService.GetTravelDestinationForCalculation("", destination)
 		travelDuration = wp.getTravelTime(travelDestination, travelType)
 		arrivalTime = departureTime.Add(travelDuration)
 	}
@@ -928,7 +814,7 @@ func (wp *WarProcessor) convertMembersToTravelRecords(ctx context.Context, membe
 		}
 
 		// Parse standardized location
-		location := wp.parseLocation(member.Status.Description)
+		location := wp.locationService.ParseLocation(member.Status.Description)
 
 		// Determine corrected state for special cases
 		state := member.Status.State
@@ -1017,7 +903,7 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 
 			} else if previousState != "" && !strings.EqualFold(previousState, "Traveling") {
 				// State transition TO Traveling - set new departure/arrival times
-				travelDestination := wp.getTravelDestinationForCalculation(member.Status.Description, record.Location)
+				travelDestination := wp.locationService.GetTravelDestinationForCalculation(member.Status.Description, record.Location)
 				if travelData := wp.calculateTravelTimes(ctx, userID, travelDestination, member.Status.TravelType, currentTime); travelData != nil {
 					record.Departure = travelData.Departure
 					record.Arrival = travelData.Arrival

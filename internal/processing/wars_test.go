@@ -11,10 +11,11 @@ import (
 func TestParseLocation(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
 	wp := &WarProcessor{
-		tornClient:   nil, // Not needed for parseLocation tests
-		sheetsClient: nil, // Not needed for parseLocation tests
-		config:       config,
-		ourFactionID: 12345,
+		tornClient:      nil, // Not needed for parseLocation tests
+		sheetsClient:    nil, // Not needed for parseLocation tests
+		config:          config,
+		ourFactionID:    12345,
+		locationService: NewLocationService(),
 	}
 
 	tests := []struct {
@@ -108,7 +109,7 @@ func TestParseLocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wp.parseLocation(tt.description)
+			result := wp.locationService.ParseLocation(tt.description)
 			if result != tt.expected {
 				t.Errorf("parseLocation(%q) = %q, expected %q", tt.description, result, tt.expected)
 			}
@@ -120,10 +121,11 @@ func TestParseLocation(t *testing.T) {
 func TestParseHospitalCountdown(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
 	wp := &WarProcessor{
-		tornClient:   nil,
-		sheetsClient: nil,
-		config:       config,
-		ourFactionID: 12345,
+		tornClient:      nil,
+		sheetsClient:    nil,
+		config:          config,
+		ourFactionID:    12345,
+		locationService: NewLocationService(),
 	}
 
 	tests := []struct {
@@ -177,10 +179,11 @@ func TestParseHospitalCountdown(t *testing.T) {
 func TestGetTravelTime(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
 	wp := &WarProcessor{
-		tornClient:   nil,
-		sheetsClient: nil,
-		config:       config,
-		ourFactionID: 12345,
+		tornClient:      nil,
+		sheetsClient:    nil,
+		config:          config,
+		ourFactionID:    12345,
+		locationService: NewLocationService(),
 	}
 
 	tests := []struct {
@@ -229,10 +232,11 @@ func TestGetTravelTime(t *testing.T) {
 func TestGetTravelDestinationForCalculation(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
 	wp := &WarProcessor{
-		tornClient:   nil,
-		sheetsClient: nil,
-		config:       config,
-		ourFactionID: 12345,
+		tornClient:      nil,
+		sheetsClient:    nil,
+		config:          config,
+		ourFactionID:    12345,
+		locationService: NewLocationService(),
 	}
 
 	tests := []struct {
@@ -269,7 +273,7 @@ func TestGetTravelDestinationForCalculation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wp.getTravelDestinationForCalculation(tt.description, tt.parsedLocation)
+			result := wp.locationService.GetTravelDestinationForCalculation(tt.description, tt.parsedLocation)
 			if result != tt.expected {
 				t.Errorf("getTravelDestinationForCalculation(%q, %q) = %q, expected %q",
 					tt.description, tt.parsedLocation, result, tt.expected)
@@ -282,10 +286,11 @@ func TestGetTravelDestinationForCalculation(t *testing.T) {
 func TestFormatTravelTime(t *testing.T) {
 	config := &app.Config{UpdateInterval: 5 * time.Minute}
 	wp := &WarProcessor{
-		tornClient:   nil,
-		sheetsClient: nil,
-		config:       config,
-		ourFactionID: 12345,
+		tornClient:      nil,
+		sheetsClient:    nil,
+		config:          config,
+		ourFactionID:    12345,
+		locationService: NewLocationService(),
 	}
 
 	tests := []struct {
