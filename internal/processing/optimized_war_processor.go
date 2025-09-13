@@ -60,11 +60,17 @@ func NewOptimizedWarProcessor(
 
 // ProcessActiveWars processes wars with sophisticated state-based optimization
 func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
-	log.Info().Msg("Processing wars with state-based optimization")
+	// Log current state at start of processing loop
+	stateInfo := owp.stateManager.GetStateInfo()
+	log.Info().
+		Str("current_state", stateInfo.State.String()).
+		Str("state_description", stateInfo.Description).
+		Dur("time_in_state", stateInfo.TimeInState).
+		Dur("time_until_next_check", stateInfo.TimeUntilCheck).
+		Msg("Starting war processor loop")
 
 	// Check if we should process now based on current state
 	if !owp.stateManager.ShouldProcessNow() {
-		stateInfo := owp.stateManager.GetStateInfo()
 		log.Info().
 			Str("current_state", stateInfo.State.String()).
 			Dur("time_until_next_check", stateInfo.TimeUntilCheck).
@@ -89,7 +95,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	currentState := owp.stateManager.UpdateState(warResponse)
 
 	// Log state information
-	stateInfo := owp.stateManager.GetStateInfo()
+	stateInfo = owp.stateManager.GetStateInfo()
 	log.Info().
 		Str("war_state", currentState.String()).
 		Str("description", stateInfo.Description).
