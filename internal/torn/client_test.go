@@ -1,10 +1,12 @@
 package torn
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
-
-	"torn_rw_stats/internal/app"
 )
 
 func TestNewClient(t *testing.T) {
@@ -51,174 +53,82 @@ func TestAPICallCounter(t *testing.T) {
 	}
 }
 
-func TestCalculateTimeRange(t *testing.T) {
-	client := NewClient("test_api_key")
+// Note: Business logic tests have been moved to processor_test.go
+// These tests focus on the infrastructure layer and backward compatibility
 
-	endTime := time.Now().Unix() + 3600
-	war := &app.War{
-		Start: time.Now().Unix() - 3600, // 1 hour ago
-		End:   &endTime,                 // 1 hour from now (pointer required)
-	}
-
-	t.Run("NoExistingTimestamp", func(t *testing.T) {
-		timeRange := client.calculateTimeRange(war, nil)
-
-		if timeRange.FromTime != war.Start {
-			t.Errorf("Expected FromTime to be war start time %d, got %d", war.Start, timeRange.FromTime)
+func TestMakeAPIRequest(t *testing.T) {
+	// Create test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify request method and headers
+		if r.Method != "GET" {
+			t.Errorf("Expected GET request, got %s", r.Method)
 		}
 
-		if timeRange.ToTime != *war.End {
-			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"test": "response"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient("test_api_key")
+	ctx := context.Background()
+
+	resp, err := client.makeAPIRequest(ctx, server.URL+"/test")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify API call counter was incremented
+	if count := client.GetAPICallCount(); count != 1 {
+		t.Errorf("Expected API call count 1, got %d", count)
+	}
+}
+
+func TestHandleAPIResponse(t *testing.T) {
+	client := NewClient("test_api_key")
+
+	t.Run("SuccessfulResponse", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"test": "data"}`))
+		}))
+		defer server.Close()
+
+		resp, _ := http.Get(server.URL)
+		defer resp.Body.Close()
+
+		body, err := client.handleAPIResponse(resp)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+
+		expected := `{"test": "data"}`
+		if string(body) != expected {
+			t.Errorf("Expected body '%s', got '%s'", expected, string(body))
 		}
 	})
 
-	t.Run("WithExistingTimestamp", func(t *testing.T) {
-		existing := war.Start + 1800 // 30 minutes after war start
-		timeRange := client.calculateTimeRange(war, &existing)
+	t.Run("ErrorResponse", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error": {"msg": "Invalid API key"}}`))
+		}))
+		defer server.Close()
 
-		// Should use existing timestamp minus 1 hour buffer, but not before war start
-		expectedFromTime := existing - 3600 // 1 hour buffer
-		if expectedFromTime < war.Start {
-			expectedFromTime = war.Start
+		resp, _ := http.Get(server.URL)
+		defer resp.Body.Close()
+
+		_, err := client.handleAPIResponse(resp)
+		if err == nil {
+			t.Fatal("Expected error for bad response, got nil")
 		}
 
-		if timeRange.FromTime != expectedFromTime {
-			t.Errorf("Expected FromTime to be %d, got %d", expectedFromTime, timeRange.FromTime)
-		}
-
-		if timeRange.ToTime != *war.End {
-			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
-		}
-
-		if timeRange.UpdateMode != "incremental" {
-			t.Errorf("Expected UpdateMode to be 'incremental', got '%s'", timeRange.UpdateMode)
+		if !strings.Contains(err.Error(), "Invalid API key") {
+			t.Errorf("Expected error to contain 'Invalid API key', got: %s", err.Error())
 		}
 	})
-}
-
-func TestShouldUseSimpleApproach(t *testing.T) {
-	client := NewClient("test_api_key")
-
-	testCases := []struct {
-		name           string
-		timeRange      TimeRange
-		expectedSimple bool
-	}{
-		{
-			name: "FullUpdateMode",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "full",
-			},
-			expectedSimple: false, // Full mode always uses pagination
-		},
-		{
-			name: "IncrementalSmallTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: true, // Small incremental updates use simple approach
-		},
-		{
-			name: "IncrementalLargeTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (25 * 60 * 60), // 25 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: false, // Large time ranges use pagination
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := client.shouldUseSimpleApproach(tc.timeRange)
-			if result != tc.expectedSimple {
-				t.Errorf("Expected %v, got %v", tc.expectedSimple, result)
-			}
-		})
-	}
-}
-
-func TestIsAttackRelevantToWar(t *testing.T) {
-	client := NewClient("test_api_key")
-
-	war := &app.War{
-		Factions: []app.Faction{
-			{ID: 1001, Name: "Faction A"},
-			{ID: 1002, Name: "Faction B"},
-		},
-	}
-
-	testCases := []struct {
-		name           string
-		attack         app.Attack
-		expectedResult bool
-	}{
-		{
-			name: "RelevantAttack",
-			attack: app.Attack{
-				Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-				Defender: app.User{Faction: &app.Faction{ID: 1002}},
-			},
-			expectedResult: true,
-		},
-		{
-			name: "IrrelevantAttack",
-			attack: app.Attack{
-				Attacker: app.User{Faction: &app.Faction{ID: 9999}},
-				Defender: app.User{Faction: &app.Faction{ID: 8888}},
-			},
-			expectedResult: false,
-		},
-		{
-			name: "PartiallyRelevantAttack",
-			attack: app.Attack{
-				Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-				Defender: app.User{Faction: &app.Faction{ID: 9999}},
-			},
-			expectedResult: true, // Should be true because attacker faction is in war
-		},
-		{
-			name: "NilFactions",
-			attack: app.Attack{
-				Attacker: app.User{Faction: nil},
-				Defender: app.User{Faction: &app.Faction{ID: 1002}},
-			},
-			expectedResult: true, // Should be true because defender faction is in war
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := client.isAttackRelevantToWar(tc.attack, war)
-			if result != tc.expectedResult {
-				t.Errorf("Expected %v, got %v", tc.expectedResult, result)
-			}
-		})
-	}
-}
-
-func TestSortAttacksChronologically(t *testing.T) {
-	client := NewClient("test_api_key")
-
-	attacks := []app.Attack{
-		{Started: 1000},
-		{Started: 500},
-		{Started: 1500},
-		{Started: 750},
-	}
-
-	client.sortAttacksChronologically(attacks)
-
-	// Should be sorted in ascending order
-	expected := []int64{500, 750, 1000, 1500}
-	for i, attack := range attacks {
-		if attack.Started != expected[i] {
-			t.Errorf("Position %d: expected timestamp %d, got %d", i, expected[i], attack.Started)
-		}
-	}
 }
