@@ -16,6 +16,7 @@ type OptimizedWarProcessor struct {
 	cachedClient   *CachedTornClient
 	optimizer      *APIOptimizer
 	tracker        *APICallTracker
+	stateManager   *WarStateManager
 }
 
 // NewOptimizedWarProcessor creates a WarProcessor with API optimizations enabled
@@ -34,6 +35,7 @@ func NewOptimizedWarProcessor(
 	tracker := NewAPICallTracker()
 	cachedClient := NewCachedTornClient(tornClient, tracker)
 	optimizer := NewAPIOptimizer(cachedClient, tracker)
+	stateManager := NewWarStateManager()
 
 	// Create processor with optimized client
 	processor := NewWarProcessor(
@@ -52,12 +54,23 @@ func NewOptimizedWarProcessor(
 		cachedClient:   cachedClient,
 		optimizer:      optimizer,
 		tracker:        tracker,
+		stateManager:   stateManager,
 	}
 }
 
-// ProcessActiveWars processes wars with API call optimizations
+// ProcessActiveWars processes wars with sophisticated state-based optimization
 func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
-	log.Info().Msg("Processing active wars with API optimizations")
+	log.Info().Msg("Processing wars with state-based optimization")
+
+	// Check if we should process now based on current state
+	if !owp.stateManager.ShouldProcessNow() {
+		stateInfo := owp.stateManager.GetStateInfo()
+		log.Info().
+			Str("current_state", stateInfo.State.String()).
+			Dur("time_until_next_check", stateInfo.TimeUntilCheck).
+			Msg("Skipping processing - not time for next check")
+		return nil
+	}
 
 	// Log pre-processing stats
 	preStats := owp.tracker.GetSessionStats()
@@ -65,24 +78,61 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 		Int64("session_calls_before", preStats.SessionCalls).
 		Msg("API calls before processing")
 
-	// Use optimized war fetching
-	warResponse, err := owp.optimizer.GetOptimizedWars(ctx)
+	// Fetch war data to determine current state
+	warResponse, err := owp.cachedClient.GetFactionWars(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to fetch optimized wars: %w", err)
+		return fmt.Errorf("failed to fetch wars for state analysis: %w", err)
 	}
 
-	// Check if this was an optimized skip (empty response but no API call)
-	postFetchStats := owp.tracker.GetSessionStats()
-	if postFetchStats.SessionCalls == preStats.SessionCalls && owp.hasActiveWars(warResponse) == false {
-		log.Info().Msg("Skipped war check due to optimization - no active wars expected")
+	// Update war state based on current data
+	previousState := owp.stateManager.GetCurrentState()
+	currentState := owp.stateManager.UpdateState(warResponse)
+
+	// Log state information
+	stateInfo := owp.stateManager.GetStateInfo()
+	log.Info().
+		Str("war_state", currentState.String()).
+		Str("description", stateInfo.Description).
+		Dur("time_in_state", stateInfo.TimeInState).
+		Dur("next_check_in", stateInfo.TimeUntilCheck).
+		Bool("state_changed", previousState != currentState).
+		Msg("War state analysis complete")
+
+	// Handle different states
+	switch currentState {
+	case NoWars:
+		log.Info().
+			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
+			Msg("No active wars - processor will pause until next Tuesday matchmaking")
 		return nil
+
+	case PostWar:
+		log.Info().
+			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
+			Msg("War completed - processor will pause until next week's matchmaking")
+		return nil
+
+	case PreWar:
+		log.Info().
+			Dur("update_interval", stateInfo.UpdateInterval).
+			Msg("Pre-war reconnaissance mode - monitoring opponent")
+		// Continue to processing for reconnaissance data
+
+	case ActiveWar:
+		log.Info().
+			Dur("update_interval", stateInfo.UpdateInterval).
+			Msg("Active war detected - real-time monitoring enabled")
+		// Continue to full processing
 	}
 
-	// Process wars using existing logic but with optimized client
-	owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
-	err = owp.processor.ProcessActiveWars(ctx)
-	if err != nil {
-		return err
+	// Only process if we have wars that need attention (PreWar or ActiveWar)
+	if currentState == PreWar || currentState == ActiveWar {
+		// Process wars using existing logic but with optimized client
+		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
+		err = owp.processor.ProcessActiveWars(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to process wars: %w", err)
+		}
 	}
 
 	// Log optimization results
