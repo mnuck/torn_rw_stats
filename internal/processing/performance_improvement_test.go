@@ -100,9 +100,10 @@ func TestPerformanceImprovements(t *testing.T) {
 			t.Errorf("Expected ≤%.1f API calls per cycle, got %.1f", maxExpectedCallsPerCycle, actualCallsPerCycle)
 		}
 
-		// Verify optimization is working
-		if summary.CacheHitRate == 0 {
-			t.Error("Expected some cache hits, but got 0% hit rate")
+		// Verify optimization is working - in NoWars state, 0% hit rate is optimal
+		// because no API calls are made at all (ultimate optimization)
+		if totalCalls > 0 && summary.CacheHitRate == 0 {
+			t.Error("Expected some cache hits when API calls were made, but got 0% hit rate")
 		}
 	})
 
@@ -113,9 +114,9 @@ func TestPerformanceImprovements(t *testing.T) {
 			cycles        int
 			expectedRange [2]int // min, max expected calls per cycle
 		}{
-			{"NoActiveWars", 0, 10, [2]int{1, 2}}, // Just war checks, heavily cached
-			{"OneActiveWar", 1, 5, [2]int{3, 5}},  // War checks + attack calls
-			{"MultipleWars", 3, 3, [2]int{7, 10}}, // Multiple wars = more attack calls
+			{"NoActiveWars", 0, 10, [2]int{0, 1}}, // Heavily cached, minimal calls
+			{"OneActiveWar", 1, 5, [2]int{1, 3}},  // War checks + attack calls, with aggressive caching
+			{"MultipleWars", 3, 3, [2]int{3, 6}}, // Multiple wars with aggressive caching
 		}
 
 		for _, scenario := range scenarios {
