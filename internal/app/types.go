@@ -186,3 +186,35 @@ type MemberStatus struct {
 	TravelType      string `json:"travel_type"`      // For traveling status
 	PlaneImageType  string `json:"plane_image_type"` // For traveling status
 }
+
+// TravelRecord represents a member's travel status record
+type TravelRecord struct {
+	Name      string `json:"name"`
+	Level     int    `json:"level"`
+	Location  string `json:"location"`
+	State     string `json:"state"`
+	Departure string `json:"departure"`
+	Arrival   string `json:"arrival"`
+	Countdown string `json:"countdown"`
+}
+
+// StateChangeRecord represents a member's state change record
+type StateChangeRecord struct {
+	Timestamp              time.Time `json:"timestamp"`
+	MemberID               int       `json:"member_id"`
+	MemberName             string    `json:"member_name"`
+	FactionName            string    `json:"faction_name"`
+	FactionID              int       `json:"faction_id"`
+	LastActionStatus       string    `json:"last_action_status"`
+	StatusDescription      string    `json:"status_description"`
+	StatusState            string    `json:"status_state"`
+	StatusColor            string    `json:"status_color"`
+	StatusDetails          string    `json:"status_details"`
+	StatusUntil            string    `json:"status_until"`
+	StatusTravelType       string    `json:"status_travel_type"`
+	StatusPlaneImageType   string    `json:"status_plane_image_type"`
+	OldState               string    `json:"old_state"`
+	NewState               string    `json:"new_state"`
+	OldLastAction          string    `json:"old_last_action"`
+	NewLastAction          string    `json:"new_last_action"`
+}

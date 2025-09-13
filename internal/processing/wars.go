@@ -3,6 +3,10 @@ package processing
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -828,40 +832,46 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 	factionName := wp.getFactionName(war, factionID)
 	
 	// Load previous member states from persistent storage
+	var previousMembers map[string]app.FactionMember
 	previousStateSheetName, err := wp.sheetsClient.EnsurePreviousStateSheet(ctx, spreadsheetID, factionID)
 	if err != nil {
 		log.Error().
 			Err(err).
 			Int("faction_id", factionID).
 			Msg("Failed to ensure previous state sheet - skipping state change detection")
+		previousMembers = make(map[string]app.FactionMember) // Empty map as fallback
 	} else {
 		// Load previous states
-		previousMembers, err := wp.sheetsClient.LoadPreviousMemberStates(ctx, spreadsheetID, previousStateSheetName)
+		loadedPreviousMembers, err := wp.sheetsClient.LoadPreviousMemberStates(ctx, spreadsheetID, previousStateSheetName)
 		if err != nil {
 			log.Warn().
 				Err(err).
 				Int("faction_id", factionID).
 				Str("sheet_name", previousStateSheetName).
 				Msg("Failed to load previous member states - skipping state change detection")
-		} else if len(previousMembers) > 0 {
-			log.Debug().
-				Int("faction_id", factionID).
-				Int("previous_members", len(previousMembers)).
-				Int("current_members", len(factionData.Members)).
-				Msg("Processing state changes")
-				
-			if err := wp.processStateChanges(ctx, factionID, factionName, previousMembers, factionData.Members, spreadsheetID); err != nil {
-				log.Error().
-					Err(err).
-					Int("faction_id", factionID).
-					Msg("Failed to process state changes - continuing")
-			}
+			previousMembers = make(map[string]app.FactionMember) // Empty map as fallback
 		} else {
-			log.Debug().
-				Int("faction_id", factionID).
-				Msg("No previous member states found - first run for this faction")
+			previousMembers = loadedPreviousMembers
+			if len(previousMembers) > 0 {
+				log.Debug().
+					Int("faction_id", factionID).
+					Int("previous_members", len(previousMembers)).
+					Int("current_members", len(factionData.Members)).
+					Msg("Processing state changes")
+
+				if err := wp.processStateChanges(ctx, factionID, factionName, previousMembers, factionData.Members, spreadsheetID); err != nil {
+					log.Error().
+						Err(err).
+						Int("faction_id", factionID).
+						Msg("Failed to process state changes - continuing")
+				}
+			} else {
+				log.Debug().
+					Int("faction_id", factionID).
+					Msg("No previous member states found - first run for this faction")
+			}
 		}
-		
+
 		// Store current member states for next comparison
 		if err := wp.sheetsClient.StorePreviousMemberStates(ctx, spreadsheetID, previousStateSheetName, factionData.Members); err != nil {
 			log.Error().
@@ -912,11 +922,20 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 			State:    state,
 		}
 
-		// Check existing record for state transition logic
-		existingRecord, hasExisting := existingTravelData[member.Name]
+		// Check existing travel record for departure/arrival time preservation
+		existingRecord, hasExistingTravel := existingTravelData[member.Name]
+
+		// Get previous state from member state data (not travel data)
 		previousState := ""
-		if hasExisting {
-			previousState = existingRecord.State
+		if previousMember, hasPreviousMember := previousMembers[userIDStr]; hasPreviousMember {
+			previousState = previousMember.Status.State
+			// Handle same state corrections that we apply to current state
+			if strings.Contains(strings.ToLower(previousMember.Status.Description), "returning to torn from") {
+				previousState = "Traveling"
+			}
+			if strings.EqualFold(previousMember.Status.State, "Abroad") {
+				previousState = "Okay"
+			}
 		}
 
 		// Handle different states with proper state transition logic
@@ -936,31 +955,31 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 			
 		} else if strings.EqualFold(state, "Traveling") {
 			if userID > 0 {
-				if strings.EqualFold(previousState, "Traveling") && hasExisting && existingRecord.Departure != "" {
+				if strings.EqualFold(previousState, "Traveling") && hasExistingTravel && existingRecord.Departure != "" {
 					// Still traveling - preserve departure/arrival, only update countdown
 					record.Departure = existingRecord.Departure
 					record.Arrival = existingRecord.Arrival
-					
+
 					// Recalculate only the countdown
 					if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, location, existingRecord.Departure, member.Status.TravelType, currentTime); travelData != nil {
 						record.Countdown = travelData.Countdown
 					}
-					
+
 					log.Debug().
 						Str("player", member.Name).
 						Str("departure", record.Departure).
 						Str("arrival", record.Arrival).
 						Str("countdown", record.Countdown).
 						Msg("Still traveling - preserved departure/arrival, updated countdown only")
-						
-				} else if hasExisting && !strings.EqualFold(previousState, "Traveling") {
+
+				} else if previousState != "" && !strings.EqualFold(previousState, "Traveling") {
 					// State transition TO Traveling - set new departure/arrival times
 					travelDestination := wp.getTravelDestinationForCalculation(member.Status.Description, location)
 					if travelData := wp.calculateTravelTimes(ctx, userID, travelDestination, member.Status.TravelType, currentTime); travelData != nil {
 						record.Departure = travelData.Departure
 						record.Arrival = travelData.Arrival
 						record.Countdown = travelData.Countdown
-						
+
 						log.Info().
 							Str("player", member.Name).
 							Str("previous_state", previousState).
@@ -970,13 +989,14 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 							Msg("State transition to Traveling - set new departure/arrival times")
 					}
 				} else {
-					// No existing data (fresh start) or already traveling with no departure time
+					// No previous state data (fresh start) or already traveling with no departure time
 					// Leave departure/arrival blank since we didn't observe the transition
 					log.Debug().
 						Str("player", member.Name).
 						Str("previous_state", previousState).
 						Str("new_state", state).
-						Bool("has_existing", hasExisting).
+						Bool("has_previous_member_state", previousState != "").
+						Bool("has_existing_travel", hasExistingTravel).
 						Msg("Player traveling but no observed state transition - leaving times blank")
 				}
 			}
@@ -1099,7 +1119,12 @@ func (wp *WarProcessor) processStateChanges(ctx context.Context, factionID int, 
 					StatusState:          newMember.Status.State,
 					StatusColor:          newMember.Status.Color,
 					StatusDetails:        newMember.Status.Details,
-					StatusUntil:          newMember.Status.Until,
+					StatusUntil:          func() string {
+						if newMember.Status.Until != nil {
+							return strconv.FormatInt(*newMember.Status.Until, 10)
+						}
+						return ""
+					}(),
 					StatusTravelType:     newMember.Status.TravelType,
 					StatusPlaneImageType: newMember.Status.PlaneImageType,
 				}
