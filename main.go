@@ -44,11 +44,11 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create sheets client")
 	}
 
-	// Initialize war processor
-	warProcessor := processing.NewWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
+	// Initialize optimized war processor with state-based optimization
+	warProcessor := processing.NewOptimizedWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
 
-	// Define the main processing function
-	processWars := func() {
+	// Define the main processing function that returns next check time
+	processWars := func() time.Duration {
 		log.Debug().Msg("Starting war processing cycle")
 
 		// Reset API call counter at the start of each cycle
@@ -56,18 +56,34 @@ func main() {
 
 		if err := warProcessor.ProcessActiveWars(ctx); err != nil {
 			log.Error().Err(err).Msg("Failed to process active wars")
-			return
+			return *interval // Use CLI interval as fallback on error
 		}
 
 		apiCalls := tornClient.GetAPICallCount()
+
+		// Get intelligent next check time from war processor
+		nextCheckTime := warProcessor.GetNextCheckTime()
+		nextCheckDuration := time.Until(nextCheckTime)
+
+		// Use CLI interval as minimum/fallback
+		if nextCheckDuration < time.Minute {
+			nextCheckDuration = time.Minute
+		}
+		if nextCheckDuration > *interval && *interval > 0 {
+			nextCheckDuration = *interval
+		}
+
 		log.Info().
 			Int64("api_calls", apiCalls).
+			Dur("next_check_in", nextCheckDuration).
 			Msg("Completed war processing cycle")
+
+		return nextCheckDuration
 	}
 
 	// Run initial processing
 	log.Info().Msg("Running initial war processing")
-	processWars()
+	nextInterval := processWars()
 
 	// Exit if run-once flag is set
 	if *runOnce {
@@ -75,15 +91,14 @@ func main() {
 		return
 	}
 
-	// Start scheduled processing
+	// Start scheduled processing with dynamic intervals
 	log.Info().
-		Dur("interval", *interval).
-		Msg("Starting scheduled war processing")
+		Dur("fallback_interval", *interval).
+		Dur("initial_next_check", nextInterval).
+		Msg("Starting scheduled war processing with intelligent timing")
 
-	ticker := time.NewTicker(*interval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		processWars()
+	for {
+		time.Sleep(nextInterval)
+		nextInterval = processWars()
 	}
 }

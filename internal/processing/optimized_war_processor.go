@@ -60,6 +60,19 @@ func NewOptimizedWarProcessor(
 
 // ProcessActiveWars processes wars with sophisticated state-based optimization
 func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
+	// Always fetch war data first to determine actual current state
+	log.Debug().
+		Msg("Fetching war data to determine current state")
+
+	warResponse, err := owp.cachedClient.GetFactionWars(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch wars for state analysis: %w", err)
+	}
+
+	// Update war state based on fresh data
+	previousState := owp.stateManager.GetCurrentState()
+	currentState := owp.stateManager.UpdateState(warResponse)
+
 	// Log current state at start of processing loop
 	stateInfo := owp.stateManager.GetStateInfo()
 	log.Info().
@@ -69,12 +82,12 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 		Dur("time_until_next_check", stateInfo.TimeUntilCheck).
 		Msg("Starting war processor loop")
 
-	// Check if we should process now based on current state
+	// Now check if we should do full processing based on updated state
 	if !owp.stateManager.ShouldProcessNow() {
 		log.Info().
 			Str("current_state", stateInfo.State.String()).
 			Dur("time_until_next_check", stateInfo.TimeUntilCheck).
-			Msg("Skipping processing - not time for next check")
+			Msg("Skipping full processing - not time for next check")
 		return nil
 	}
 
@@ -83,16 +96,6 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	log.Debug().
 		Int64("session_calls_before", preStats.SessionCalls).
 		Msg("API calls before processing")
-
-	// Fetch war data to determine current state
-	warResponse, err := owp.cachedClient.GetFactionWars(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to fetch wars for state analysis: %w", err)
-	}
-
-	// Update war state based on current data
-	previousState := owp.stateManager.GetCurrentState()
-	currentState := owp.stateManager.UpdateState(warResponse)
 
 	// Log state information
 	stateInfo = owp.stateManager.GetStateInfo()
@@ -201,6 +204,11 @@ func (owp *OptimizedWarProcessor) ResetSession() {
 // GetAPICallCount returns the current API call count
 func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
 	return owp.tracker.GetSessionStats().SessionCalls
+}
+
+// GetNextCheckTime returns when the next processing should occur based on current war state
+func (owp *OptimizedWarProcessor) GetNextCheckTime() time.Time {
+	return owp.stateManager.GetNextCheckTime()
 }
 
 // ClearCache manually clears all cached data

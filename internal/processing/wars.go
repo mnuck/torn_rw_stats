@@ -73,6 +73,26 @@ func NewWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClie
 	)
 }
 
+// NewOptimizedWarProcessorWithConcreteDependencies creates an OptimizedWarProcessor with concrete implementations
+// This is the recommended constructor for production use with state-based optimization
+func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
+	// Create the attack processing service
+	attackService := NewAttackProcessingService(config.OurFactionID)
+	summaryService := NewWarSummaryService(attackService)
+	stateChangeService := NewStateChangeDetectionService(sheetsClient)
+
+	return NewOptimizedWarProcessor(
+		tornClient,
+		sheetsClient,
+		NewLocationService(),
+		NewTravelTimeService(),
+		attackService,
+		summaryService,
+		stateChangeService,
+		config,
+	)
+}
+
 // ensureOurFactionID fetches and caches our faction ID if not already set
 func (wp *WarProcessor) ensureOurFactionID(ctx context.Context) error {
 	if wp.ourFactionID == 0 {
