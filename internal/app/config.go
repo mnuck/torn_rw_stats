@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -19,14 +20,53 @@ type Config struct {
 	UpdateInterval  time.Duration
 }
 
-// SetupEnvironment initializes logging and loads environment variables
+// SetupEnvironment loads .env file and configures zerolog output and log level.
 func SetupEnvironment() {
-	// Set up logging
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	// Load .env file if it exists
-	_ = godotenv.Load()
+	err := godotenv.Load()
+
+	// Configure logging
+	if os.Getenv("ENV") == "production" {
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+		log.Logger = log.Output(os.Stderr)
+	} else {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+	}
+
+	levelStr := strings.ToLower(os.Getenv("LOGLEVEL"))
+	switch levelStr {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn", "warning":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	case "fatal":
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+	case "panic":
+		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	case "disabled":
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+	case "":
+		// Default based on environment
+		if os.Getenv("ENV") == "production" {
+			zerolog.SetGlobalLevel(zerolog.WarnLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		log.Warn().Msgf("Unknown LOGLEVEL '%s', defaulting to info.", levelStr)
+	}
+
+	// wait until now to report on the .env file so we have the chance to set up logging first
+	if err == nil {
+		log.Debug().Msg("Loaded environment variables from .env file.")
+	} else {
+		log.Debug().Msg("No .env file found or error loading .env file; proceeding with existing environment variables.")
+	}
 }
 
 // LoadConfig loads configuration from environment variables
