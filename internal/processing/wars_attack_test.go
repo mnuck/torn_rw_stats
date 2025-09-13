@@ -9,11 +9,12 @@ import (
 // Test attack processing into records
 func TestProcessAttacksIntoRecords(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	// Create test war data
@@ -100,11 +101,12 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 // Test war summary generation
 func TestGenerateWarSummary(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	// Create test war data
@@ -197,11 +199,12 @@ func TestGenerateWarSummary(t *testing.T) {
 // Test faction ID helper functions
 func TestGetOurFactionID(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	war := &app.War{
@@ -219,11 +222,12 @@ func TestGetOurFactionID(t *testing.T) {
 
 func TestGetEnemyFactionID(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	war := &app.War{
@@ -241,11 +245,12 @@ func TestGetEnemyFactionID(t *testing.T) {
 
 func TestGetFactionName(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	war := &app.War{
@@ -271,11 +276,12 @@ func TestGetFactionName(t *testing.T) {
 // Test status change detection
 func TestHasStatusChanged(t *testing.T) {
 	wp := &WarProcessor{
-		tornClient:      nil,
-		sheetsClient:    nil,
-		config:          &app.Config{},
-		ourFactionID:    12345,
-		locationService: NewLocationService(),
+		tornClient:        nil,
+		sheetsClient:      nil,
+		config:            &app.Config{},
+		ourFactionID:      12345,
+		locationService:   NewLocationService(),
+		travelTimeService: NewTravelTimeService(),
 	}
 
 	// Test identical members - no change
