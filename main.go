@@ -32,6 +32,9 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
+	// Set the update interval from command line flag
+	config.UpdateInterval = *interval
+
 	ctx := context.Background()
 
 	// Initialize clients

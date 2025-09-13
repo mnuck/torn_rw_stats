@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
@@ -11,10 +12,11 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	TornAPIKey    string
-	SpreadsheetID string
+	TornAPIKey      string
+	SpreadsheetID   string
 	CredentialsFile string
-	OurFactionID  int
+	OurFactionID    int
+	UpdateInterval  time.Duration
 }
 
 // SetupEnvironment initializes logging and loads environment variables
