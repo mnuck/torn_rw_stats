@@ -858,19 +858,23 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 			} else {
 				// No previous state data (fresh start) or already traveling with no departure time
 				// Check if existing travel data has departure/arrival times - preserve them if present
-				if hasExistingTravel && existingRecord.Departure != "" && existingRecord.Arrival != "" {
-					// Preserve manually curated departure/arrival times
-					record.Departure = existingRecord.Departure
-					record.Arrival = existingRecord.Arrival
+				if hasExistingTravel && (existingRecord.Departure != "" || existingRecord.Arrival != "") {
+					// Preserve any manually curated times
+					if existingRecord.Departure != "" {
+						record.Departure = existingRecord.Departure
+					}
+					if existingRecord.Arrival != "" {
+						record.Arrival = existingRecord.Arrival
 
-					// Recalculate countdown using existing arrival time
-					if arrivalTime, err := time.Parse("2006-01-02 15:04:05", record.Arrival); err == nil {
-						timeRemaining := arrivalTime.Sub(currentTime)
-						countdown := wp.travelTimeService.FormatTravelTime(timeRemaining)
-						if timeRemaining <= 0 {
-							countdown = "Arrived"
+						// Only calculate countdown if we have arrival time
+						if arrivalTime, err := time.Parse("2006-01-02 15:04:05", record.Arrival); err == nil {
+							timeRemaining := arrivalTime.Sub(currentTime)
+							countdown := wp.travelTimeService.FormatTravelTime(timeRemaining)
+							if timeRemaining <= 0 {
+								countdown = "Arrived"
+							}
+							record.Countdown = countdown
 						}
-						record.Countdown = countdown
 					}
 
 					log.Debug().
