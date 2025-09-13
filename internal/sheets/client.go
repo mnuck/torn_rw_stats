@@ -9,6 +9,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
+// Client implements the SheetsAPI interface using Google Sheets API
 type Client struct {
 	service *sheets.Service
 }
