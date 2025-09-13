@@ -283,7 +283,6 @@ func (wsm *WarStateManager) selectMostRecentEndedWar(wars []app.War) app.War {
 	return mostRecent
 }
 
-
 // getAllWars extracts all wars from the response
 func (wsm *WarStateManager) getAllWars(warResponse *app.WarResponse) []app.War {
 	var wars []app.War
@@ -384,23 +383,23 @@ func (wsm *WarStateManager) GetStateInfo() WarStateInfo {
 	nextCheck := wsm.GetNextCheckTime()
 
 	return WarStateInfo{
-		State:           wsm.currentState,
-		Description:     config.Description,
-		TimeInState:     time.Since(wsm.lastStateChange),
-		NextCheckTime:   nextCheck,
-		TimeUntilCheck:  time.Until(nextCheck),
-		UpdateInterval:  config.UpdateInterval,
-		CurrentWar:      wsm.currentWar,
+		State:          wsm.currentState,
+		Description:    config.Description,
+		TimeInState:    time.Since(wsm.lastStateChange),
+		NextCheckTime:  nextCheck,
+		TimeUntilCheck: time.Until(nextCheck),
+		UpdateInterval: config.UpdateInterval,
+		CurrentWar:     wsm.currentWar,
 	}
 }
 
 // WarStateInfo provides comprehensive state information
 type WarStateInfo struct {
-	State           WarState
-	Description     string
-	TimeInState     time.Duration
-	NextCheckTime   time.Time
-	TimeUntilCheck  time.Duration
-	UpdateInterval  time.Duration
-	CurrentWar      *app.War
+	State          WarState
+	Description    string
+	TimeInState    time.Duration
+	NextCheckTime  time.Time
+	TimeUntilCheck time.Duration
+	UpdateInterval time.Duration
+	CurrentWar     *app.War
 }

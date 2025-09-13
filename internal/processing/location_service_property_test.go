@@ -179,11 +179,11 @@ func TestLocationServiceProperties(t *testing.T) {
 			// Only test strings that don't match known patterns
 			lowerDesc := strings.ToLower(description)
 			if strings.Contains(lowerDesc, "traveling") ||
-			   strings.Contains(lowerDesc, "hospital") ||
-			   strings.Contains(lowerDesc, "torn") ||
-			   strings.Contains(lowerDesc, "okay") ||
-			   strings.HasPrefix(lowerDesc, "in ") ||
-			   strings.Contains(lowerDesc, "returning") {
+				strings.Contains(lowerDesc, "hospital") ||
+				strings.Contains(lowerDesc, "torn") ||
+				strings.Contains(lowerDesc, "okay") ||
+				strings.HasPrefix(lowerDesc, "in ") ||
+				strings.Contains(lowerDesc, "returning") {
 				return true // Skip known patterns
 			}
 

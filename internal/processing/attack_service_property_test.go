@@ -106,7 +106,7 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 				}
 				if i < len(attacks) {
 					if record.RespectGain != attacks[i].RespectGain ||
-					   record.RespectLoss != attacks[i].RespectLoss {
+						record.RespectLoss != attacks[i].RespectLoss {
 						return false
 					}
 				}
@@ -185,8 +185,8 @@ func genFaction() gopter.Gen {
 // genWar generates a war with factions
 func genWar() gopter.Gen {
 	return gen.Struct(reflect.TypeOf(app.War{}), map[string]gopter.Gen{
-		"ID":    gen.IntRange(1, 999999),
-		"Start": gen.Int64Range(1640995200, 1740995200),
+		"ID":       gen.IntRange(1, 999999),
+		"Start":    gen.Int64Range(1640995200, 1740995200),
 		"Factions": gen.SliceOfN(2, genFaction()), // Always 2 factions for wars
 	}).Map(func(w app.War) *app.War {
 		return &w

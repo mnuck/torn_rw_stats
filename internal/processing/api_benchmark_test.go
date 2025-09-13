@@ -147,10 +147,10 @@ func BenchmarkAPICallPrediction(b *testing.B) {
 		activeWars int
 		expected   int64
 	}{
-		{"NoActiveWars", 0, 1},     // Just GetFactionWars
-		{"OneWar", 1, 3},           // GetFactionWars + 2 attack calls avg
-		{"ThreeWars", 3, 7},        // GetFactionWars + 6 attack calls avg
-		{"TenWars", 10, 21},        // GetFactionWars + 20 attack calls avg
+		{"NoActiveWars", 0, 1}, // Just GetFactionWars
+		{"OneWar", 1, 3},       // GetFactionWars + 2 attack calls avg
+		{"ThreeWars", 3, 7},    // GetFactionWars + 6 attack calls avg
+		{"TenWars", 10, 21},    // GetFactionWars + 20 attack calls avg
 	}
 
 	for _, scenario := range scenarios {

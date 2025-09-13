@@ -961,4 +961,3 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 
 	return nil
 }
-

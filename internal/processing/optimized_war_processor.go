@@ -12,11 +12,11 @@ import (
 
 // OptimizedWarProcessor wraps WarProcessor with API call optimizations
 type OptimizedWarProcessor struct {
-	processor      *WarProcessor
-	cachedClient   *CachedTornClient
-	optimizer      *APIOptimizer
-	tracker        *APICallTracker
-	stateManager   *WarStateManager
+	processor    *WarProcessor
+	cachedClient *CachedTornClient
+	optimizer    *APIOptimizer
+	tracker      *APICallTracker
+	stateManager *WarStateManager
 }
 
 // NewOptimizedWarProcessor creates a WarProcessor with API optimizations enabled
@@ -50,11 +50,11 @@ func NewOptimizedWarProcessor(
 	)
 
 	return &OptimizedWarProcessor{
-		processor:      processor,
-		cachedClient:   cachedClient,
-		optimizer:      optimizer,
-		tracker:        tracker,
-		stateManager:   stateManager,
+		processor:    processor,
+		cachedClient: cachedClient,
+		optimizer:    optimizer,
+		tracker:      tracker,
+		stateManager: stateManager,
 	}
 }
 

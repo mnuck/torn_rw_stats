@@ -42,9 +42,9 @@ func (o *APIOptimizer) GetOptimizedWars(ctx context.Context) (*app.WarResponse, 
 		// Return empty response to indicate skip
 		return &app.WarResponse{
 			Wars: struct {
-				Ranked    *app.War    `json:"ranked"`
-				Raids     []app.War   `json:"raids"`
-				Territory []app.War   `json:"territory"`
+				Ranked    *app.War  `json:"ranked"`
+				Raids     []app.War `json:"raids"`
+				Territory []app.War `json:"territory"`
 			}{},
 		}, nil
 	}
@@ -133,10 +133,10 @@ func (o *APIOptimizer) updateWarState(wars *app.WarResponse, checkTime time.Time
 // GetOptimizationStats returns current optimization statistics
 func (o *APIOptimizer) GetOptimizationStats() OptimizationStats {
 	return OptimizationStats{
-		LastWarCheck:       o.lastWarCheck,
-		KnownActiveWars:    len(o.lastKnownWars),
-		ConsecutiveEmpty:   o.consecutiveEmpty,
-		NextCheckInterval:  o.getNextCheckInterval(),
+		LastWarCheck:      o.lastWarCheck,
+		KnownActiveWars:   len(o.lastKnownWars),
+		ConsecutiveEmpty:  o.consecutiveEmpty,
+		NextCheckInterval: o.getNextCheckInterval(),
 	}
 }
 
@@ -160,10 +160,10 @@ func (o *APIOptimizer) getNextCheckInterval() time.Duration {
 
 // OptimizationStats represents API optimization statistics
 type OptimizationStats struct {
-	LastWarCheck       time.Time
-	KnownActiveWars    int
-	ConsecutiveEmpty   int
-	NextCheckInterval  time.Duration
+	LastWarCheck      time.Time
+	KnownActiveWars   int
+	ConsecutiveEmpty  int
+	NextCheckInterval time.Duration
 }
 
 // EstimateCallsForPeriod estimates API calls needed for a given time period
@@ -187,21 +187,21 @@ func (o *APIOptimizer) EstimateCallsForPeriod(duration time.Duration) APICallEst
 	total := warChecks + attackCalls + factionCalls
 
 	return APICallEstimate{
-		WarChecks:      warChecks,
-		AttackCalls:    attackCalls,
-		FactionCalls:   factionCalls,
-		TotalEstimate:  total,
-		Period:         duration,
-		CheckInterval:  checkInterval,
+		WarChecks:     warChecks,
+		AttackCalls:   attackCalls,
+		FactionCalls:  factionCalls,
+		TotalEstimate: total,
+		Period:        duration,
+		CheckInterval: checkInterval,
 	}
 }
 
 // APICallEstimate represents projected API usage
 type APICallEstimate struct {
-	WarChecks      int64
-	AttackCalls    int64
-	FactionCalls   int64
-	TotalEstimate  int64
-	Period         time.Duration
-	CheckInterval  time.Duration
+	WarChecks     int64
+	AttackCalls   int64
+	FactionCalls  int64
+	TotalEstimate int64
+	Period        time.Duration
+	CheckInterval time.Duration
 }

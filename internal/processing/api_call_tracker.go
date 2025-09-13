@@ -48,11 +48,11 @@ func (t *APICallTracker) GetSessionStats() APICallStats {
 	}
 
 	return APICallStats{
-		SessionCalls:     t.sessionCalls,
-		TotalCalls:       t.totalCalls,
-		SessionDuration:  duration,
-		CallsByEndpoint:  endpointCopy,
-		CallsPerMinute:   float64(t.sessionCalls) / duration.Minutes(),
+		SessionCalls:    t.sessionCalls,
+		TotalCalls:      t.totalCalls,
+		SessionDuration: duration,
+		CallsByEndpoint: endpointCopy,
+		CallsPerMinute:  float64(t.sessionCalls) / duration.Minutes(),
 	}
 }
 
@@ -86,11 +86,11 @@ func (t *APICallTracker) LogSessionSummary(ctx context.Context) {
 
 // APICallStats represents API call statistics
 type APICallStats struct {
-	SessionCalls     int64
-	TotalCalls       int64
-	SessionDuration  time.Duration
-	CallsByEndpoint  map[string]int64
-	CallsPerMinute   float64
+	SessionCalls    int64
+	TotalCalls      int64
+	SessionDuration time.Duration
+	CallsByEndpoint map[string]int64
+	CallsPerMinute  float64
 }
 
 // PredictCallsForNextCycle estimates API calls needed for next execution cycle

@@ -9,11 +9,11 @@ import (
 // These will cause compilation errors if the types don't implement the interfaces
 
 var (
-	_ TornClientInterface                    = (*torn.Client)(nil)
-	_ SheetsClientInterface                  = (*sheets.Client)(nil)
-	_ LocationServiceInterface               = (*LocationService)(nil)
-	_ TravelTimeServiceInterface             = (*TravelTimeService)(nil)
-	_ AttackProcessingServiceInterface       = (*AttackProcessingService)(nil)
-	_ WarSummaryServiceInterface             = (*WarSummaryService)(nil)
-	_ StateChangeDetectionServiceInterface   = (*StateChangeDetectionService)(nil)
+	_ TornClientInterface                  = (*torn.Client)(nil)
+	_ SheetsClientInterface                = (*sheets.Client)(nil)
+	_ LocationServiceInterface             = (*LocationService)(nil)
+	_ TravelTimeServiceInterface           = (*TravelTimeService)(nil)
+	_ AttackProcessingServiceInterface     = (*AttackProcessingService)(nil)
+	_ WarSummaryServiceInterface           = (*WarSummaryService)(nil)
+	_ StateChangeDetectionServiceInterface = (*StateChangeDetectionService)(nil)
 )

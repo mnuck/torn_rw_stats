@@ -31,10 +31,10 @@ func DefaultAPICacheConfig() APICacheConfig {
 
 // CachedTornClient wraps a TornClient with intelligent caching
 type CachedTornClient struct {
-	client    TornClientInterface
-	config    APICacheConfig
-	tracker   *APICallTracker
-	mutex     sync.RWMutex
+	client  TornClientInterface
+	config  APICacheConfig
+	tracker *APICallTracker
+	mutex   sync.RWMutex
 
 	// Cache entries
 	factionInfo      *cachedFactionInfo

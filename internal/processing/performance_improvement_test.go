@@ -21,9 +21,9 @@ func TestPerformanceImprovements(t *testing.T) {
 		// Set up realistic responses
 		mockTornClient.FactionWarsResponse = &app.WarResponse{
 			Wars: struct {
-				Ranked    *app.War    `json:"ranked"`
-				Raids     []app.War   `json:"raids"`
-				Territory []app.War   `json:"territory"`
+				Ranked    *app.War  `json:"ranked"`
+				Raids     []app.War `json:"raids"`
+				Territory []app.War `json:"territory"`
 			}{
 				Ranked: &app.War{
 					ID:    12345,
@@ -113,9 +113,9 @@ func TestPerformanceImprovements(t *testing.T) {
 			cycles        int
 			expectedRange [2]int // min, max expected calls per cycle
 		}{
-			{"NoActiveWars", 0, 10, [2]int{1, 2}},     // Just war checks, heavily cached
-			{"OneActiveWar", 1, 5, [2]int{3, 5}},      // War checks + attack calls
-			{"MultipleWars", 3, 3, [2]int{7, 10}},     // Multiple wars = more attack calls
+			{"NoActiveWars", 0, 10, [2]int{1, 2}}, // Just war checks, heavily cached
+			{"OneActiveWar", 1, 5, [2]int{3, 5}},  // War checks + attack calls
+			{"MultipleWars", 3, 3, [2]int{7, 10}}, // Multiple wars = more attack calls
 		}
 
 		for _, scenario := range scenarios {
@@ -127,9 +127,9 @@ func TestPerformanceImprovements(t *testing.T) {
 				// Set up scenario-specific responses
 				warResponse := &app.WarResponse{
 					Wars: struct {
-						Ranked    *app.War    `json:"ranked"`
-						Raids     []app.War   `json:"raids"`
-						Territory []app.War   `json:"territory"`
+						Ranked    *app.War  `json:"ranked"`
+						Raids     []app.War `json:"raids"`
+						Territory []app.War `json:"territory"`
 					}{},
 				}
 
@@ -188,9 +188,9 @@ func BenchmarkPerformanceOptimizations(b *testing.B) {
 		mockClient := mocks.NewMockTornClient()
 		mockClient.FactionWarsResponse = &app.WarResponse{
 			Wars: struct {
-				Ranked    *app.War    `json:"ranked"`
-				Raids     []app.War   `json:"raids"`
-				Territory []app.War   `json:"territory"`
+				Ranked    *app.War  `json:"ranked"`
+				Raids     []app.War `json:"raids"`
+				Territory []app.War `json:"territory"`
 			}{
 				Raids: []app.War{{
 					ID:    12345,
@@ -232,8 +232,8 @@ func BenchmarkPerformanceOptimizations(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				// Simulate optimized: caching reduces API calls
-				_, _ = cachedClient.GetOwnFaction(ctx)    // Cached after first call
-				_, _ = cachedClient.GetFactionWars(ctx)   // Cached for 2 minutes
+				_, _ = cachedClient.GetOwnFaction(ctx)                                                      // Cached after first call
+				_, _ = cachedClient.GetFactionWars(ctx)                                                     // Cached for 2 minutes
 				_, _ = cachedClient.GetAllAttacksForWar(ctx, &mockClient.FactionWarsResponse.Wars.Raids[0]) // Never cached
 			}
 

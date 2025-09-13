@@ -49,8 +49,8 @@ func TestAPICallEfficiency(t *testing.T) {
 
 		for i := 0; i < 10; i++ {
 			// Each cycle: cached faction info, cached wars, fresh attacks
-			_, _ = cachedClient.GetOwnFaction(ctx)    // Only 1st call hits API
-			_, _ = cachedClient.GetFactionWars(ctx)   // Every few calls hit API (shorter TTL)
+			_, _ = cachedClient.GetOwnFaction(ctx)  // Only 1st call hits API
+			_, _ = cachedClient.GetFactionWars(ctx) // Every few calls hit API (shorter TTL)
 
 			// Attacks are never cached (too dynamic)
 			for j := 0; j < 2; j++ {
@@ -92,9 +92,9 @@ func TestAPICallEfficiency(t *testing.T) {
 		stats := tracker.GetSessionStats()
 
 		// Verify the breakdown makes sense
-		expectedFactionCalls := int64(1)  // Should be cached after first call
-		expectedWarCalls := int64(3)      // Should be cached but may expire (2min TTL)
-		expectedAttackCalls := int64(10)  // Total attacks: 1+2+3+1+2 = 9, but allow some variance
+		expectedFactionCalls := int64(1) // Should be cached after first call
+		expectedWarCalls := int64(3)     // Should be cached but may expire (2min TTL)
+		expectedAttackCalls := int64(10) // Total attacks: 1+2+3+1+2 = 9, but allow some variance
 
 		if factionCalls := stats.CallsByEndpoint["GetOwnFaction"]; factionCalls > expectedFactionCalls {
 			t.Errorf("Too many faction calls: expected ≤%d, got %d", expectedFactionCalls, factionCalls)
@@ -128,9 +128,9 @@ func TestAPIOptimizer(t *testing.T) {
 		// Simulate scenario: no active wars
 		emptyWarResponse := &app.WarResponse{
 			Wars: struct {
-				Ranked    *app.War    `json:"ranked"`
-				Raids     []app.War   `json:"raids"`
-				Territory []app.War   `json:"territory"`
+				Ranked    *app.War  `json:"ranked"`
+				Raids     []app.War `json:"raids"`
+				Territory []app.War `json:"territory"`
 			}{},
 		}
 		mock.FactionWarsResponse = emptyWarResponse

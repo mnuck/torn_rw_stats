@@ -94,10 +94,10 @@ func TestAttackProcessingServiceDetermineAttackDirection(t *testing.T) {
 	service := NewAttackProcessingService(12345)
 
 	tests := []struct {
-		name        string
-		attack      app.Attack
+		name         string
+		attack       app.Attack
 		ourFactionID int
-		expected    string
+		expected     string
 	}{
 		{
 			name: "Outgoing attack",
