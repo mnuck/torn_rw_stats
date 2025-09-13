@@ -809,24 +809,20 @@ func (wp *WarProcessor) readExistingTravelData(ctx context.Context, spreadsheetI
 	return existingData, nil
 }
 
-// processTravelStatus fetches and processes travel status for a faction
-func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, factionID int, spreadsheetID string) error {
-	// Determine if this is our faction or enemy faction for logging
-	isOurFaction := factionID == wp.ourFactionID
-	factionType := "enemy faction"
-	if isOurFaction {
-		factionType = "our faction"
+// getFactionTypeForLogging determines faction type string for logging
+func (wp *WarProcessor) getFactionTypeForLogging(factionID int) string {
+	if factionID == wp.ourFactionID {
+		return "our faction"
 	}
-	
-	log.Debug().
-		Int("faction_id", factionID).
-		Str("faction_type", factionType).
-		Msg("Processing travel status")
+	return "enemy faction"
+}
 
+// setupTravelTracking sets up travel tracking infrastructure (sheets and existing data)
+func (wp *WarProcessor) setupTravelTracking(ctx context.Context, spreadsheetID string, factionID int) (string, map[string]app.TravelRecord, error) {
 	// Ensure travel status sheet exists
 	travelSheetName, err := wp.sheetsClient.EnsureTravelStatusSheet(ctx, spreadsheetID, factionID)
 	if err != nil {
-		return fmt.Errorf("failed to ensure travel status sheet: %w", err)
+		return "", nil, fmt.Errorf("failed to ensure travel status sheet: %w", err)
 	}
 
 	// Read existing travel data to preserve departure times
@@ -839,15 +835,22 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 		existingTravelData = make(map[string]app.TravelRecord) // Empty map as fallback
 	}
 
-	// Fetch faction basic data
+	return travelSheetName, existingTravelData, nil
+}
+
+// fetchFactionData retrieves current faction data from API
+func (wp *WarProcessor) fetchFactionData(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
 	factionData, err := wp.tornClient.GetFactionBasic(ctx, factionID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch faction basic data: %w", err)
+		return nil, fmt.Errorf("failed to fetch faction basic data: %w", err)
 	}
-	
-	// Get faction name from war data
+	return factionData, nil
+}
+
+// handleStateChangeDetection manages state change detection and persistence
+func (wp *WarProcessor) handleStateChangeDetection(ctx context.Context, war *app.War, factionID int, factionData *app.FactionBasicResponse, spreadsheetID string) (map[string]app.FactionMember, error) {
 	factionName := wp.getFactionName(war, factionID)
-	
+
 	// Load previous member states from persistent storage
 	var previousMembers map[string]app.FactionMember
 	previousStateSheetName, err := wp.sheetsClient.EnsurePreviousStateSheet(ctx, spreadsheetID, factionID)
@@ -905,11 +908,15 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 		}
 	}
 
-	// Convert faction members to travel records with travel time tracking
+	return previousMembers, nil
+}
+
+// convertMembersToTravelRecords processes faction members into travel records
+func (wp *WarProcessor) convertMembersToTravelRecords(ctx context.Context, members map[string]app.FactionMember, existingTravelData map[string]app.TravelRecord, previousMembers map[string]app.FactionMember) []app.TravelRecord {
 	currentTime := time.Now().UTC()
 	var travelRecords []app.TravelRecord
-	
-	for userIDStr, member := range factionData.Members {
+
+	for userIDStr, member := range members {
 		// Parse user ID for travel time calculations
 		userID, err := strconv.Atoi(userIDStr)
 		if err != nil {
@@ -919,10 +926,10 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 				Msg("Failed to parse user ID, skipping travel tracking")
 			userID = 0
 		}
-		
+
 		// Parse standardized location
 		location := wp.parseLocation(member.Status.Description)
-		
+
 		// Determine corrected state for special cases
 		state := member.Status.State
 		if strings.Contains(strings.ToLower(member.Status.Description), "returning to torn from") {
@@ -931,7 +938,7 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 		if strings.EqualFold(member.Status.State, "Abroad") {
 			state = "Okay"
 		}
-		
+
 		record := app.TravelRecord{
 			Name:     member.Name,
 			Level:    member.Level,
@@ -939,95 +946,8 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 			State:    state,
 		}
 
-		// Check existing travel record for departure/arrival time preservation
-		existingRecord, hasExistingTravel := existingTravelData[member.Name]
-
-		// Get previous state from member state data (not travel data)
-		previousState := ""
-		if previousMember, hasPreviousMember := previousMembers[userIDStr]; hasPreviousMember {
-			previousState = previousMember.Status.State
-			// Handle same state corrections that we apply to current state
-			if strings.Contains(strings.ToLower(previousMember.Status.Description), "returning to torn from") {
-				previousState = "Traveling"
-			}
-			if strings.EqualFold(previousMember.Status.State, "Abroad") {
-				previousState = "Okay"
-			}
-		}
-
-		// Handle different states with proper state transition logic
-		if strings.EqualFold(member.Status.State, "Hospital") {
-			// Hospital countdown
-			record.Countdown = wp.parseHospitalCountdown(member.Status.Description)
-			
-			// Clear travel times if transitioning from Traveling to Hospital
-			if strings.EqualFold(previousState, "Traveling") {
-				log.Debug().
-					Str("player", member.Name).
-					Str("previous_state", previousState).
-					Str("new_state", state).
-					Msg("State transition from Traveling - clearing departure/arrival times")
-			}
-			// Departure and Arrival remain empty for Hospital state
-			
-		} else if strings.EqualFold(state, "Traveling") {
-			if userID > 0 {
-				if strings.EqualFold(previousState, "Traveling") && hasExistingTravel && existingRecord.Departure != "" {
-					// Still traveling - preserve departure/arrival, only update countdown
-					record.Departure = existingRecord.Departure
-					record.Arrival = existingRecord.Arrival
-
-					// Recalculate only the countdown using existing arrival time
-					if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, location, existingRecord.Departure, existingRecord.Arrival, member.Status.TravelType, currentTime); travelData != nil {
-						record.Countdown = travelData.Countdown
-					}
-
-					log.Debug().
-						Str("player", member.Name).
-						Str("departure", record.Departure).
-						Str("arrival", record.Arrival).
-						Str("countdown", record.Countdown).
-						Msg("Still traveling - preserved departure/arrival, updated countdown only")
-
-				} else if previousState != "" && !strings.EqualFold(previousState, "Traveling") {
-					// State transition TO Traveling - set new departure/arrival times
-					travelDestination := wp.getTravelDestinationForCalculation(member.Status.Description, location)
-					if travelData := wp.calculateTravelTimes(ctx, userID, travelDestination, member.Status.TravelType, currentTime); travelData != nil {
-						record.Departure = travelData.Departure
-						record.Arrival = travelData.Arrival
-						record.Countdown = travelData.Countdown
-
-						log.Info().
-							Str("player", member.Name).
-							Str("previous_state", previousState).
-							Str("new_state", state).
-							Str("destination", travelDestination).
-							Str("departure", record.Departure).
-							Msg("State transition to Traveling - set new departure/arrival times")
-					}
-				} else {
-					// No previous state data (fresh start) or already traveling with no departure time
-					// Leave departure/arrival blank since we didn't observe the transition
-					log.Debug().
-						Str("player", member.Name).
-						Str("previous_state", previousState).
-						Str("new_state", state).
-						Bool("has_previous_member_state", previousState != "").
-						Bool("has_existing_travel", hasExistingTravel).
-						Msg("Player traveling but no observed state transition - leaving times blank")
-				}
-			}
-		} else {
-			// Not traveling and not in hospital - clear travel times if transitioning from Traveling
-			if strings.EqualFold(previousState, "Traveling") {
-				log.Debug().
-					Str("player", member.Name).
-					Str("previous_state", previousState).
-					Str("new_state", state).
-					Msg("State transition from Traveling - clearing departure/arrival times")
-			}
-			// Departure, Arrival, and Countdown remain empty for non-traveling states
-		}
+		// Process travel record based on member state
+		wp.processTravelRecordByState(ctx, &record, member, userID, userIDStr, existingTravelData, previousMembers, currentTime)
 
 		travelRecords = append(travelRecords, record)
 	}
@@ -1039,6 +959,137 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 		}
 		return travelRecords[i].Level > travelRecords[j].Level
 	})
+
+	return travelRecords
+}
+
+// processTravelRecordByState handles travel record processing based on member state
+func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *app.TravelRecord, member app.FactionMember, userID int, userIDStr string, existingTravelData map[string]app.TravelRecord, previousMembers map[string]app.FactionMember, currentTime time.Time) {
+	// Check existing travel record for departure/arrival time preservation
+	existingRecord, hasExistingTravel := existingTravelData[member.Name]
+
+	// Get previous state from member state data (not travel data)
+	previousState := ""
+	if previousMember, hasPreviousMember := previousMembers[userIDStr]; hasPreviousMember {
+		previousState = previousMember.Status.State
+		// Handle same state corrections that we apply to current state
+		if strings.Contains(strings.ToLower(previousMember.Status.Description), "returning to torn from") {
+			previousState = "Traveling"
+		}
+		if strings.EqualFold(previousMember.Status.State, "Abroad") {
+			previousState = "Okay"
+		}
+	}
+
+	// Handle different states with proper state transition logic
+	if strings.EqualFold(member.Status.State, "Hospital") {
+		// Hospital countdown
+		record.Countdown = wp.parseHospitalCountdown(member.Status.Description)
+
+		// Clear travel times if transitioning from Traveling to Hospital
+		if strings.EqualFold(previousState, "Traveling") {
+			log.Debug().
+				Str("player", member.Name).
+				Str("previous_state", previousState).
+				Str("new_state", record.State).
+				Msg("State transition from Traveling - clearing departure/arrival times")
+		}
+		// Departure and Arrival remain empty for Hospital state
+
+	} else if strings.EqualFold(record.State, "Traveling") {
+		if userID > 0 {
+			if strings.EqualFold(previousState, "Traveling") && hasExistingTravel && existingRecord.Departure != "" {
+				// Still traveling - preserve departure/arrival, only update countdown
+				record.Departure = existingRecord.Departure
+				record.Arrival = existingRecord.Arrival
+
+				// Recalculate only the countdown using existing arrival time
+				if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, record.Location, existingRecord.Departure, existingRecord.Arrival, member.Status.TravelType, currentTime); travelData != nil {
+					record.Countdown = travelData.Countdown
+				}
+
+				log.Debug().
+					Str("player", member.Name).
+					Str("departure", record.Departure).
+					Str("arrival", record.Arrival).
+					Str("countdown", record.Countdown).
+					Msg("Still traveling - preserved departure/arrival, updated countdown only")
+
+			} else if previousState != "" && !strings.EqualFold(previousState, "Traveling") {
+				// State transition TO Traveling - set new departure/arrival times
+				travelDestination := wp.getTravelDestinationForCalculation(member.Status.Description, record.Location)
+				if travelData := wp.calculateTravelTimes(ctx, userID, travelDestination, member.Status.TravelType, currentTime); travelData != nil {
+					record.Departure = travelData.Departure
+					record.Arrival = travelData.Arrival
+					record.Countdown = travelData.Countdown
+
+					log.Info().
+						Str("player", member.Name).
+						Str("previous_state", previousState).
+						Str("new_state", record.State).
+						Str("destination", travelDestination).
+						Str("departure", record.Departure).
+						Msg("State transition to Traveling - set new departure/arrival times")
+				}
+			} else {
+				// No previous state data (fresh start) or already traveling with no departure time
+				// Leave departure/arrival blank since we didn't observe the transition
+				log.Debug().
+					Str("player", member.Name).
+					Str("previous_state", previousState).
+					Str("new_state", record.State).
+					Bool("has_previous_member_state", previousState != "").
+					Bool("has_existing_travel", hasExistingTravel).
+					Msg("Player traveling but no observed state transition - leaving times blank")
+			}
+		}
+	} else {
+		// Not traveling and not in hospital - clear travel times if transitioning from Traveling
+		if strings.EqualFold(previousState, "Traveling") {
+			log.Debug().
+				Str("player", member.Name).
+				Str("previous_state", previousState).
+				Str("new_state", record.State).
+				Msg("State transition from Traveling - clearing departure/arrival times")
+		}
+		// Departure, Arrival, and Countdown remain empty for non-traveling states
+	}
+}
+
+// processTravelStatus fetches and processes travel status for a faction
+func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, factionID int, spreadsheetID string) error {
+	factionType := wp.getFactionTypeForLogging(factionID)
+
+	log.Debug().
+		Int("faction_id", factionID).
+		Str("faction_type", factionType).
+		Msg("Processing travel status")
+
+	// Setup travel tracking infrastructure
+	travelSheetName, existingTravelData, err := wp.setupTravelTracking(ctx, spreadsheetID, factionID)
+	if err != nil {
+		return fmt.Errorf("failed to setup travel tracking: %w", err)
+	}
+
+	// Fetch faction basic data
+	factionData, err := wp.fetchFactionData(ctx, factionID)
+	if err != nil {
+		return err
+	}
+
+	// Handle state change detection and persistence
+	previousMembers, err := wp.handleStateChangeDetection(ctx, war, factionID, factionData, spreadsheetID)
+	if err != nil {
+		// Log error but continue processing
+		log.Error().
+			Err(err).
+			Int("faction_id", factionID).
+			Msg("Failed to handle state change detection - continuing")
+		previousMembers = make(map[string]app.FactionMember) // Fallback
+	}
+
+	// Convert faction members to travel records with travel time tracking
+	travelRecords := wp.convertMembersToTravelRecords(ctx, factionData.Members, existingTravelData, previousMembers)
 
 	// Update travel status sheet
 	if err := wp.sheetsClient.UpdateTravelStatus(ctx, spreadsheetID, travelSheetName, travelRecords); err != nil {
