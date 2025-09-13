@@ -844,8 +844,9 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 
 // normalizeHospitalDescription removes countdown from hospital descriptions for comparison
 func (wp *WarProcessor) normalizeHospitalDescription(description string) string {
-	// Match "In hospital for X hrs Y mins" and replace with "In hospital"
-	hospitalRegex := regexp.MustCompile(`(?i)^(in hospital).*`)
+	// Match "In hospital for X hrs Y mins" and "In a [Country/Countries] hospital for X mins" patterns
+	// Handles single words (British, Mexican) and multi-word countries (South African)
+	hospitalRegex := regexp.MustCompile(`(?i)^in\s+(a\s+[\w\s]+\s+)?hospital(\s+for\s+.*)?$`)
 	if hospitalRegex.MatchString(description) {
 		return "In hospital"
 	}
