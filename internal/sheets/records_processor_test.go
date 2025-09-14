@@ -79,8 +79,8 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 				t.Fatalf("Expected no error, got %v", err)
 			}
 
-			if info.LastTimestamp != tc.expectedLast {
-				t.Errorf("Expected last timestamp %d, got %d", tc.expectedLast, info.LastTimestamp)
+			if info.LatestTimestamp != tc.expectedLast {
+				t.Errorf("Expected last timestamp %d, got %d", tc.expectedLast, info.LatestTimestamp)
 			}
 
 			if info.RecordCount != tc.expectedCount {
@@ -147,7 +147,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			existing := &RecordsInfo{
-				LastTimestamp: tc.existingTimestamp,
+				LatestTimestamp: tc.existingTimestamp,
 			}
 
 			filtered := processor.FilterAndSortRecords(tc.records, existing)
@@ -365,7 +365,7 @@ func TestAttackRecordsProcessorEdgeCases(t *testing.T) {
 		{AttackID: 2, Started: time.Unix(1, 0)},
 	}
 
-	existing := &RecordsInfo{LastTimestamp: 0}
+	existing := &RecordsInfo{LatestTimestamp: 0}
 	filtered := processor.FilterAndSortRecords(records, existing)
 
 	// Should keep records with timestamp > 0

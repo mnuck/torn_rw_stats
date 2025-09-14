@@ -12,7 +12,7 @@ func TestTravelStatusManagerEnsureTravelStatusSheet(t *testing.T) {
 	manager := NewTravelStatusManager(mockAPI)
 
 	factionID := 12345
-	expectedSheetName := "Travel - 12345"
+	expectedSheetName := "Status - 12345"
 
 	sheetName, err := manager.EnsureTravelStatusSheet(context.Background(), "test_spreadsheet", factionID)
 	if err != nil {
@@ -40,7 +40,7 @@ func TestTravelStatusManagerEnsureTravelStatusSheetAlreadyExists(t *testing.T) {
 	manager := NewTravelStatusManager(mockAPI)
 
 	factionID := 12345
-	expectedSheetName := "Travel - 12345"
+	expectedSheetName := "Status - 12345"
 
 	// Pre-create the sheet
 	mockAPI.sheets[expectedSheetName] = true
@@ -68,10 +68,10 @@ func TestTravelStatusManagerGenerateTravelSheetName(t *testing.T) {
 		factionID    int
 		expectedName string
 	}{
-		{123, "Travel - 123"},
-		{456, "Travel - 456"},
-		{0, "Travel - 0"},
-		{999999, "Travel - 999999"},
+		{123, "Status - 123"},
+		{456, "Status - 456"},
+		{0, "Status - 0"},
+		{999999, "Status - 999999"},
 	}
 
 	for _, tc := range testCases {
@@ -92,8 +92,8 @@ func TestTravelStatusManagerGenerateTravelStatusHeaders(t *testing.T) {
 
 	headerRow := headers[0]
 	expectedColumns := []string{
-		"Player ID", "Player Name", "Level", "Status", "Location",
-		"Last Action", "Until", "Travel Time Left", "Destination", "Last Updated",
+		"Player Name", "Level", "Status", "Location",
+		"Countdown", "Departure", "Arrival",
 	}
 
 	if len(headerRow) != len(expectedColumns) {
@@ -111,7 +111,7 @@ func TestTravelStatusManagerUpdateTravelStatus(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	manager := NewTravelStatusManager(mockAPI)
 
-	sheetName := "Travel - 123"
+	sheetName := "Status - 123"
 	records := []app.TravelRecord{
 		{
 			Name:      "TestPlayer1",
@@ -119,7 +119,6 @@ func TestTravelStatusManagerUpdateTravelStatus(t *testing.T) {
 			State:     "Traveling",
 			Location:  "Torn City",
 			Countdown: "5 minutes",
-			Arrival:   "Japan",
 		},
 		{
 			Name:      "TestPlayer2",
@@ -127,7 +126,6 @@ func TestTravelStatusManagerUpdateTravelStatus(t *testing.T) {
 			State:     "Okay",
 			Location:  "Japan",
 			Countdown: "",
-			Arrival:   "",
 		},
 	}
 
@@ -145,20 +143,20 @@ func TestTravelStatusManagerUpdateTravelStatus(t *testing.T) {
 	// Check first record
 	if len(sheetData) > 0 {
 		row := sheetData[0]
-		if len(row) < 10 {
-			t.Errorf("Expected at least 10 columns, got %d", len(row))
+		if len(row) != 7 {
+			t.Errorf("Expected 7 columns, got %d", len(row))
 		}
 
-		if row[1] != "TestPlayer1" {
-			t.Errorf("Expected player name 'TestPlayer1', got %v", row[1])
+		if row[0] != "TestPlayer1" {
+			t.Errorf("Expected player name 'TestPlayer1', got %v", row[0])
 		}
 
-		if row[2] != 50 {
-			t.Errorf("Expected level 50, got %v", row[2])
+		if row[1] != 50 {
+			t.Errorf("Expected level 50, got %v", row[1])
 		}
 
-		if row[3] != "Traveling" {
-			t.Errorf("Expected state 'Traveling', got %v", row[3])
+		if row[2] != "Traveling" {
+			t.Errorf("Expected state 'Traveling', got %v", row[2])
 		}
 	}
 }
@@ -167,7 +165,7 @@ func TestTravelStatusManagerUpdateTravelStatusEmpty(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	manager := NewTravelStatusManager(mockAPI)
 
-	sheetName := "Travel - 123"
+	sheetName := "Status - 123"
 	records := []app.TravelRecord{}
 
 	err := manager.UpdateTravelStatus(context.Background(), "test_spreadsheet", sheetName, records)
@@ -192,7 +190,6 @@ func TestTravelStatusManagerConvertTravelRecordsToRows(t *testing.T) {
 			State:     "Hospital",
 			Location:  "Torn City",
 			Countdown: "2 hours",
-			Arrival:   "Switzerland",
 		},
 		{
 			Name:      "Player2",
@@ -200,7 +197,6 @@ func TestTravelStatusManagerConvertTravelRecordsToRows(t *testing.T) {
 			State:     "Okay",
 			Location:  "Japan",
 			Countdown: "",
-			Arrival:   "",
 		},
 	}
 
@@ -212,21 +208,18 @@ func TestTravelStatusManagerConvertTravelRecordsToRows(t *testing.T) {
 
 	// Check first row
 	row1 := rows[0]
-	if len(row1) != 10 {
-		t.Errorf("Expected 10 columns, got %d", len(row1))
+	if len(row1) != 7 {
+		t.Errorf("Expected 7 columns, got %d", len(row1))
 	}
 
 	expectedValues := []interface{}{
-		0,             // Player ID
-		"Player1",     // Player Name
-		25,            // Level
-		"Hospital",    // Status
-		"Torn City",   // Location
-		"",            // Last Action
-		"",            // Until
-		"2 hours",     // Travel Time Left
-		"Switzerland", // Destination
-		"",            // Last Updated
+		"Player1",   // Player Name
+		25,          // Level
+		"Hospital",  // Status
+		"Torn City", // Location
+		"2 hours",   // Countdown
+		"",          // Departure (empty for hospital)
+		"",          // Arrival (empty for hospital)
 	}
 
 	for i, expected := range expectedValues {
@@ -237,7 +230,7 @@ func TestTravelStatusManagerConvertTravelRecordsToRows(t *testing.T) {
 
 	// Check second row
 	row2 := rows[1]
-	if row2[1] != "Player2" || row2[2] != 100 || row2[3] != "Okay" {
+	if row2[0] != "Player2" || row2[1] != 100 || row2[2] != "Okay" {
 		t.Error("Second row data doesn't match expected values")
 	}
 }

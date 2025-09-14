@@ -48,19 +48,24 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			duration := time.Duration(minutes) * time.Minute
 			formatted := service.FormatTravelTime(duration)
 
-			// Should always be in HH:MM:SS format
-			if len(formatted) != 8 {
+			// Should always be in 'HH:MM:SS format (with apostrophe prefix)
+			if len(formatted) != 9 {
 				return false
 			}
 
-			// Should have colons at positions 2 and 5
-			if formatted[2] != ':' || formatted[5] != ':' {
+			// Should start with apostrophe
+			if formatted[0] != '\'' {
 				return false
 			}
 
-			// Negative durations should format as 00:00:00
+			// Should have colons at positions 3 and 6 (after apostrophe)
+			if formatted[3] != ':' || formatted[6] != ':' {
+				return false
+			}
+
+			// Negative durations should format as '00:00:00
 			if minutes < 0 {
-				return formatted == "00:00:00"
+				return formatted == "'00:00:00"
 			}
 
 			return true
@@ -81,9 +86,9 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			expectedHours := hours
 			expectedMinutes := minutes
 
-			// Parse the formatted string
+			// Parse the formatted string (skip the apostrophe prefix)
 			var parsedHours, parsedMinutes, parsedSeconds int
-			n, err := fmt.Sscanf(formatted, "%02d:%02d:%02d", &parsedHours, &parsedMinutes, &parsedSeconds)
+			n, err := fmt.Sscanf(formatted[1:], "%02d:%02d:%02d", &parsedHours, &parsedMinutes, &parsedSeconds)
 			if err != nil || n != 3 {
 				return false
 			}
@@ -116,7 +121,7 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			}
 			negativeDuration := time.Duration(negativeMinutes) * time.Minute
 			formatted := service.FormatTravelTime(negativeDuration)
-			return formatted == "00:00:00"
+			return formatted == "'00:00:00"
 		},
 		gen.IntRange(-1000, 0),
 	))

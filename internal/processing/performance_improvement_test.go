@@ -61,7 +61,7 @@ func TestPerformanceImprovements(t *testing.T) {
 		}
 
 		// Set up additional mock responses for sheets operations
-		mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel Status - 1001"
+		mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel - 1001"
 		mockSheetsClient.EnsurePreviousStateSheetResponse = "Previous State - 1001"
 		mockSheetsClient.EnsureStateChangeRecordsSheetResponse = "State Changes - 1001"
 		mockSheetsClient.ReadSheetResponse = [][]interface{}{} // Empty sheet data
@@ -92,7 +92,7 @@ func TestPerformanceImprovements(t *testing.T) {
 		for i := 0; i < cycles; i++ {
 			startCalls := optimizedProcessor.GetAPICallCount()
 
-			err := optimizedProcessor.ProcessActiveWars(ctx)
+			err := optimizedProcessor.ProcessActiveWars(ctx, false)
 			if err != nil {
 				t.Fatalf("Processing cycle %d failed: %v", i, err)
 			}

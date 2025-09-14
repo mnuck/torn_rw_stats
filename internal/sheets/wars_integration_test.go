@@ -48,7 +48,8 @@ func TestConvertRecordsToRows(t *testing.T) {
 		},
 	}
 
-	rows := client.convertRecordsToRows(records)
+	processor := NewAttackRecordsProcessor(client)
+	rows := processor.ConvertRecordsToRows(records)
 
 	if len(rows) != 1 {
 		t.Fatalf("Expected 1 row, got %d", len(rows))
@@ -100,7 +101,8 @@ func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 		},
 	}
 
-	rows := client.convertRecordsToRows(records)
+	processor := NewAttackRecordsProcessor(client)
+	rows := processor.ConvertRecordsToRows(records)
 
 	if len(rows) != 1 {
 		t.Fatalf("Expected 1 row, got %d", len(rows))
@@ -128,8 +130,8 @@ func TestConvertTravelRecordsToRows(t *testing.T) {
 			Location:  "Mexico",
 			State:     "Traveling",
 			Departure: "2024-01-15 12:00:00",
-			Arrival:   "2024-01-15 14:00:00",
 			Countdown: "01:30:00",
+			Arrival:   "2024-01-15 12:26:00",
 		},
 		{
 			Name:      "TestPlayer2",
@@ -137,8 +139,8 @@ func TestConvertTravelRecordsToRows(t *testing.T) {
 			Location:  "Torn",
 			State:     "Okay",
 			Departure: "",
-			Arrival:   "",
 			Countdown: "",
+			Arrival:   "",
 		},
 	}
 
@@ -150,42 +152,48 @@ func TestConvertTravelRecordsToRows(t *testing.T) {
 
 	// Test first row (traveling player)
 	row1 := rows[0]
-	if len(row1) != 10 {
-		t.Fatalf("Expected 10 columns, got %d", len(row1))
+	if len(row1) != 7 {
+		t.Fatalf("Expected 7 columns, got %d", len(row1))
 	}
-	if row1[0] != 0 { // Player ID (placeholder)
-		t.Errorf("Expected Player ID 0, got %v", row1[0])
+	if row1[0] != "TestPlayer1" { // Player Name
+		t.Errorf("Expected Name 'TestPlayer1', got %v", row1[0])
 	}
-	if row1[1] != "TestPlayer1" { // Player Name
-		t.Errorf("Expected Name 'TestPlayer1', got %v", row1[1])
+	if row1[1] != 50 { // Level
+		t.Errorf("Expected Level 50, got %v", row1[1])
 	}
-	if row1[2] != 50 { // Level
-		t.Errorf("Expected Level 50, got %v", row1[2])
+	if row1[2] != "Traveling" { // Status
+		t.Errorf("Expected State 'Traveling', got %v", row1[2])
 	}
-	if row1[3] != "Traveling" { // Status
-		t.Errorf("Expected State 'Traveling', got %v", row1[3])
+	if row1[3] != "Mexico" { // Location
+		t.Errorf("Expected Location 'Mexico', got %v", row1[3])
 	}
-	if row1[4] != "Mexico" { // Location
-		t.Errorf("Expected Location 'Mexico', got %v", row1[4])
+	if row1[4] != "01:30:00" { // Countdown
+		t.Errorf("Expected Countdown '01:30:00', got %v", row1[4])
 	}
-	if row1[7] != "01:30:00" { // Travel Time Left
-		t.Errorf("Expected Travel Time Left '01:30:00', got %v", row1[7])
+	if row1[5] != "2024-01-15 12:00:00" { // Departure
+		t.Errorf("Expected Departure '2024-01-15 12:00:00', got %v", row1[5])
 	}
-	if row1[8] != "2024-01-15 14:00:00" { // Destination (Arrival time)
-		t.Errorf("Expected Destination '2024-01-15 14:00:00', got %v", row1[8])
+	if row1[6] != "2024-01-15 12:26:00" { // Arrival
+		t.Errorf("Expected Arrival '2024-01-15 12:26:00', got %v", row1[6])
 	}
 
 	// Test second row (non-traveling player)
 	row2 := rows[1]
-	if row2[1] != "TestPlayer2" { // Player Name
-		t.Errorf("Expected Name 'TestPlayer2', got %v", row2[1])
+	if row2[0] != "TestPlayer2" { // Player Name
+		t.Errorf("Expected Name 'TestPlayer2', got %v", row2[0])
 	}
-	if row2[3] != "Okay" { // Status
-		t.Errorf("Expected State 'Okay', got %v", row2[3])
+	if row2[2] != "Okay" { // Status
+		t.Errorf("Expected State 'Okay', got %v", row2[2])
 	}
 	// Empty fields should be empty strings
-	if row2[7] != "" { // Travel Time Left
-		t.Errorf("Expected empty Travel Time Left, got %v", row2[7])
+	if row2[4] != "" { // Countdown
+		t.Errorf("Expected empty Countdown, got %v", row2[4])
+	}
+	if row2[5] != "" { // Departure
+		t.Errorf("Expected empty Departure, got %v", row2[5])
+	}
+	if row2[6] != "" { // Arrival
+		t.Errorf("Expected empty Arrival, got %v", row2[6])
 	}
 }
 
@@ -309,7 +317,8 @@ func TestFilterAndSortRecords(t *testing.T) {
 		RecordCount:     1,
 	}
 
-	filtered := client.filterAndSortRecords(records, existing)
+	processor := NewAttackRecordsProcessor(client)
+	filtered := processor.FilterAndSortRecords(records, existing)
 
 	// Should have 2 records (code_2 and code_3) - code_1 duplicates filtered out
 	if len(filtered) != 2 {
@@ -341,7 +350,8 @@ func TestEmptyRecordHandling(t *testing.T) {
 
 	t.Run("empty attack records", func(t *testing.T) {
 		records := []app.AttackRecord{}
-		rows := client.convertRecordsToRows(records)
+		processor := NewAttackRecordsProcessor(client)
+	rows := processor.ConvertRecordsToRows(records)
 		if len(rows) != 0 {
 			t.Errorf("Expected 0 rows for empty records, got %d", len(rows))
 		}

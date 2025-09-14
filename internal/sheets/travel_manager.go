@@ -22,7 +22,7 @@ func NewTravelStatusManager(api SheetsAPI) *TravelStatusManager {
 	}
 }
 
-// EnsureTravelStatusSheet creates a travel status sheet for a faction if it doesn't exist
+// EnsureTravelStatusSheet creates a status sheet for a faction if it doesn't exist
 func (m *TravelStatusManager) EnsureTravelStatusSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	sheetName := m.GenerateTravelSheetName(factionID)
 
@@ -36,7 +36,7 @@ func (m *TravelStatusManager) EnsureTravelStatusSheet(ctx context.Context, sprea
 		log.Info().
 			Str("sheet_name", sheetName).
 			Int("faction_id", factionID).
-			Msg("Creating travel status sheet")
+			Msg("Creating status sheet")
 
 		if err := m.api.CreateSheet(ctx, spreadsheetID, sheetName); err != nil {
 			return "", fmt.Errorf("failed to create travel sheet: %w", err)
@@ -44,16 +44,18 @@ func (m *TravelStatusManager) EnsureTravelStatusSheet(ctx context.Context, sprea
 
 		// Initialize with headers
 		if err := m.InitializeTravelStatusSheet(ctx, spreadsheetID, sheetName); err != nil {
-			return "", fmt.Errorf("failed to initialize travel sheet: %w", err)
+			return "", fmt.Errorf("failed to initialize status sheet: %w", err)
 		}
+
+		// Note: Formatting will be applied after data is added to prevent inheritance issues
 	}
 
 	return sheetName, nil
 }
 
-// GenerateTravelSheetName creates a standardized travel sheet name for a faction
+// GenerateTravelSheetName creates a standardized status sheet name for a faction
 func (m *TravelStatusManager) GenerateTravelSheetName(factionID int) string {
-	return fmt.Sprintf("Travel - %d", factionID)
+	return fmt.Sprintf("Status - %d", factionID)
 }
 
 // InitializeTravelStatusSheet sets up headers for a travel status sheet
@@ -67,7 +69,7 @@ func (m *TravelStatusManager) InitializeTravelStatusSheet(ctx context.Context, s
 
 	log.Debug().
 		Str("sheet_name", sheetName).
-		Msg("Initialized travel status sheet with headers")
+		Msg("Initialized status sheet with headers")
 
 	return nil
 }
@@ -76,16 +78,13 @@ func (m *TravelStatusManager) InitializeTravelStatusSheet(ctx context.Context, s
 func (m *TravelStatusManager) GenerateTravelStatusHeaders() [][]interface{} {
 	return [][]interface{}{
 		{
-			"Player ID",
 			"Player Name",
 			"Level",
 			"Status",
 			"Location",
-			"Last Action",
-			"Until",
-			"Travel Time Left",
-			"Destination",
-			"Last Updated",
+			"Countdown",
+			"Departure",
+			"Arrival",
 		},
 	}
 }
@@ -103,14 +102,14 @@ func (m *TravelStatusManager) UpdateTravelStatus(ctx context.Context, spreadshee
 	rows := m.ConvertTravelRecordsToRows(records)
 
 	// Clear existing content (except headers) and write new data
-	rangeSpec := fmt.Sprintf("%s!A2:J", sheetName)
+	rangeSpec := fmt.Sprintf("%s!A2:G", sheetName)
 	if err := m.api.ClearRange(ctx, spreadsheetID, rangeSpec); err != nil {
 		return fmt.Errorf("failed to clear travel data: %w", err)
 	}
 
 	// Ensure sheet has enough capacity
 	requiredRows := len(rows) + 1 // +1 for header
-	requiredCols := 10
+	requiredCols := 7
 	if err := m.api.EnsureSheetCapacity(ctx, spreadsheetID, sheetName, requiredRows, requiredCols); err != nil {
 		return fmt.Errorf("failed to ensure sheet capacity: %w", err)
 	}
@@ -121,10 +120,19 @@ func (m *TravelStatusManager) UpdateTravelStatus(ctx context.Context, spreadshee
 		return fmt.Errorf("failed to update travel records: %w", err)
 	}
 
+	// Apply formatting after data is added to prevent inheritance issues
+	if err := m.api.FormatStatusSheet(ctx, spreadsheetID, sheetName); err != nil {
+		// Log error but don't fail - formatting is nice-to-have, not critical
+		log.Warn().
+			Err(err).
+			Str("sheet_name", sheetName).
+			Msg("Failed to apply formatting to status sheet")
+	}
+
 	log.Info().
 		Str("sheet_name", sheetName).
 		Int("records_updated", len(records)).
-		Msg("Updated travel status sheet")
+		Msg("Updated status sheet")
 
 	return nil
 }
@@ -135,16 +143,13 @@ func (m *TravelStatusManager) ConvertTravelRecordsToRows(records []app.TravelRec
 
 	for i, record := range records {
 		rows[i] = []interface{}{
-			0,                // Player ID (placeholder - not available in TravelRecord)
-			record.Name,      // Player Name
-			record.Level,     // Level
-			record.State,     // Status
-			record.Location,  // Location
-			"",               // Last Action (not available in TravelRecord)
-			"",               // Until (not available in TravelRecord)
-			record.Countdown, // Travel Time Left
-			record.Arrival,   // Destination
-			"",               // Last Updated (not available in TravelRecord)
+			record.Name,           // Player Name
+			record.Level,          // Level
+			record.State,          // Status
+			record.Location,       // Location
+			record.Countdown,      // Countdown (travel time left or hospital time)
+			record.Departure,      // Departure time
+			record.Arrival,        // Arrival time
 		}
 	}
 

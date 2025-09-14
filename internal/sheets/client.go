@@ -197,3 +197,28 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 
 	return nil
 }
+
+// FormatStatusSheet is disabled - formatting is handled manually in Google Sheets
+// We only keep the apostrophe prefix in travel time formatting to prevent decimal conversion
+func (c *Client) FormatStatusSheet(ctx context.Context, spreadsheetID, sheetName string) error {
+	log.Debug().
+		Str("sheet_name", sheetName).
+		Msg("Skipping automatic formatting - handled manually")
+	return nil
+}
+
+// getSheetID retrieves the sheet ID for a given sheet name
+func (c *Client) getSheetID(ctx context.Context, spreadsheetID, sheetName string) (int64, error) {
+	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get spreadsheet: %w", err)
+	}
+
+	for _, sheet := range spreadsheet.Sheets {
+		if sheet.Properties.Title == sheetName {
+			return sheet.Properties.SheetId, nil
+		}
+	}
+
+	return 0, fmt.Errorf("sheet %s not found", sheetName)
+}

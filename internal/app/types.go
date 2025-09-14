@@ -194,8 +194,8 @@ type TravelRecord struct {
 	Location  string `json:"location"`
 	State     string `json:"state"`
 	Departure string `json:"departure"`
-	Arrival   string `json:"arrival"`
 	Countdown string `json:"countdown"`
+	Arrival   string `json:"arrival"`
 }
 
 // StateChangeRecord represents a member's state change record

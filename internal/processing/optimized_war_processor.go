@@ -59,7 +59,7 @@ func NewOptimizedWarProcessor(
 }
 
 // ProcessActiveWars processes wars with sophisticated state-based optimization
-func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
+func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force bool) error {
 	// Always fetch war data first to determine actual current state
 	log.Debug().
 		Msg("Fetching war data to determine current state")
@@ -83,12 +83,18 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 		Msg("Starting war processor loop")
 
 	// Now check if we should do full processing based on updated state
-	if !owp.stateManager.ShouldProcessNow() {
+	if !force && !owp.stateManager.ShouldProcessNow() {
 		log.Info().
 			Str("current_state", stateInfo.State.String()).
 			Dur("time_until_next_check", stateInfo.TimeUntilCheck).
 			Msg("Skipping full processing - not time for next check")
 		return nil
+	}
+
+	if force {
+		log.Info().
+			Str("current_state", stateInfo.State.String()).
+			Msg("Force flag enabled - bypassing state-based optimization")
 	}
 
 	// Log pre-processing stats
@@ -110,16 +116,29 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	// Handle different states
 	switch currentState {
 	case NoWars:
+		if !force {
+			log.Info().
+				Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
+				Msg("No active wars - processor will pause until next Tuesday matchmaking")
+			return nil
+		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("No active wars - processor will pause until next Tuesday matchmaking")
-		return nil
+			Msg("No active wars - but force flag enabled, processing our faction status only")
+
+		// Process just our faction's status when no wars exist
+		return owp.processOurFactionOnly(ctx)
 
 	case PostWar:
+		if !force {
+			log.Info().
+				Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
+				Msg("War completed - processor will pause until next week's matchmaking")
+			return nil
+		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("War completed - processor will pause until next week's matchmaking")
-		return nil
+			Msg("War completed - but force flag enabled, continuing processing")
 
 	case PreWar:
 		log.Info().
@@ -134,8 +153,8 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 		// Continue to full processing
 	}
 
-	// Only process if we have wars that need attention (PreWar or ActiveWar)
-	if currentState == PreWar || currentState == ActiveWar {
+	// Only process if we have wars that need attention (PreWar or ActiveWar) or force flag is enabled
+	if currentState == PreWar || currentState == ActiveWar || force {
 		// Process wars using existing logic but with optimized client
 		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
 		err = owp.processor.ProcessActiveWars(ctx)
@@ -226,6 +245,40 @@ func calculateCacheHitRate(callsByEndpoint map[string]int64, cacheStats CacheSta
 
 	// This is a simplified calculation - in reality we'd track cache hits vs misses
 	return float64(cacheStats.ValidEntries) / float64(cacheableCalls+int64(cacheStats.ValidEntries)) * 100
+}
+
+// processOurFactionOnly processes just our faction's status when no wars exist
+func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) error {
+	log.Info().Msg("Processing our faction status only (no active wars)")
+
+	// Ensure our faction ID is loaded
+	if err := owp.processor.ensureOurFactionID(ctx); err != nil {
+		return fmt.Errorf("failed to initialize faction ID: %w", err)
+	}
+
+	ourFactionID := owp.processor.ourFactionID
+	if ourFactionID == 0 {
+		return fmt.Errorf("our faction ID is not set")
+	}
+
+	// Create a dummy war structure for travel processing (needed for the existing processTravelStatus method)
+	dummyWar := &app.War{
+		ID: 0, // Use 0 to indicate "no war"
+		Factions: []app.Faction{
+			{ID: ourFactionID}, // Just our faction
+		},
+	}
+
+	// Process our faction's travel status using existing method
+	if err := owp.processor.processTravelStatus(ctx, dummyWar, ourFactionID, owp.processor.config.SpreadsheetID); err != nil {
+		return fmt.Errorf("failed to process our faction travel status: %w", err)
+	}
+
+	log.Info().
+		Int("faction_id", ourFactionID).
+		Msg("Successfully processed our faction status")
+
+	return nil
 }
 
 // OptimizationSummary provides a summary of API optimization effectiveness

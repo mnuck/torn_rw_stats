@@ -223,12 +223,12 @@ func (m *WarSheetsManager) ConvertSummaryToRows(summary *app.WarSummary) []inter
 		summary.StartTime.Format("2006-01-02 15:04:05"), // Start Time
 		endTimeStr,                     // End Time
 		"",                             // Empty row
-		summary.OurFaction,             // Our Faction
-		summary.EnemyFaction,           // Enemy Faction
+		summary.OurFaction.Name,        // Our Faction Name
+		summary.EnemyFaction.Name,      // Enemy Faction Name
 		"",                             // Empty row
 		"",                             // Current Scores header
-		0,                              // Our Score (placeholder - would need to be calculated from war data)
-		0,                              // Enemy Score (placeholder - would need to be calculated from war data)
+		summary.OurFaction.Score,       // Our Score
+		summary.EnemyFaction.Score,     // Enemy Score
 		"",                             // Empty row
 		"",                             // Attack Statistics header
 		summary.TotalAttacks,           // Total Attacks

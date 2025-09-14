@@ -116,6 +116,14 @@ func (m *MockSheetsAPI) EnsureSheetCapacity(ctx context.Context, spreadsheetID, 
 	return nil
 }
 
+func (m *MockSheetsAPI) FormatStatusSheet(ctx context.Context, spreadsheetID, sheetName string) error {
+	if m.shouldError {
+		return &mockError{msg: "mock format error"}
+	}
+	// For testing, this is a no-op
+	return nil
+}
+
 func (m *MockSheetsAPI) SetError(shouldError bool) {
 	m.shouldError = shouldError
 }
@@ -257,11 +265,11 @@ func TestAttackRecordsProcessorReadExistingRecords(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	// Set up mock data with timestamps
+	// Set up mock data with attack records (ID, Code, Started timestamp)
 	mockAPI.SetSheetData("test_sheet", [][]interface{}{
-		{"1000"},
-		{"2000"},
-		{"1500"},
+		{100001, "attack_code_1", "2024-01-01 10:16:40", "2024-01-01 10:17:40"},
+		{100002, "attack_code_2", "2024-01-01 10:33:20", "2024-01-01 10:34:20"},
+		{100003, "attack_code_3", "2024-01-01 10:25:00", "2024-01-01 10:26:00"},
 	})
 
 	info, err := processor.ReadExistingRecords(context.Background(), "test_spreadsheet", "test_sheet")
@@ -269,12 +277,22 @@ func TestAttackRecordsProcessorReadExistingRecords(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if info.LastTimestamp != 2000 {
-		t.Errorf("Expected last timestamp 2000, got %d", info.LastTimestamp)
+	// Expected: 2024-01-01 10:33:20 Unix timestamp
+	expectedTimestamp := int64(1704105200) // 2024-01-01 10:33:20 UTC
+	if info.LatestTimestamp != expectedTimestamp {
+		t.Errorf("Expected last timestamp %d, got %d", expectedTimestamp, info.LatestTimestamp)
 	}
 
 	if info.RecordCount != 3 {
 		t.Errorf("Expected record count 3, got %d", info.RecordCount)
+	}
+
+	// Check attack codes
+	if len(info.AttackCodes) != 3 {
+		t.Errorf("Expected 3 attack codes, got %d", len(info.AttackCodes))
+	}
+	if !info.AttackCodes["attack_code_1"] || !info.AttackCodes["attack_code_2"] || !info.AttackCodes["attack_code_3"] {
+		t.Error("Expected all attack codes to be present in map")
 	}
 }
 
@@ -283,30 +301,40 @@ func TestAttackRecordsProcessorFilterAndSortRecords(t *testing.T) {
 	processor := NewAttackRecordsProcessor(mockAPI)
 
 	records := []app.AttackRecord{
-		{AttackID: 1, Started: time.Unix(1000, 0)},
-		{AttackID: 2, Started: time.Unix(500, 0)}, // Should be filtered out
-		{AttackID: 3, Started: time.Unix(1500, 0)},
-		{AttackID: 4, Started: time.Unix(750, 0)}, // Should be filtered out
+		{AttackID: 1, Code: "new_code_1", Started: time.Unix(1000, 0)},
+		{AttackID: 2, Code: "existing_code", Started: time.Unix(500, 0)}, // Should be filtered out (duplicate)
+		{AttackID: 3, Code: "new_code_2", Started: time.Unix(1500, 0)},
+		{AttackID: 4, Code: "existing_code", Started: time.Unix(750, 0)}, // Should be filtered out (duplicate)
 	}
 
 	existing := &RecordsInfo{
-		LastTimestamp: 800, // Records with timestamp <= 800 should be filtered out
+		AttackCodes: map[string]bool{
+			"existing_code": true, // This code already exists
+		},
+		LatestTimestamp: 0,
+		RecordCount:     1,
 	}
 
 	filtered := processor.FilterAndSortRecords(records, existing)
 
-	// Should have 2 records (1000 and 1500)
+	// Should have 2 records (new_code_1 and new_code_2), duplicates filtered out
 	if len(filtered) != 2 {
 		t.Errorf("Expected 2 filtered records, got %d", len(filtered))
 	}
 
-	// Should be sorted by timestamp (oldest first)
+	// Should be sorted by timestamp (oldest first: 1000, then 1500)
 	if len(filtered) >= 2 {
 		if filtered[0].Started.Unix() != 1000 {
 			t.Errorf("Expected first record timestamp 1000, got %d", filtered[0].Started.Unix())
 		}
 		if filtered[1].Started.Unix() != 1500 {
 			t.Errorf("Expected second record timestamp 1500, got %d", filtered[1].Started.Unix())
+		}
+		if filtered[0].Code != "new_code_1" {
+			t.Errorf("Expected first record code 'new_code_1', got %s", filtered[0].Code)
+		}
+		if filtered[1].Code != "new_code_2" {
+			t.Errorf("Expected second record code 'new_code_2', got %s", filtered[1].Code)
 		}
 	}
 }
@@ -335,21 +363,25 @@ func TestAttackRecordsProcessorConvertRecordsToRows(t *testing.T) {
 	}
 
 	row := rows[0]
-	if len(row) < 13 {
-		t.Fatalf("Expected at least 13 columns, got %d", len(row))
+	if len(row) != 32 {
+		t.Fatalf("Expected 32 columns, got %d", len(row))
 	}
 
-	// Check key fields
-	if row[0] != int64(1000) { // Timestamp
-		t.Errorf("Expected timestamp 1000, got %v", row[0])
+	// Check key fields in new format
+	if row[0] != int64(123) { // AttackID
+		t.Errorf("Expected AttackID 123, got %v", row[0])
 	}
 
-	if row[3] != "Outgoing" { // Direction
-		t.Errorf("Expected direction 'Outgoing', got %v", row[3])
+	if row[1] != "Win" { // Code
+		t.Errorf("Expected code 'Win', got %v", row[1])
 	}
 
-	if row[4] != "TestAttacker" { // Attacker name
-		t.Errorf("Expected attacker 'TestAttacker', got %v", row[4])
+	if row[4] != "Outgoing" { // Direction
+		t.Errorf("Expected direction 'Outgoing', got %v", row[4])
+	}
+
+	if row[6] != "TestAttacker" { // AttackerName
+		t.Errorf("Expected attacker 'TestAttacker', got %v", row[6])
 	}
 }
 

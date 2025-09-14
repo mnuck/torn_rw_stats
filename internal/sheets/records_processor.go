@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
+	"time"
 
 	"torn_rw_stats/internal/app"
 
@@ -26,63 +26,73 @@ func NewAttackRecordsProcessor(api SheetsAPI) *AttackRecordsProcessor {
 
 // RecordsInfo contains information about existing records in a sheet
 type RecordsInfo struct {
-	LastTimestamp    int64
-	RecordCount      int
-	LastRowProcessed int
+	AttackCodes       map[string]bool
+	LatestTimestamp   int64 // For compatibility with existing usage
+	RecordCount       int
+	LastRowProcessed  int
 }
 
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there
 func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
-	// Read the timestamp column (column A) starting from row 2 (skip header)
-	rangeSpec := fmt.Sprintf("%s!A2:A", sheetName)
+	log.Debug().
+		Str("sheet_name", sheetName).
+		Msg("Reading existing attack records")
 
+	// Read all data from the sheet (starting from row 2 to skip headers)
+	rangeSpec := fmt.Sprintf("'%s'!A2:AF", sheetName)
 	values, err := p.api.ReadSheet(ctx, spreadsheetID, rangeSpec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read existing records: %w", err)
 	}
 
 	info := &RecordsInfo{
-		LastTimestamp:    0,
-		RecordCount:      0,
+		AttackCodes:      make(map[string]bool),
+		LatestTimestamp:  0,
+		RecordCount:      len(values),
 		LastRowProcessed: 1, // Header is row 1
 	}
 
-	// Find the last (highest) timestamp
-	for i, row := range values {
-		if len(row) == 0 || row[0] == nil {
+	validRows := 0
+	for _, row := range values {
+		if len(row) < 3 { // Need at least Code and Started timestamp
 			continue
 		}
 
-		timestampStr := parseStringValue(row[0])
-		if timestampStr == "" {
-			continue
+		// Parse Attack Code (column B) - always a string
+		if codeStr, ok := row[1].(string); ok && codeStr != "" {
+			info.AttackCodes[codeStr] = true
+			validRows++
 		}
 
-		// Parse the timestamp
-		timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
-		if err != nil {
-			log.Debug().
-				Str("timestamp_str", timestampStr).
-				Int("row", i+2). // +2 because we start from row 2
-				Err(err).
-				Msg("Failed to parse timestamp in existing records")
-			continue
+		// Parse Started timestamp (column C) to find latest
+		if startedStr, ok := row[2].(string); ok {
+			if startedTime, err := time.Parse("2006-01-02 15:04:05", startedStr); err == nil {
+				timestamp := startedTime.Unix()
+				if timestamp > info.LatestTimestamp {
+					info.LatestTimestamp = timestamp
+				}
+			}
 		}
-
-		if timestamp > info.LastTimestamp {
-			info.LastTimestamp = timestamp
-		}
-
-		info.RecordCount++
-		info.LastRowProcessed = i + 2 // +2 because we start from row 2
 	}
 
+	// Update record count to reflect valid rows only
+	info.RecordCount = validRows
+	info.LastRowProcessed = len(values) + 1 // +1 for header row
+
 	log.Debug().
-		Str("sheet_name", sheetName).
-		Int64("last_timestamp", info.LastTimestamp).
-		Int("record_count", info.RecordCount).
-		Int("last_row", info.LastRowProcessed).
-		Msg("Read existing records info")
+		Int("total_rows_read", len(values)).
+		Int("valid_records", info.RecordCount).
+		Int("unique_attack_codes", len(info.AttackCodes)).
+		Int64("latest_timestamp", info.LatestTimestamp).
+		Str("latest_time", time.Unix(info.LatestTimestamp, 0).Format("2006-01-02 15:04:05")).
+		Msg("Analyzed existing records")
+
+	// Validation: warn if no attack codes were parsed from non-empty sheet
+	if len(values) > 0 && len(info.AttackCodes) == 0 {
+		log.Warn().
+			Int("rows_in_sheet", len(values)).
+			Msg("No attack codes parsed from existing sheet - possible column mismatch")
+	}
 
 	return info, nil
 }
@@ -90,54 +100,87 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 // UpdateAttackRecords updates the attack records sheet with new records
 func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error {
 	if len(records) == 0 {
-		log.Debug().
-			Str("sheet_name", config.RecordsTabName).
-			Msg("No attack records to update")
 		return nil
-	}
-
-	// Read existing records to determine what's new
-	existing, err := p.ReadExistingRecords(ctx, spreadsheetID, config.RecordsTabName)
-	if err != nil {
-		return fmt.Errorf("failed to read existing records: %w", err)
-	}
-
-	// Filter and sort new records
-	newRecords := p.FilterAndSortRecords(records, existing)
-
-	if len(newRecords) == 0 {
-		log.Debug().
-			Str("sheet_name", config.RecordsTabName).
-			Int("total_records", len(records)).
-			Msg("No new records to add after filtering")
-		return nil
-	}
-
-	// Convert to spreadsheet format
-	rows := p.ConvertRecordsToRows(newRecords)
-
-	// Determine the range to append to
-	startRow := existing.LastRowProcessed + 1
-	rangeSpec := fmt.Sprintf("%s!A%d", config.RecordsTabName, startRow)
-
-	// Ensure sheet has enough capacity
-	requiredRows := startRow + len(rows)
-	requiredCols := 13 // Based on our header structure
-	if err := p.api.EnsureSheetCapacity(ctx, spreadsheetID, config.RecordsTabName, requiredRows, requiredCols); err != nil {
-		return fmt.Errorf("failed to ensure sheet capacity: %w", err)
-	}
-
-	// Append the new records
-	if err := p.api.AppendRows(ctx, spreadsheetID, rangeSpec, rows); err != nil {
-		return fmt.Errorf("failed to append attack records: %w", err)
 	}
 
 	log.Info().
 		Int("war_id", config.WarID).
 		Str("sheet_name", config.RecordsTabName).
-		Int("new_records_added", len(newRecords)).
-		Int("total_input_records", len(records)).
-		Msg("Updated attack records sheet")
+		Int("records_count", len(records)).
+		Msg("=== ENTERING UpdateAttackRecords ===")
+
+	// Read existing records to determine update strategy
+	existing, err := p.ReadExistingRecords(ctx, spreadsheetID, config.RecordsTabName)
+	if err != nil {
+		return fmt.Errorf("failed to read existing records: %w", err)
+	}
+
+	// Filter out duplicate attacks and sort chronologically
+	log.Debug().
+		Int("input_records", len(records)).
+		Int("existing_attack_codes", len(existing.AttackCodes)).
+		Int("existing_record_count", existing.RecordCount).
+		Msg("Starting deduplication")
+
+	newRecords := p.FilterAndSortRecords(records, existing)
+
+	if len(newRecords) == 0 {
+		log.Info().Msg("=== EXITING UpdateAttackRecords - No new records after deduplication ===")
+		return nil
+	}
+
+	log.Info().
+		Int("original_records", len(records)).
+		Int("new_records", len(newRecords)).
+		Int("existing_records", existing.RecordCount).
+		Msg("Processed records for update")
+
+	// Convert to spreadsheet format
+	rows := p.ConvertRecordsToRows(newRecords)
+
+	// Calculate required sheet dimensions (matching wars_api.go approach)
+	startRow := existing.RecordCount + 2 // +2 for header row and 1-based indexing
+	endRow := startRow + len(rows) - 1
+	requiredRows := endRow
+	requiredCols := 32 // AF column = 32
+
+	// Ensure sheet has sufficient capacity
+	if err := p.api.EnsureSheetCapacity(ctx, spreadsheetID, config.RecordsTabName, requiredRows, requiredCols); err != nil {
+		return fmt.Errorf("failed to ensure sheet capacity: %w", err)
+	}
+
+	// Append new rows to the sheet
+	rangeSpec := fmt.Sprintf("'%s'!A%d:AF%d", config.RecordsTabName, startRow, endRow)
+
+	// Log first few rows being written to detect duplicates at write time
+	sampleRows := make([]string, 0, 3)
+	for i, row := range rows {
+		if i < 3 && len(row) >= 2 {
+			if attackID, ok := row[0].(interface{}); ok {
+				if code, ok := row[1].(string); ok {
+					sampleRows = append(sampleRows, fmt.Sprintf("ID:%v Code:%s", attackID, code))
+				}
+			}
+		}
+	}
+
+	log.Info().
+		Str("range", rangeSpec).
+		Int("rows_to_write", len(rows)).
+		Strs("sample_rows", sampleRows).
+		Msg("=== WRITING TO SHEET ===")
+
+	// Use UpdateRange instead of AppendRows for exact range specification
+	err = p.api.UpdateRange(ctx, spreadsheetID, rangeSpec, rows)
+	if err != nil {
+		return fmt.Errorf("failed to append attack records: %w", err)
+	}
+
+	log.Info().
+		Int("war_id", config.WarID).
+		Int("records_appended", len(newRecords)).
+		Str("range", rangeSpec).
+		Msg("=== EXITING UpdateAttackRecords - Successfully appended records ===")
 
 	return nil
 }
@@ -146,58 +189,97 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord, existing *RecordsInfo) []app.AttackRecord {
 	var newRecords []app.AttackRecord
 
-	// Filter out records that already exist (timestamp <= last existing timestamp)
+	// Filter out duplicates using attack codes (guaranteed unique strings)
+	duplicates := 0
 	for _, record := range records {
-		recordTimestamp := record.Started.Unix()
-		if recordTimestamp > existing.LastTimestamp {
+		if !existing.AttackCodes[record.Code] {
 			newRecords = append(newRecords, record)
+		} else {
+			duplicates++
+			log.Debug().
+				Str("attack_code", record.Code).
+				Int64("attack_id", record.AttackID).
+				Msg("Filtered duplicate attack")
 		}
 	}
 
-	// Sort by timestamp (oldest first) for consistent ordering
+	// Log some example attack codes for debugging
+	sampleCodes := make([]string, 0, 3)
+	for i, record := range newRecords {
+		if i < 3 {
+			sampleCodes = append(sampleCodes, record.Code)
+		} else {
+			break
+		}
+	}
+
+	log.Info().
+		Int("input_records", len(records)).
+		Int("duplicates_filtered", duplicates).
+		Int("new_records", len(newRecords)).
+		Strs("sample_attack_codes", sampleCodes).
+		Msg("Completed deduplication filtering")
+
+	// Sort chronologically (oldest first)
 	sort.Slice(newRecords, func(i, j int) bool {
-		return newRecords[i].Started.Unix() < newRecords[j].Started.Unix()
+		return newRecords[i].Started.Before(newRecords[j].Started)
 	})
 
 	log.Debug().
-		Int("input_records", len(records)).
 		Int("filtered_records", len(newRecords)).
-		Int64("last_existing_timestamp", existing.LastTimestamp).
-		Msg("Filtered and sorted attack records")
+		Msg("Filtered and sorted records chronologically")
 
 	return newRecords
 }
 
 // ConvertRecordsToRows converts attack records into spreadsheet row format
 func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []app.AttackRecord) [][]interface{} {
-	rows := make([][]interface{}, len(records))
+	var rows [][]interface{}
 
-	for i, record := range records {
-		// Format timestamp as readable date/time
-		timestamp := record.Started.UTC()
-		dateStr := timestamp.Format("2006-01-02")
-		timeStr := timestamp.Format("15:04:05")
-
-		// Calculate respect per chain if chain > 0 (placeholder logic)
-		respectPerChain := ""
-		// Note: AttackRecord doesn't have Chain/Respect fields in current structure
-		// This would need to be calculated from actual war/attack data
-
-		rows[i] = []interface{}{
-			record.Started.Unix(),      // Timestamp (for sorting/filtering)
-			dateStr,                    // Date
-			timeStr,                    // Time
-			record.Direction,           // Direction (Attack/Defense)
-			record.AttackerName,        // Attacker
-			record.AttackerFactionName, // Attacker Faction
-			record.DefenderName,        // Defender
-			record.DefenderFactionName, // Defender Faction
-			record.Code,                // Result/Code
-			0,                          // Respect (placeholder - would need calculation)
-			0,                          // Chain (placeholder - would need calculation)
-			respectPerChain,            // Respect/Chain
-			record.AttackID,            // Attack ID
+	for _, record := range records {
+		// Helper function to safely convert nullable int pointers
+		factionID := func(id *int) interface{} {
+			if id == nil {
+				return ""
+			}
+			return *id
 		}
+
+		row := []interface{}{
+			record.AttackID,
+			record.Code,
+			record.Started.Format("2006-01-02 15:04:05"),
+			record.Ended.Format("2006-01-02 15:04:05"),
+			record.Direction,
+			record.AttackerID,
+			record.AttackerName,
+			record.AttackerLevel,
+			factionID(record.AttackerFactionID),
+			record.AttackerFactionName,
+			record.DefenderID,
+			record.DefenderName,
+			record.DefenderLevel,
+			factionID(record.DefenderFactionID),
+			record.DefenderFactionName,
+			record.Result,
+			fmt.Sprintf("%.2f", record.RespectGain),
+			fmt.Sprintf("%.2f", record.RespectLoss),
+			record.Chain,
+			record.IsInterrupted,
+			record.IsStealthed,
+			record.IsRaid,
+			record.IsRankedWar,
+			record.ModifierFairFight,
+			record.ModifierWar,
+			record.ModifierRetaliation,
+			record.ModifierGroup,
+			record.ModifierOverseas,
+			record.ModifierChain,
+			record.ModifierWarlord,
+			record.FinishingHitName,
+			record.FinishingHitValue,
+		}
+		rows = append(rows, row)
 	}
 
 	return rows

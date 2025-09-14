@@ -135,10 +135,11 @@ Run with 10-minute intervals:
   - Attack modifiers (Fair Fight, War, Retaliation, etc.)
   - Finishing hit effects and values
 
-### Travel Status Sheets (`Travel Status - {faction_id}`)
-- Real-time faction member travel monitoring:
-  - Member name, level, current location, status
-  - Departure/arrival times with countdown timers
+### Status Sheets (`Status - {faction_id}`)
+- Real-time faction member status monitoring:
+  - Member name, level, current location, status (travel, hospital, okay, etc.)
+  - Departure/arrival times with countdown timers for travel
+  - Hospital countdown timers
   - State change detection and logging
 
 ## Configuration

@@ -568,27 +568,27 @@ func (wp *WarProcessor) readExistingTravelData(ctx context.Context, spreadsheetI
 			record.Level = int(levelVal)
 		}
 
-		// Parse other string fields
-		if location, ok := row[2].(string); ok {
-			record.Location = location
-		}
-		if state, ok := row[3].(string); ok {
+		// Parse other string fields (column layout: Name, Level, Status, Location, Countdown, Departure, Arrival)
+		if state, ok := row[2].(string); ok {
 			record.State = state
 		}
-		// Parse optional columns (departure, arrival, countdown) safely
+		if location, ok := row[3].(string); ok {
+			record.Location = location
+		}
+		// Parse optional columns safely
 		if len(row) > 4 {
-			if departure, ok := row[4].(string); ok {
-				record.Departure = departure
+			if countdown, ok := row[4].(string); ok {
+				record.Countdown = countdown
 			}
 		}
 		if len(row) > 5 {
-			if arrival, ok := row[5].(string); ok {
-				record.Arrival = arrival
+			if departure, ok := row[5].(string); ok {
+				record.Departure = departure
 			}
 		}
 		if len(row) > 6 {
-			if countdown, ok := row[6].(string); ok {
-				record.Countdown = countdown
+			if arrival, ok := row[6].(string); ok {
+				record.Arrival = arrival
 			}
 		}
 
@@ -606,6 +606,7 @@ func (wp *WarProcessor) readExistingTravelData(ctx context.Context, spreadsheetI
 			Str("player", name).
 			Str("departure", record.Departure).
 			Str("arrival", record.Arrival).
+			Str("countdown", record.Countdown).
 			Str("state", record.State).
 			Msg("Found existing travel data record")
 	}
@@ -783,9 +784,9 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 				}
 				return "N/A"
 			}()).
-			Str("existing_arrival", func() string {
+			Str("existing_countdown", func() string {
 				if hasExistingTravel {
-					return existingRecord.Arrival
+					return existingRecord.Countdown
 				}
 				return "N/A"
 			}()).
@@ -817,36 +818,34 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 				Str("player", member.Name).
 				Str("previous_state", previousState).
 				Str("new_state", record.State).
-				Msg("State transition from Traveling - clearing departure/arrival times")
+				Msg("State transition from Traveling - clearing departure and countdown")
 		}
-		// Departure and Arrival remain empty for Hospital state
+		// Departure and Countdown remain empty for Hospital state
 
 	} else if strings.EqualFold(record.State, "Traveling") {
 		if userID > 0 {
 			if strings.EqualFold(previousState, "Traveling") && hasExistingTravel && existingRecord.Departure != "" {
 				// Still traveling - preserve departure/arrival, only update countdown
 				record.Departure = existingRecord.Departure
-				record.Arrival = existingRecord.Arrival
-
-				// Recalculate only the countdown using existing arrival time
+				// Recalculate only the countdown using existing departure time
 				if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, record.Location, existingRecord.Departure, existingRecord.Arrival, member.Status.TravelType, currentTime); travelData != nil {
 					record.Countdown = travelData.Countdown
+					record.Arrival = travelData.Arrival
 				}
 
 				log.Debug().
 					Str("player", member.Name).
 					Str("departure", record.Departure).
-					Str("arrival", record.Arrival).
 					Str("countdown", record.Countdown).
-					Msg("Still traveling - preserved departure/arrival, updated countdown only")
+					Msg("Still traveling - preserved departure, updated countdown only")
 
 			} else if previousState != "" && !strings.EqualFold(previousState, "Traveling") {
-				// State transition TO Traveling - set new departure/arrival times
+				// State transition TO Traveling - set new departure and countdown times
 				travelDestination := wp.locationService.GetTravelDestinationForCalculation(member.Status.Description, record.Location)
 				if travelData := wp.calculateTravelTimes(ctx, userID, travelDestination, member.Status.TravelType, currentTime); travelData != nil {
 					record.Departure = travelData.Departure
-					record.Arrival = travelData.Arrival
 					record.Countdown = travelData.Countdown
+					record.Arrival = travelData.Arrival
 
 					log.Info().
 						Str("player", member.Name).
@@ -854,28 +853,18 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 						Str("new_state", record.State).
 						Str("destination", travelDestination).
 						Str("departure", record.Departure).
-						Msg("State transition to Traveling - set new departure/arrival times")
+						Msg("State transition to Traveling - set new departure and countdown times")
 				}
 			} else {
 				// No previous state data (fresh start) or already traveling with no departure time
-				// Check if existing travel data has departure/arrival times - preserve them if present
-				if hasExistingTravel && (existingRecord.Departure != "" || existingRecord.Arrival != "") {
-					// Preserve any manually curated times
-					if existingRecord.Departure != "" {
-						record.Departure = existingRecord.Departure
-					}
-					if existingRecord.Arrival != "" {
-						record.Arrival = existingRecord.Arrival
-
-						// Only calculate countdown if we have arrival time
-						if arrivalTime, err := time.Parse("2006-01-02 15:04:05", record.Arrival); err == nil {
-							timeRemaining := arrivalTime.Sub(currentTime)
-							countdown := wp.travelTimeService.FormatTravelTime(timeRemaining)
-							if timeRemaining <= 0 {
-								countdown = "Arrived"
-							}
-							record.Countdown = countdown
-						}
+				// Check if existing travel data has departure time - preserve it if present
+				if hasExistingTravel && existingRecord.Departure != "" {
+					// Preserve manually curated departure time
+					record.Departure = existingRecord.Departure
+					// Recalculate countdown from departure
+					if travelData := wp.calculateTravelTimesFromDeparture(ctx, userID, record.Location, existingRecord.Departure, existingRecord.Arrival, member.Status.TravelType, currentTime); travelData != nil {
+						record.Countdown = travelData.Countdown
+						record.Arrival = travelData.Arrival
 					}
 
 					log.Debug().
@@ -883,20 +872,19 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 						Str("previous_state", previousState).
 						Str("new_state", record.State).
 						Str("departure", record.Departure).
-						Str("arrival", record.Arrival).
 						Str("countdown", record.Countdown).
 						Bool("has_previous_member_state", previousState != "").
 						Bool("has_existing_travel", hasExistingTravel).
-						Msg("Player traveling but no observed state transition - preserved existing times")
+						Msg("Player traveling but no observed state transition - preserved existing departure time")
 				} else {
-					// Leave departure/arrival blank since we didn't observe the transition and have no existing data
+					// Leave departure blank since we didn't observe the transition and have no existing data
 					log.Debug().
 						Str("player", member.Name).
 						Str("previous_state", previousState).
 						Str("new_state", record.State).
 						Bool("has_previous_member_state", previousState != "").
 						Bool("has_existing_travel", hasExistingTravel).
-						Msg("Player traveling but no observed state transition - leaving times blank")
+						Msg("Player traveling but no observed state transition - leaving departure blank")
 				}
 			}
 		}
@@ -907,9 +895,9 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 				Str("player", member.Name).
 				Str("previous_state", previousState).
 				Str("new_state", record.State).
-				Msg("State transition from Traveling - clearing departure/arrival times")
+				Msg("State transition from Traveling - clearing departure and countdown")
 		}
-		// Departure, Arrival, and Countdown remain empty for non-traveling states
+		// Departure and Countdown remain empty for non-traveling states
 	}
 }
 

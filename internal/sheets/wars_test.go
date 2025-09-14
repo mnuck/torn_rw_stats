@@ -404,10 +404,11 @@ func TestTravelStatusSheets(t *testing.T) {
 
 	t.Run("SheetCreation", func(t *testing.T) {
 		factionID := 1001
-		expectedSheetName := fmt.Sprintf("Travel Status - %d", factionID)
+		manager := NewTravelStatusManager(NewMockSheetsAPI())
+		expectedSheetName := manager.GenerateTravelSheetName(factionID)
 
-		if expectedSheetName != "Travel Status - 1001" {
-			t.Errorf("Expected sheet name 'Travel Status - 1001', got %s", expectedSheetName)
+		if expectedSheetName != "Status - 1001" {
+			t.Errorf("Expected sheet name 'Status - 1001', got %s", expectedSheetName)
 		}
 	})
 
@@ -419,8 +420,8 @@ func TestTravelStatusSheets(t *testing.T) {
 				Location:  "Mexico",
 				State:     "Traveling",
 				Departure: "2024-01-15 12:00:00",
-				Arrival:   "2024-01-15 14:00:00",
 				Countdown: "01:30:00",
+				Arrival:   "2024-01-15 12:26:00",
 			},
 		}
 
@@ -435,18 +436,27 @@ func TestTravelStatusSheets(t *testing.T) {
 			t.Errorf("Expected 7 columns, got %d", len(row))
 		}
 
-		// Verify fields
+		// Verify fields (layout: Name, Level, Status, Location, Countdown, Departure, Arrival)
 		if row[0] != "TestPlayer" {
 			t.Errorf("Expected Name 'TestPlayer', got %v", row[0])
 		}
 		if row[1] != 50 {
 			t.Errorf("Expected Level 50, got %v", row[1])
 		}
-		if row[2] != "Mexico" {
-			t.Errorf("Expected Location 'Mexico', got %v", row[2])
+		if row[2] != "Traveling" {
+			t.Errorf("Expected State 'Traveling', got %v", row[2])
 		}
-		if row[3] != "Traveling" {
-			t.Errorf("Expected State 'Traveling', got %v", row[3])
+		if row[3] != "Mexico" {
+			t.Errorf("Expected Location 'Mexico', got %v", row[3])
+		}
+		if row[4] != "01:30:00" {
+			t.Errorf("Expected Countdown '01:30:00', got %v", row[4])
+		}
+		if row[5] != "2024-01-15 12:00:00" {
+			t.Errorf("Expected Departure '2024-01-15 12:00:00', got %v", row[5])
+		}
+		if row[6] != "2024-01-15 12:26:00" {
+			t.Errorf("Expected Arrival '2024-01-15 12:26:00', got %v", row[6])
 		}
 	})
 }
@@ -510,13 +520,13 @@ func convertTravelRecordsToRows(records []app.TravelRecord) [][]interface{} {
 
 	for _, record := range records {
 		row := []interface{}{
-			record.Name,
-			record.Level,
-			record.Location,
-			record.State,
-			record.Departure,
-			record.Arrival,
-			record.Countdown,
+			record.Name,      // Player Name
+			record.Level,     // Level
+			record.State,     // Status
+			record.Location,  // Location
+			record.Countdown, // Countdown
+			record.Departure, // Departure
+			record.Arrival,   // Arrival
 		}
 		rows = append(rows, row)
 	}

@@ -272,27 +272,27 @@ func TestFormatTravelTime(t *testing.T) {
 		{
 			name:     "Zero duration",
 			duration: 0,
-			expected: "00:00:00",
+			expected: "'00:00:00",
 		},
 		{
 			name:     "Negative duration",
 			duration: -5 * time.Minute,
-			expected: "00:00:00",
+			expected: "'00:00:00",
 		},
 		{
 			name:     "Minutes only",
 			duration: 45 * time.Minute,
-			expected: "00:45:00",
+			expected: "'00:45:00",
 		},
 		{
 			name:     "Hours and minutes",
 			duration: 2*time.Hour + 30*time.Minute,
-			expected: "02:30:00",
+			expected: "'02:30:00",
 		},
 		{
 			name:     "Hours, minutes, seconds",
 			duration: 3*time.Hour + 15*time.Minute + 42*time.Second,
-			expected: "03:15:42",
+			expected: "'03:15:42",
 		},
 	}
 

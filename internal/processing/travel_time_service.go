@@ -74,16 +74,17 @@ func (tts *TravelTimeService) GetTravelTime(destination string, travelType strin
 }
 
 // FormatTravelTime formats duration as HH:MM:SS
+// Prefixed with apostrophe to force Google Sheets to treat as text (prevents fraction conversion)
 func (tts *TravelTimeService) FormatTravelTime(d time.Duration) string {
 	if d <= 0 {
-		return "00:00:00"
+		return "'00:00:00"
 	}
 
 	hours := int(d.Hours())
 	minutes := int(d.Minutes()) % 60
 	seconds := int(d.Seconds()) % 60
 
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	return fmt.Sprintf("'%02d:%02d:%02d", hours, minutes, seconds)
 }
 
 // CalculateTravelTimes calculates travel departure, arrival and countdown for a user

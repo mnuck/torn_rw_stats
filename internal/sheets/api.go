@@ -17,4 +17,7 @@ type SheetsAPI interface {
 	CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error
 	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
 	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
+
+	// Sheet formatting
+	FormatStatusSheet(ctx context.Context, spreadsheetID, sheetName string) error
 }

@@ -207,7 +207,7 @@ func TestProcessWarIntegrationWithMocks(t *testing.T) {
 	mockTornClient.AllAttacksForWarResponse = testAttacks
 
 	// Setup mocks for travel status processing (which runs after attack processing)
-	mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel Status - 12345"
+	mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel - 12345"
 	mockSheetsClient.ReadSheetResponse = [][]interface{}{} // Empty existing travel data
 
 	mockTornClient.FactionBasicResponse = &app.FactionBasicResponse{

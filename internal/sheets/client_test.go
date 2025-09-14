@@ -30,7 +30,7 @@ func TestSheetOperationLogic(t *testing.T) {
 		}{
 			{"Summary - 12345", "A", "B", 1, 25, "'Summary - 12345'!A1:B25"},
 			{"Records - 12345", "A", "AF", 2, 100, "'Records - 12345'!A2:AF100"},
-			{"Travel Status - 1001", "A", "G", 2, 50, "'Travel Status - 1001'!A2:G50"},
+			{"Travel - 1001", "A", "G", 2, 50, "'Travel - 1001'!A2:G50"},
 		}
 
 		for _, tc := range testCases {
@@ -50,14 +50,14 @@ func TestSheetOperationLogic(t *testing.T) {
 			expectedRecords string
 			expectedTravel  string
 		}{
-			{12345, 1001, "Summary - 12345", "Records - 12345", "Travel Status - 1001"},
-			{67890, 2002, "Summary - 67890", "Records - 67890", "Travel Status - 2002"},
+			{12345, 1001, "Summary - 12345", "Records - 12345", "Travel - 1001"},
+			{67890, 2002, "Summary - 67890", "Records - 67890", "Travel - 2002"},
 		}
 
 		for _, tc := range testCases {
 			summaryName := fmt.Sprintf("Summary - %d", tc.warID)
 			recordsName := fmt.Sprintf("Records - %d", tc.warID)
-			travelName := fmt.Sprintf("Travel Status - %d", tc.factionID)
+			travelName := fmt.Sprintf("Travel - %d", tc.factionID)
 
 			if summaryName != tc.expectedSummary {
 				t.Errorf("Expected summary name %s, got %s", tc.expectedSummary, summaryName)
