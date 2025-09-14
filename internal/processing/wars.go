@@ -53,7 +53,6 @@ func NewWarProcessor(
 	}
 }
 
-
 // NewOptimizedWarProcessorWithConcreteDependencies creates an OptimizedWarProcessor with concrete implementations
 // This is the recommended constructor for production use with state-based optimization
 func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
@@ -243,13 +242,40 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		return fmt.Errorf("failed to update attack records: %w", err)
 	}
 
-	// Process travel status for both factions
+	// Process travel status for both factions - fetch data upfront to avoid lag
 	ourFactionID := wp.getOurFactionID(war)
 	enemyFactionID := wp.getEnemyFactionID(war)
 
-	// Process our faction travel status
+	// Fetch faction data upfront for both factions to ensure synchronized snapshots
+	var ourFactionData, enemyFactionData *app.FactionBasicResponse
+
 	if ourFactionID > 0 {
-		if err := wp.processTravelStatus(ctx, war, ourFactionID, wp.config.SpreadsheetID); err != nil {
+		var err error
+		ourFactionData, err = wp.fetchFactionData(ctx, ourFactionID)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Int("war_id", war.ID).
+				Int("our_faction_id", ourFactionID).
+				Msg("Failed to fetch our faction data - skipping travel status")
+		}
+	}
+
+	if enemyFactionID > 0 {
+		var err error
+		enemyFactionData, err = wp.fetchFactionData(ctx, enemyFactionID)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Int("war_id", war.ID).
+				Int("enemy_faction_id", enemyFactionID).
+				Msg("Failed to fetch enemy faction data - skipping travel status")
+		}
+	}
+
+	// Process our faction travel status with pre-fetched data
+	if ourFactionID > 0 && ourFactionData != nil {
+		if err := wp.processTravelStatusWithData(ctx, war, ourFactionID, wp.config.SpreadsheetID, ourFactionData); err != nil {
 			log.Error().
 				Err(err).
 				Int("war_id", war.ID).
@@ -258,9 +284,9 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		}
 	}
 
-	// Process enemy faction travel status
-	if enemyFactionID > 0 {
-		if err := wp.processTravelStatus(ctx, war, enemyFactionID, wp.config.SpreadsheetID); err != nil {
+	// Process enemy faction travel status with pre-fetched data
+	if enemyFactionID > 0 && enemyFactionData != nil {
+		if err := wp.processTravelStatusWithData(ctx, war, enemyFactionID, wp.config.SpreadsheetID, enemyFactionData); err != nil {
 			log.Error().
 				Err(err).
 				Int("war_id", war.ID).
@@ -903,12 +929,24 @@ func (wp *WarProcessor) processTravelRecordByState(ctx context.Context, record *
 
 // processTravelStatus fetches and processes travel status for a faction
 func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, factionID int, spreadsheetID string) error {
+	// Fetch faction basic data
+	factionData, err := wp.fetchFactionData(ctx, factionID)
+	if err != nil {
+		return err
+	}
+
+	return wp.processTravelStatusWithData(ctx, war, factionID, spreadsheetID, factionData)
+}
+
+// processTravelStatusWithData processes travel status for a faction using pre-fetched faction data
+// This eliminates data lag by using synchronized faction snapshots
+func (wp *WarProcessor) processTravelStatusWithData(ctx context.Context, war *app.War, factionID int, spreadsheetID string, factionData *app.FactionBasicResponse) error {
 	factionType := wp.getFactionTypeForLogging(factionID)
 
 	log.Debug().
 		Int("faction_id", factionID).
 		Str("faction_type", factionType).
-		Msg("Processing travel status")
+		Msg("Processing travel status with pre-fetched data")
 
 	// Setup travel tracking infrastructure
 	travelSheetName, existingTravelData, err := wp.setupTravelTracking(ctx, spreadsheetID, factionID)
@@ -916,13 +954,7 @@ func (wp *WarProcessor) processTravelStatus(ctx context.Context, war *app.War, f
 		return fmt.Errorf("failed to setup travel tracking: %w", err)
 	}
 
-	// Fetch faction basic data
-	factionData, err := wp.fetchFactionData(ctx, factionID)
-	if err != nil {
-		return err
-	}
-
-	// Handle state change detection and persistence
+	// Handle state change detection and persistence using provided faction data
 	previousMembers, err := wp.handleStateChangeDetection(ctx, war, factionID, factionData, spreadsheetID)
 	if err != nil {
 		// Log error but continue processing

@@ -117,4 +117,3 @@ func (aps *AttackProcessingService) getOurFactionID(war *app.War) int {
 
 	return 0
 }
-

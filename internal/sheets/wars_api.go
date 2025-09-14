@@ -37,8 +37,6 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 	return processor.UpdateAttackRecords(ctx, spreadsheetID, config, records)
 }
 
-
-
 // Travel and State Management Functions - delegate to specialized managers
 
 // convertTravelRecordsToRows converts TravelRecord structs to sheet row format

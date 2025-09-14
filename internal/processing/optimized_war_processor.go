@@ -169,7 +169,6 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 	return nil
 }
 
-
 // LogOptimizationResults logs the impact of API optimizations
 func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
 	// Get current session stats
@@ -201,7 +200,6 @@ func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
 		Msg("API call estimate for next period")
 }
 
-
 // GetAPICallCount returns the current API call count
 func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
 	return owp.tracker.GetSessionStats().SessionCalls
@@ -211,7 +209,6 @@ func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
 func (owp *OptimizedWarProcessor) GetNextCheckTime() time.Time {
 	return owp.stateManager.GetNextCheckTime()
 }
-
 
 // GetOptimizationSummary returns a summary of optimization effectiveness
 func (owp *OptimizedWarProcessor) GetOptimizationSummary() OptimizationSummary {

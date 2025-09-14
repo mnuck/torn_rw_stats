@@ -351,7 +351,7 @@ func TestEmptyRecordHandling(t *testing.T) {
 	t.Run("empty attack records", func(t *testing.T) {
 		records := []app.AttackRecord{}
 		processor := NewAttackRecordsProcessor(client)
-	rows := processor.ConvertRecordsToRows(records)
+		rows := processor.ConvertRecordsToRows(records)
 		if len(rows) != 0 {
 			t.Errorf("Expected 0 rows for empty records, got %d", len(rows))
 		}
