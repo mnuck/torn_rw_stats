@@ -11,7 +11,7 @@ import (
 
 // MockSheetsAPI implements SheetsAPI for testing
 type MockSheetsAPI struct {
-	sheets          map[string]bool     // Track which sheets exist
+	sheets          map[string]bool            // Track which sheets exist
 	data            map[string][][]interface{} // Store sheet data
 	shouldError     bool
 	lastReadRange   string
@@ -180,7 +180,7 @@ func TestWarSheetsManagerGenerateTabNames(t *testing.T) {
 	manager := NewWarSheetsManager(NewMockSheetsAPI())
 
 	testCases := []struct {
-		warID        int
+		warID           int
 		expectedSummary string
 		expectedRecords string
 	}{
@@ -284,9 +284,9 @@ func TestAttackRecordsProcessorFilterAndSortRecords(t *testing.T) {
 
 	records := []app.AttackRecord{
 		{AttackID: 1, Started: time.Unix(1000, 0)},
-		{AttackID: 2, Started: time.Unix(500, 0)},   // Should be filtered out
+		{AttackID: 2, Started: time.Unix(500, 0)}, // Should be filtered out
 		{AttackID: 3, Started: time.Unix(1500, 0)},
-		{AttackID: 4, Started: time.Unix(750, 0)},   // Should be filtered out
+		{AttackID: 4, Started: time.Unix(750, 0)}, // Should be filtered out
 	}
 
 	existing := &RecordsInfo{

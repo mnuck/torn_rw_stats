@@ -26,9 +26,9 @@ func NewAttackRecordsProcessor(api SheetsAPI) *AttackRecordsProcessor {
 
 // RecordsInfo contains information about existing records in a sheet
 type RecordsInfo struct {
-	LastTimestamp     int64
-	RecordCount       int
-	LastRowProcessed  int
+	LastTimestamp    int64
+	RecordCount      int
+	LastRowProcessed int
 }
 
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there
@@ -184,19 +184,19 @@ func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []app.AttackRecord
 		// This would need to be calculated from actual war/attack data
 
 		rows[i] = []interface{}{
-			record.Started.Unix(),   // Timestamp (for sorting/filtering)
-			dateStr,                 // Date
-			timeStr,                 // Time
-			record.Direction,        // Direction (Attack/Defense)
-			record.AttackerName,     // Attacker
-			record.AttackerFactionName,  // Attacker Faction
-			record.DefenderName,     // Defender
-			record.DefenderFactionName,  // Defender Faction
-			record.Code,             // Result/Code
-			0,                       // Respect (placeholder - would need calculation)
-			0,                       // Chain (placeholder - would need calculation)
-			respectPerChain,         // Respect/Chain
-			record.AttackID,         // Attack ID
+			record.Started.Unix(),      // Timestamp (for sorting/filtering)
+			dateStr,                    // Date
+			timeStr,                    // Time
+			record.Direction,           // Direction (Attack/Defense)
+			record.AttackerName,        // Attacker
+			record.AttackerFactionName, // Attacker Faction
+			record.DefenderName,        // Defender
+			record.DefenderFactionName, // Defender Faction
+			record.Code,                // Result/Code
+			0,                          // Respect (placeholder - would need calculation)
+			0,                          // Chain (placeholder - would need calculation)
+			respectPerChain,            // Respect/Chain
+			record.AttackID,            // Attack ID
 		}
 	}
 

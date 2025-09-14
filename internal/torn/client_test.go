@@ -98,7 +98,10 @@ func TestHandleAPIResponse(t *testing.T) {
 		}))
 		defer server.Close()
 
-		resp, _ := http.Get(server.URL)
+		resp, err := http.Get(server.URL)
+		if err != nil {
+			t.Fatalf("Failed to make HTTP request: %v", err)
+		}
 		defer resp.Body.Close()
 
 		body, err := client.handleAPIResponse(resp)
@@ -119,10 +122,13 @@ func TestHandleAPIResponse(t *testing.T) {
 		}))
 		defer server.Close()
 
-		resp, _ := http.Get(server.URL)
+		resp, err := http.Get(server.URL)
+		if err != nil {
+			t.Fatalf("Failed to make HTTP request: %v", err)
+		}
 		defer resp.Body.Close()
 
-		_, err := client.handleAPIResponse(resp)
+		_, err = client.handleAPIResponse(resp)
 		if err == nil {
 			t.Fatal("Expected error for bad response, got nil")
 		}

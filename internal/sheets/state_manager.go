@@ -119,14 +119,14 @@ func (m *StateChangeManager) ConvertStateChangeToRow(record app.StateChangeRecor
 	timeStr := timestamp.Format("15:04:05")
 
 	return []interface{}{
-		record.Timestamp.Unix(), // Timestamp (for sorting)
-		dateStr,                 // Date
-		timeStr,                 // Time
-		record.MemberID,         // Player ID
-		record.MemberName,       // Player Name
-		"State Change",          // Change Type
-		record.OldState,         // Old Status
-		record.NewState,         // New Status
+		record.Timestamp.Unix(),  // Timestamp (for sorting)
+		dateStr,                  // Date
+		timeStr,                  // Time
+		record.MemberID,          // Player ID
+		record.MemberName,        // Player Name
+		"State Change",           // Change Type
+		record.OldState,          // Old Status
+		record.NewState,          // New Status
 		record.StatusDescription, // Description
 	}
 }
@@ -298,15 +298,15 @@ func (m *StateChangeManager) ConvertMembersToStateRows(members map[string]app.Fa
 		currentTime := time.Now().Format("2006-01-02 15:04:05")
 
 		row := []interface{}{
-			0,                          // Player ID (not available in FactionMember)
-			member.Name,                // Player Name
-			member.Level,               // Level
-			member.Status.Description,  // Status
-			lastActionTimestamp,        // Last Action (timestamp)
-			untilTimestamp,             // Until (timestamp)
-			member.Status.Details,      // Description
-			member.Position,            // Location/Position
-			currentTime,                // Last Updated
+			0,                         // Player ID (not available in FactionMember)
+			member.Name,               // Player Name
+			member.Level,              // Level
+			member.Status.Description, // Status
+			lastActionTimestamp,       // Last Action (timestamp)
+			untilTimestamp,            // Until (timestamp)
+			member.Status.Details,     // Description
+			member.Position,           // Location/Position
+			currentTime,               // Last Updated
 		}
 
 		rows = append(rows, row)

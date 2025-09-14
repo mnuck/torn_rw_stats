@@ -288,8 +288,8 @@ func TestFactionCacheReasonLogging(t *testing.T) {
 	tracker := NewAPICallTracker()
 
 	testCases := []struct {
-		name         string
-		state        WarState
+		name           string
+		state          WarState
 		expectedReason string
 	}{
 		{"NoWars", NoWars, "faction_unlocked_nowars"},

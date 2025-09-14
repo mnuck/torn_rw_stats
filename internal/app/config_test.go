@@ -106,10 +106,10 @@ func TestSetupEnvironment(t *testing.T) {
 	}()
 
 	testCases := []struct {
-		name           string
-		env            string
-		logLevel       string
-		expectedLevel  zerolog.Level
+		name          string
+		env           string
+		logLevel      string
+		expectedLevel zerolog.Level
 	}{
 		{"ProductionDebug", "production", "debug", zerolog.DebugLevel},
 		{"ProductionInfo", "production", "info", zerolog.InfoLevel},

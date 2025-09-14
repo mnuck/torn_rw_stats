@@ -10,12 +10,12 @@ import (
 
 // MockTornAPI implements TornAPI for testing
 type MockTornAPI struct {
-	warResponse        *app.WarResponse
-	attackResponse     *app.AttackResponse
-	factionResponse    *app.FactionBasicResponse
+	warResponse         *app.WarResponse
+	attackResponse      *app.AttackResponse
+	factionResponse     *app.FactionBasicResponse
 	factionInfoResponse *app.FactionInfoResponse
-	apiCallCount       int64
-	shouldError        bool
+	apiCallCount        int64
+	shouldError         bool
 }
 
 func (m *MockTornAPI) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
@@ -392,10 +392,10 @@ func TestShouldStopPagination(t *testing.T) {
 	processor := NewAttackProcessor(mockAPI)
 
 	testCases := []struct {
-		name        string
-		pageResult  *PageResult
-		fromTime    int64
-		shouldStop  bool
+		name       string
+		pageResult *PageResult
+		fromTime   int64
+		shouldStop bool
 	}{
 		{
 			name: "NoAttacksReturned",

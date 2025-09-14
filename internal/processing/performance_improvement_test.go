@@ -141,7 +141,7 @@ func TestPerformanceImprovements(t *testing.T) {
 		}{
 			{"NoActiveWars", 0, 10, [2]int{0, 1}}, // Heavily cached, minimal calls
 			{"OneActiveWar", 1, 5, [2]int{1, 3}},  // War checks + attack calls, with aggressive caching
-			{"MultipleWars", 3, 3, [2]int{3, 6}}, // Multiple wars with aggressive caching
+			{"MultipleWars", 3, 3, [2]int{3, 6}},  // Multiple wars with aggressive caching
 		}
 
 		for _, scenario := range scenarios {

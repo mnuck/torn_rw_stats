@@ -285,3 +285,97 @@ func TestHasStatusChanged(t *testing.T) {
 		t.Error("Expected status change for different status descriptions")
 	}
 }
+
+// Test the WarProcessor wrapper method for processAttacksIntoRecords (currently 0% coverage)
+func TestWarProcessor_processAttacksIntoRecords(t *testing.T) {
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
+
+	war := &app.War{
+		ID: 1001,
+		Factions: []app.Faction{
+			{ID: 12345, Name: "Our Faction"},
+			{ID: 67890, Name: "Enemy Faction"},
+		},
+	}
+
+	attacks := []app.Attack{
+		{
+			ID:      100001,
+			Code:    "test_code",
+			Started: 1640995200,
+			Ended:   1640995260,
+			Attacker: app.User{
+				ID:      123,
+				Name:    "TestAttacker",
+				Level:   50,
+				Faction: &app.Faction{ID: 12345, Name: "Our Faction"},
+			},
+			Defender: app.User{
+				ID:      456,
+				Name:    "TestDefender",
+				Level:   45,
+				Faction: &app.Faction{ID: 67890, Name: "Enemy Faction"},
+			},
+			Result:      "Hospitalized",
+			RespectGain: 2.5,
+		},
+	}
+
+	// Call the WarProcessor method directly (not the service)
+	records := wp.processAttacksIntoRecords(attacks, war)
+
+	if len(records) != 1 {
+		t.Fatalf("Expected 1 record, got %d", len(records))
+	}
+
+	record := records[0]
+	if record.AttackID != 100001 {
+		t.Errorf("Expected AttackID 100001, got %d", record.AttackID)
+	}
+	if record.Direction != "Outgoing" {
+		t.Errorf("Expected Direction 'Outgoing', got %q", record.Direction)
+	}
+}
+
+// Test the WarProcessor wrapper method for generateWarSummary (currently 0% coverage)
+func TestWarProcessor_generateWarSummary(t *testing.T) {
+	wp := newTestWarProcessor(&app.Config{})
+	wp.ourFactionID = 12345
+
+	war := &app.War{
+		ID:    2001,
+		Start: 1640995200,
+		End:   nil,
+		Factions: []app.Faction{
+			{ID: 12345, Name: "Our Faction", Score: 150},
+			{ID: 67890, Name: "Enemy Faction", Score: 120},
+		},
+	}
+
+	attacks := []app.Attack{
+		{
+			ID: 1,
+			Attacker: app.User{
+				ID:      123,
+				Faction: &app.Faction{ID: 12345},
+			},
+			Defender: app.User{
+				ID:      456,
+				Faction: &app.Faction{ID: 67890},
+			},
+			Result:      "Hospitalized",
+			RespectGain: 3.0,
+		},
+	}
+
+	// Call the WarProcessor method directly (not the service)
+	summary := wp.generateWarSummary(war, attacks)
+
+	if summary.WarID != 2001 {
+		t.Errorf("Expected WarID 2001, got %d", summary.WarID)
+	}
+	if summary.Status != "Active" {
+		t.Errorf("Expected Status 'Active', got %q", summary.Status)
+	}
+}

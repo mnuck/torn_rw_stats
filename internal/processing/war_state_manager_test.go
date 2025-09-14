@@ -556,3 +556,126 @@ func TestStateInfo(t *testing.T) {
 		t.Error("Expected non-empty description")
 	}
 }
+
+// TestShouldProcessNow tests the critical processing decision logic we just fixed
+func TestShouldProcessNow(t *testing.T) {
+	testCases := []struct {
+		name            string
+		state           WarState
+		expectedProcess bool
+		description     string
+	}{
+		{
+			name:            "ActiveWar_ShouldAlwaysProcess",
+			state:           ActiveWar,
+			expectedProcess: true,
+			description:     "Real-time monitoring should always process",
+		},
+		{
+			name:            "PreWar_ShouldAlwaysProcess",
+			state:           PreWar,
+			expectedProcess: true,
+			description:     "Reconnaissance monitoring should always process",
+		},
+		{
+			name:            "PostWar_ShouldAlwaysProcess",
+			state:           PostWar,
+			expectedProcess: true,
+			description:     "Post-war processing should always process",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			wsm := NewWarStateManager()
+			wsm.currentState = tc.state
+			wsm.lastStateChange = time.Now().Add(-5 * time.Minute)
+
+			result := wsm.ShouldProcessNow()
+			if result != tc.expectedProcess {
+				t.Errorf("Expected ShouldProcessNow()=%v for %s (%s), got %v",
+					tc.expectedProcess, tc.state.String(), tc.description, result)
+			}
+		})
+	}
+}
+
+// TestShouldProcessNow_NoWarsState tests the time-based logic for NoWars state
+func TestShouldProcessNow_NoWarsState(t *testing.T) {
+	wsm := NewWarStateManager()
+	wsm.currentState = NoWars
+	wsm.lastStateChange = time.Now().Add(-1 * time.Hour)
+
+	t.Run("NotTimeForMatchmaking", func(t *testing.T) {
+		// For NoWars, should only process if it's time for Tuesday matchmaking
+		// Since we can't easily mock time, we test that it follows the logic
+		result := wsm.ShouldProcessNow()
+
+		// Get the next matchmaking time to see if we should process
+		nextCheck := wsm.GetNextCheckTime()
+		expectedResult := time.Now().After(nextCheck.Add(-30 * time.Second))
+
+		if result != expectedResult {
+			t.Errorf("Expected ShouldProcessNow()=%v for NoWars state based on matchmaking time, got %v",
+				expectedResult, result)
+		}
+	})
+}
+
+// TestGetNextCheckTime tests the scheduling calculations
+func TestGetNextCheckTime(t *testing.T) {
+	testCases := []struct {
+		name                string
+		state               WarState
+		expectedMinInterval time.Duration
+		expectedMaxInterval time.Duration
+	}{
+		{"ActiveWar", ActiveWar, 59 * time.Second, 61 * time.Second},                      // ~1 minute
+		{"PreWar", PreWar, 4*time.Minute + 59*time.Second, 5*time.Minute + 1*time.Second}, // ~5 minutes
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			wsm := NewWarStateManager()
+			wsm.currentState = tc.state
+			wsm.lastStateChange = time.Now()
+
+			nextCheck := wsm.GetNextCheckTime()
+			duration := time.Until(nextCheck)
+
+			if duration < tc.expectedMinInterval || duration > tc.expectedMaxInterval {
+				t.Errorf("Expected next check duration between %v and %v for %s, got %v",
+					tc.expectedMinInterval, tc.expectedMaxInterval, tc.state.String(), duration)
+			}
+		})
+	}
+}
+
+// TestGetNextCheckTime_TuesdayCalculations tests Tuesday matchmaking calculations
+func TestGetNextCheckTime_TuesdayCalculations(t *testing.T) {
+	wsm := NewWarStateManager()
+	wsm.currentState = NoWars
+	wsm.lastStateChange = time.Now()
+
+	nextCheck := wsm.GetNextCheckTime()
+
+	// Should be a future Tuesday at 12:05 UTC
+	if nextCheck.Before(time.Now()) {
+		t.Error("Next Tuesday check should be in the future")
+	}
+
+	// Should be on a Tuesday
+	if nextCheck.Weekday() != time.Tuesday {
+		t.Errorf("Expected Tuesday, got %s", nextCheck.Weekday())
+	}
+
+	// Should be at 12:05 UTC
+	if nextCheck.Hour() != 12 || nextCheck.Minute() != 5 {
+		t.Errorf("Expected 12:05 UTC, got %02d:%02d", nextCheck.Hour(), nextCheck.Minute())
+	}
+
+	// Should be in UTC
+	if nextCheck.Location() != time.UTC {
+		t.Errorf("Expected UTC timezone, got %s", nextCheck.Location())
+	}
+}

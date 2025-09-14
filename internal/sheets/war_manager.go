@@ -218,27 +218,27 @@ func (m *WarSheetsManager) ConvertSummaryToRows(summary *app.WarSummary) []inter
 	}
 
 	return []interface{}{
-		summary.WarID,        // War ID
-		summary.Status,       // Status
+		summary.WarID,  // War ID
+		summary.Status, // Status
 		summary.StartTime.Format("2006-01-02 15:04:05"), // Start Time
-		endTimeStr,           // End Time
-		"",                   // Empty row
-		summary.OurFaction,   // Our Faction
-		summary.EnemyFaction, // Enemy Faction
-		"",                   // Empty row
-		"",                   // Current Scores header
-		0,                    // Our Score (placeholder - would need to be calculated from war data)
-		0,                    // Enemy Score (placeholder - would need to be calculated from war data)
-		"",                   // Empty row
-		"",                   // Attack Statistics header
-		summary.TotalAttacks, // Total Attacks
-		summary.AttacksWon,   // Attacks Won
-		summary.AttacksLost,  // Attacks Lost
+		endTimeStr,                     // End Time
+		"",                             // Empty row
+		summary.OurFaction,             // Our Faction
+		summary.EnemyFaction,           // Enemy Faction
+		"",                             // Empty row
+		"",                             // Current Scores header
+		0,                              // Our Score (placeholder - would need to be calculated from war data)
+		0,                              // Enemy Score (placeholder - would need to be calculated from war data)
+		"",                             // Empty row
+		"",                             // Attack Statistics header
+		summary.TotalAttacks,           // Total Attacks
+		summary.AttacksWon,             // Attacks Won
+		summary.AttacksLost,            // Attacks Lost
 		fmt.Sprintf("%.1f%%", winRate), // Win Rate
-		"",                   // Empty row
-		"",                   // Respect Statistics header
-		summary.RespectGained, // Respect Gained
-		summary.RespectLost,   // Respect Lost
+		"",                             // Empty row
+		"",                             // Respect Statistics header
+		summary.RespectGained,          // Respect Gained
+		summary.RespectLost,            // Respect Lost
 		summary.RespectGained - summary.RespectLost, // Net Respect
 	}
 }

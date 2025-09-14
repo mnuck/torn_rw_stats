@@ -217,16 +217,16 @@ func TestTravelStatusManagerConvertTravelRecordsToRows(t *testing.T) {
 	}
 
 	expectedValues := []interface{}{
-		0,            // Player ID
-		"Player1",    // Player Name
-		25,           // Level
-		"Hospital",   // Status
-		"Torn City",  // Location
-		"",           // Last Action
-		"",           // Until
-		"2 hours",    // Travel Time Left
+		0,             // Player ID
+		"Player1",     // Player Name
+		25,            // Level
+		"Hospital",    // Status
+		"Torn City",   // Location
+		"",            // Last Action
+		"",            // Until
+		"2 hours",     // Travel Time Left
 		"Switzerland", // Destination
-		"",           // Last Updated
+		"",            // Last Updated
 	}
 
 	for i, expected := range expectedValues {

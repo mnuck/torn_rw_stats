@@ -13,11 +13,11 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 	processor := NewAttackRecordsProcessor(mockAPI)
 
 	testCases := []struct {
-		name           string
-		data           [][]interface{}
-		expectedLast   int64
-		expectedCount  int
-		expectError    bool
+		name          string
+		data          [][]interface{}
+		expectedLast  int64
+		expectedCount int
+		expectError   bool
 	}{
 		{
 			name: "valid timestamps",
@@ -43,8 +43,8 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 			expectError:   false,
 		},
 		{
-			name: "empty data",
-			data: [][]interface{}{},
+			name:          "empty data",
+			data:          [][]interface{}{},
 			expectedLast:  0,
 			expectedCount: 0,
 			expectError:   false,
@@ -106,9 +106,9 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 			name: "basic filtering and sorting",
 			records: []app.AttackRecord{
 				{AttackID: 1, Started: time.Unix(1000, 0)},
-				{AttackID: 2, Started: time.Unix(500, 0)},  // Should be filtered out
+				{AttackID: 2, Started: time.Unix(500, 0)}, // Should be filtered out
 				{AttackID: 3, Started: time.Unix(1500, 0)},
-				{AttackID: 4, Started: time.Unix(750, 0)},  // Should be filtered out
+				{AttackID: 4, Started: time.Unix(750, 0)}, // Should be filtered out
 				{AttackID: 5, Started: time.Unix(1200, 0)},
 			},
 			existingTimestamp: 800,
@@ -215,19 +215,19 @@ func TestAttackRecordsProcessorConvertRecordsToRowsComprehensive(t *testing.T) {
 	}
 
 	expectedValues1 := []interface{}{
-		int64(1640995200),  // Timestamp
-		"2022-01-01",       // Date
-		"00:00:00",         // Time
-		"Outgoing",         // Direction
-		"TestAttacker",     // Attacker
-		"AttackerFaction",  // Attacker Faction
-		"TestDefender",     // Defender
-		"DefenderFaction",  // Defender Faction
-		"Win",              // Code
-		0,                  // Respect (placeholder)
-		0,                  // Chain (placeholder)
-		"",                 // Respect/Chain (placeholder)
-		int64(123456),      // Attack ID
+		int64(1640995200), // Timestamp
+		"2022-01-01",      // Date
+		"00:00:00",        // Time
+		"Outgoing",        // Direction
+		"TestAttacker",    // Attacker
+		"AttackerFaction", // Attacker Faction
+		"TestDefender",    // Defender
+		"DefenderFaction", // Defender Faction
+		"Win",             // Code
+		0,                 // Respect (placeholder)
+		0,                 // Chain (placeholder)
+		"",                // Respect/Chain (placeholder)
+		int64(123456),     // Attack ID
 	}
 
 	for i, expected := range expectedValues1 {

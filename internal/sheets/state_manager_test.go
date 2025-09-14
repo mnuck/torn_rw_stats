@@ -215,14 +215,14 @@ func TestStateChangeManagerConvertStateChangeToRow(t *testing.T) {
 	row := manager.ConvertStateChangeToRow(record)
 
 	expectedValues := []interface{}{
-		int64(1640995200),        // Timestamp
-		"2022-01-01",             // Date
-		"00:00:00",               // Time
-		67890,                    // Player ID
-		"AnotherPlayer",          // Player Name
-		"State Change",           // Change Type
-		"Hospital",               // Old Status
-		"Okay",                   // New Status
+		int64(1640995200),         // Timestamp
+		"2022-01-01",              // Date
+		"00:00:00",                // Time
+		67890,                     // Player ID
+		"AnotherPlayer",           // Player Name
+		"State Change",            // Change Type
+		"Hospital",                // Old Status
+		"Okay",                    // New Status
 		"Recovered from hospital", // Description
 	}
 
