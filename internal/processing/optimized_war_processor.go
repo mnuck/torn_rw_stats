@@ -195,11 +195,6 @@ func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
 		Msg("API call estimate for next period")
 }
 
-// ResetSession resets optimization tracking for a new session
-func (owp *OptimizedWarProcessor) ResetSession() {
-	owp.tracker.ResetSession()
-	log.Info().Msg("API optimization session reset")
-}
 
 // GetAPICallCount returns the current API call count
 func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
@@ -211,11 +206,6 @@ func (owp *OptimizedWarProcessor) GetNextCheckTime() time.Time {
 	return owp.stateManager.GetNextCheckTime()
 }
 
-// ClearCache manually clears all cached data
-func (owp *OptimizedWarProcessor) ClearCache() {
-	owp.cachedClient.ClearCache()
-	log.Info().Msg("API cache manually cleared")
-}
 
 // GetOptimizationSummary returns a summary of optimization effectiveness
 func (owp *OptimizedWarProcessor) GetOptimizationSummary() OptimizationSummary {

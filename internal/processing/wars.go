@@ -53,25 +53,6 @@ func NewWarProcessor(
 	}
 }
 
-// NewWarProcessorWithConcreteDependencies creates a WarProcessor with concrete implementations
-// This is a convenience constructor for production use
-func NewWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *WarProcessor {
-	// Create the attack processing service
-	attackService := NewAttackProcessingService(config.OurFactionID)
-	summaryService := NewWarSummaryService(attackService)
-	stateChangeService := NewStateChangeDetectionService(sheetsClient)
-
-	return NewWarProcessor(
-		tornClient,
-		sheetsClient,
-		NewLocationService(),
-		NewTravelTimeService(),
-		attackService,
-		summaryService,
-		stateChangeService,
-		config,
-	)
-}
 
 // NewOptimizedWarProcessorWithConcreteDependencies creates an OptimizedWarProcessor with concrete implementations
 // This is the recommended constructor for production use with state-based optimization
