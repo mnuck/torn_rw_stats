@@ -7,6 +7,7 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/processing/mocks"
+	"torn_rw_stats/internal/sheets"
 )
 
 // TestPerformanceImprovements demonstrates the complete optimization impact
@@ -40,6 +41,30 @@ func TestPerformanceImprovements(t *testing.T) {
 			ID:   1001,
 			Name: "Our Faction",
 		}
+
+		// Set up mock sheets client responses
+		mockSheetsClient.EnsureWarSheetsResponse = &app.SheetConfig{
+			SummaryTabName: "Summary - 12345",
+			RecordsTabName: "Records - 12345",
+		}
+		mockSheetsClient.ReadExistingRecordsResponse = &sheets.ExistingRecordsInfo{
+			RecordCount:     0,
+			LatestTimestamp: 0,
+		}
+
+		// Set up faction basic responses with member data
+		mockTornClient.FactionBasicResponse = &app.FactionBasicResponse{
+			Members: map[string]app.FactionMember{
+				"123": {Name: "Player 1", Status: app.MemberStatus{State: "Okay"}},
+				"456": {Name: "Player 2", Status: app.MemberStatus{State: "Okay"}},
+			},
+		}
+
+		// Set up additional mock responses for sheets operations
+		mockSheetsClient.EnsureTravelStatusSheetResponse = "Travel Status - 1001"
+		mockSheetsClient.EnsurePreviousStateSheetResponse = "Previous State - 1001"
+		mockSheetsClient.EnsureStateChangeRecordsSheetResponse = "State Changes - 1001"
+		mockSheetsClient.ReadSheetResponse = [][]interface{}{} // Empty sheet data
 
 		// Set up services with real implementations
 		locationService := NewLocationService()

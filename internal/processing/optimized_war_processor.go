@@ -33,9 +33,9 @@ func NewOptimizedWarProcessor(
 
 	// Create optimization layer
 	tracker := NewAPICallTracker()
-	cachedClient := NewCachedTornClient(tornClient, tracker)
-	optimizer := NewAPIOptimizer(cachedClient, tracker)
 	stateManager := NewWarStateManager()
+	cachedClient := NewCachedTornClientWithWarStateManager(tornClient, tracker, stateManager)
+	optimizer := NewAPIOptimizer(cachedClient, tracker)
 
 	// Create processor with optimized client
 	processor := NewWarProcessor(

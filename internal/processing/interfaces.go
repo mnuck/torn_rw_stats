@@ -63,3 +63,9 @@ type StateChangeDetectionServiceInterface interface {
 	HasStatusChanged(oldMember, newMember app.FactionMember) bool
 	ProcessStateChanges(ctx context.Context, factionID int, factionName string, oldMembers, newMembers map[string]app.FactionMember, spreadsheetID string) error
 }
+
+// WarStateManagerInterface defines the interface for war state management
+type WarStateManagerInterface interface {
+	GetCurrentState() WarState
+	GetCurrentWar() *app.War
+}

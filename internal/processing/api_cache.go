@@ -18,6 +18,8 @@ type APICacheConfig struct {
 	WarsTTL time.Duration
 	// FactionBasicTTL is how long to cache faction member data
 	FactionBasicTTL time.Duration
+	// WarStateManager provides context for war-state-aware caching
+	WarStateManager WarStateManagerInterface
 }
 
 // DefaultAPICacheConfig returns sensible cache defaults
@@ -26,7 +28,15 @@ func DefaultAPICacheConfig() APICacheConfig {
 		FactionInfoTTL:  30 * time.Minute, // Faction info rarely changes
 		WarsTTL:         2 * time.Minute,  // Wars can start/end but not frequently
 		FactionBasicTTL: 5 * time.Minute,  // Member data changes but not constantly
+		WarStateManager: nil,              // Must be set separately
 	}
+}
+
+// NewAPICacheConfigWithWarStateManager creates cache config with war state awareness
+func NewAPICacheConfigWithWarStateManager(wsm WarStateManagerInterface) APICacheConfig {
+	config := DefaultAPICacheConfig()
+	config.WarStateManager = wsm
+	return config
 }
 
 // CachedTornClient wraps a TornClient with intelligent caching
@@ -67,22 +77,40 @@ func NewCachedTornClient(client TornClientInterface, tracker *APICallTracker) *C
 	}
 }
 
-// GetOwnFaction returns cached faction info or fetches fresh data
+// NewCachedTornClientWithWarStateManager creates a caching wrapper with war-state-aware caching
+func NewCachedTornClientWithWarStateManager(client TornClientInterface, tracker *APICallTracker, wsm WarStateManagerInterface) *CachedTornClient {
+	return &CachedTornClient{
+		client:           client,
+		config:           NewAPICacheConfigWithWarStateManager(wsm),
+		tracker:          tracker,
+		factionBasicData: make(map[int]*cachedFactionBasic),
+	}
+}
+
+// GetOwnFaction returns cached faction info or fetches fresh data with war-state-aware caching
 func (c *CachedTornClient) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {
 	c.mutex.RLock()
 	cached := c.factionInfo
 	c.mutex.RUnlock()
 
+	// Determine cache TTL based on war state (faction locking during wars)
+	cacheTTL := c.getFactionInfoCacheTTL()
+
 	// Check if cache is valid
-	if cached != nil && time.Since(cached.timestamp) < c.config.FactionInfoTTL {
+	if cached != nil && time.Since(cached.timestamp) < cacheTTL {
 		log.Debug().
 			Dur("cache_age", time.Since(cached.timestamp)).
+			Dur("cache_ttl", cacheTTL).
+			Str("reason", c.getFactionCacheReason()).
 			Msg("Using cached faction info (API call saved)")
 		return cached.data, nil
 	}
 
 	// Cache miss or expired - fetch fresh data
-	log.Debug().Msg("Fetching fresh faction info from API")
+	log.Debug().
+		Dur("cache_ttl", cacheTTL).
+		Str("reason", c.getFactionCacheReason()).
+		Msg("Fetching fresh faction info from API")
 	data, err := c.client.GetOwnFaction(ctx)
 	if err != nil {
 		return nil, err
@@ -239,4 +267,56 @@ type CacheStats struct {
 	ValidEntries   int
 	ExpiredEntries int
 	TotalEntries   int
+}
+
+// getFactionInfoCacheTTL returns appropriate cache TTL based on war state
+func (c *CachedTornClient) getFactionInfoCacheTTL() time.Duration {
+	// If no war state manager, use default TTL
+	if c.config.WarStateManager == nil {
+		return c.config.FactionInfoTTL
+	}
+
+	state := c.config.WarStateManager.GetCurrentState()
+	currentWar := c.config.WarStateManager.GetCurrentWar()
+
+	switch state {
+	case PreWar, ActiveWar:
+		// Faction is locked during wars - cache until war ends + buffer
+		if currentWar != nil && currentWar.End != nil {
+			warEnd := time.Unix(*currentWar.End, 0)
+			timeUntilWarEnd := time.Until(warEnd)
+			if timeUntilWarEnd > 0 {
+				// Cache until war end + 1 hour buffer
+				return timeUntilWarEnd + time.Hour
+			}
+		}
+		// If no end time or war already ended, use extended cache
+		return 4 * time.Hour // Extended cache for locked faction
+	case NoWars, PostWar:
+		// Faction can change - use default TTL
+		return c.config.FactionInfoTTL
+	default:
+		return c.config.FactionInfoTTL
+	}
+}
+
+// getFactionCacheReason returns human-readable reason for current cache strategy
+func (c *CachedTornClient) getFactionCacheReason() string {
+	if c.config.WarStateManager == nil {
+		return "no_war_state_manager"
+	}
+
+	state := c.config.WarStateManager.GetCurrentState()
+	switch state {
+	case PreWar:
+		return "faction_locked_prewar"
+	case ActiveWar:
+		return "faction_locked_activewar"
+	case NoWars:
+		return "faction_unlocked_nowars"
+	case PostWar:
+		return "faction_unlocked_postwar"
+	default:
+		return "unknown_state"
+	}
 }
