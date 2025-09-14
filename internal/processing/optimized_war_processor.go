@@ -150,19 +150,6 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	return nil
 }
 
-// hasActiveWars checks if the war response contains any active wars
-func (owp *OptimizedWarProcessor) hasActiveWars(warResponse *app.WarResponse) bool {
-	if warResponse.Wars.Ranked != nil {
-		return true
-	}
-	if len(warResponse.Wars.Raids) > 0 {
-		return true
-	}
-	if len(warResponse.Wars.Territory) > 0 {
-		return true
-	}
-	return false
-}
 
 // LogOptimizationResults logs the impact of API optimizations
 func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {

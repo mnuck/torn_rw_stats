@@ -118,25 +118,3 @@ func (aps *AttackProcessingService) getOurFactionID(war *app.War) int {
 	return 0
 }
 
-// getEnemyFactionID determines which faction is the enemy in the war
-func (aps *AttackProcessingService) getEnemyFactionID(war *app.War) int {
-	ourFactionID := aps.getOurFactionID(war)
-
-	for _, faction := range war.Factions {
-		if faction.ID != ourFactionID {
-			return faction.ID
-		}
-	}
-
-	return 0
-}
-
-// getFactionName gets the name of a faction by ID
-func (aps *AttackProcessingService) getFactionName(war *app.War, factionID int) string {
-	for _, faction := range war.Factions {
-		if faction.ID == factionID {
-			return faction.Name
-		}
-	}
-	return "Faction " + string(rune(factionID))
-}
