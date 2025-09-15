@@ -143,13 +143,13 @@ func (m *TravelStatusManager) ConvertTravelRecordsToRows(records []app.TravelRec
 
 	for i, record := range records {
 		rows[i] = []interface{}{
-			record.Name,           // Player Name
-			record.Level,          // Level
-			record.State,          // Status
-			record.Location,       // Location
-			record.Countdown,      // Countdown (travel time left or hospital time)
-			record.Departure,      // Departure time
-			record.Arrival,        // Arrival time
+			record.Name,      // Player Name
+			record.Level,     // Level
+			record.State,     // Status
+			record.Location,  // Location
+			record.Countdown, // Countdown (travel time left or hospital time)
+			record.Departure, // Departure time
+			record.Arrival,   // Arrival time
 		}
 	}
 

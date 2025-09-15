@@ -12,11 +12,13 @@ import (
 
 // OptimizedWarProcessor wraps WarProcessor with API call optimizations
 type OptimizedWarProcessor struct {
-	processor    *WarProcessor
-	cachedClient *CachedTornClient
-	optimizer    *APIOptimizer
-	tracker      *APICallTracker
-	stateManager *WarStateManager
+	processor       *WarProcessor
+	cachedClient    *CachedTornClient
+	optimizer       *APIOptimizer
+	tracker         *APICallTracker
+	stateManager    *WarStateManager
+	stateTracker    *StateTrackingService
+	spreadsheetID   string
 }
 
 // NewOptimizedWarProcessor creates a WarProcessor with API optimizations enabled
@@ -37,6 +39,9 @@ func NewOptimizedWarProcessor(
 	cachedClient := NewCachedTornClientWithWarStateManager(tornClient, tracker, stateManager)
 	optimizer := NewAPIOptimizer(cachedClient, tracker)
 
+	// Create state tracking service with raw client for real-time faction data
+	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
+
 	// Create processor with optimized client
 	processor := NewWarProcessor(
 		cachedClient, // Use cached client instead of raw client
@@ -50,11 +55,13 @@ func NewOptimizedWarProcessor(
 	)
 
 	return &OptimizedWarProcessor{
-		processor:    processor,
-		cachedClient: cachedClient,
-		optimizer:    optimizer,
-		tracker:      tracker,
-		stateManager: stateManager,
+		processor:     processor,
+		cachedClient:  cachedClient,
+		optimizer:     optimizer,
+		tracker:       tracker,
+		stateManager:  stateManager,
+		stateTracker:  stateTracker,
+		spreadsheetID: config.SpreadsheetID,
 	}
 }
 
@@ -113,6 +120,14 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		Bool("state_changed", previousState != currentState).
 		Msg("War state analysis complete")
 
+	// Ensure our faction ID is available for state tracking
+	if err := owp.processor.ensureOurFactionID(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to ensure our faction ID - continuing without state tracking")
+	}
+
+	// Process state changes for all observed factions
+	owp.processStateChanges(ctx, warResponse)
+
 	// Handle different states
 	switch currentState {
 	case NoWars:
@@ -169,7 +184,6 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 	return nil
 }
 
-
 // LogOptimizationResults logs the impact of API optimizations
 func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
 	// Get current session stats
@@ -201,7 +215,6 @@ func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
 		Msg("API call estimate for next period")
 }
 
-
 // GetAPICallCount returns the current API call count
 func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
 	return owp.tracker.GetSessionStats().SessionCalls
@@ -211,7 +224,6 @@ func (owp *OptimizedWarProcessor) GetAPICallCount() int64 {
 func (owp *OptimizedWarProcessor) GetNextCheckTime() time.Time {
 	return owp.stateManager.GetNextCheckTime()
 }
-
 
 // GetOptimizationSummary returns a summary of optimization effectiveness
 func (owp *OptimizedWarProcessor) GetOptimizationSummary() OptimizationSummary {
@@ -279,6 +291,78 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 		Msg("Successfully processed our faction status")
 
 	return nil
+}
+
+// processStateChanges handles state tracking for all observed factions
+func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse) {
+	// Determine which factions to track based on current wars
+	var factionIDs []int
+
+	// Add our faction ID if available
+	if owp.processor.ourFactionID != 0 {
+		factionIDs = append(factionIDs, owp.processor.ourFactionID)
+	}
+
+	// Add faction IDs from active wars
+	if warResponse.Wars.Ranked != nil {
+		for _, faction := range warResponse.Wars.Ranked.Factions {
+			factionIDs = append(factionIDs, faction.ID)
+		}
+	}
+
+	// Add faction IDs from raid wars
+	for _, war := range warResponse.Wars.Raids {
+		for _, faction := range war.Factions {
+			factionIDs = append(factionIDs, faction.ID)
+		}
+	}
+
+	// Add faction IDs from territory wars
+	for _, war := range warResponse.Wars.Territory {
+		for _, faction := range war.Factions {
+			factionIDs = append(factionIDs, faction.ID)
+		}
+	}
+
+	// Remove duplicates
+	factionIDs = owp.removeDuplicateFactionIDs(factionIDs)
+
+	// If no factions to track, skip
+	if len(factionIDs) == 0 {
+		log.Debug().Msg("No factions to track for state changes")
+		return
+	}
+
+	// Process state changes
+	log.Debug().
+		Ints("faction_ids", factionIDs).
+		Msg("Processing state changes for factions")
+
+	if err := owp.stateTracker.ProcessStateChanges(ctx, owp.spreadsheetID, factionIDs); err != nil {
+		log.Error().
+			Err(err).
+			Ints("faction_ids", factionIDs).
+			Msg("Failed to process state changes - continuing with main processing")
+	} else {
+		log.Debug().
+			Ints("faction_ids", factionIDs).
+			Msg("Successfully processed state changes")
+	}
+}
+
+// removeDuplicateFactionIDs removes duplicate faction IDs from a slice
+func (owp *OptimizedWarProcessor) removeDuplicateFactionIDs(factionIDs []int) []int {
+	seen := make(map[int]bool)
+	var result []int
+
+	for _, id := range factionIDs {
+		if !seen[id] {
+			seen[id] = true
+			result = append(result, id)
+		}
+	}
+
+	return result
 }
 
 // OptimizationSummary provides a summary of API optimization effectiveness

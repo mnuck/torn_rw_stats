@@ -26,10 +26,10 @@ func NewAttackRecordsProcessor(api SheetsAPI) *AttackRecordsProcessor {
 
 // RecordsInfo contains information about existing records in a sheet
 type RecordsInfo struct {
-	AttackCodes       map[string]bool
-	LatestTimestamp   int64 // For compatibility with existing usage
-	RecordCount       int
-	LastRowProcessed  int
+	AttackCodes      map[string]bool
+	LatestTimestamp  int64 // For compatibility with existing usage
+	RecordCount      int
+	LastRowProcessed int
 }
 
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there

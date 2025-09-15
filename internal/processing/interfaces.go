@@ -31,6 +31,14 @@ type SheetsClientInterface interface {
 	UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error
 	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
+
+	// Additional methods for state tracking
+	UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error
+	ClearRange(ctx context.Context, spreadsheetID, range_ string) error
+	AppendRows(ctx context.Context, spreadsheetID, range_ string, rows [][]interface{}) error
+	CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error
+	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
+	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
 }
 
 // LocationServiceInterface defines the location service methods used by WarProcessor
