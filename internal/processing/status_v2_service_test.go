@@ -20,8 +20,6 @@ func TestParseStateRecordFromRow(t *testing.T) {
 			name: "complete row with travel type",
 			row: []interface{}{
 				"2022-01-01 00:00:00",        // Timestamp
-				"2022-01-01",                 // Date
-				"00:00:00",                   // Time
 				"12345",                      // Member ID
 				"TestPlayer",                 // Member Name
 				"1001",                       // Faction ID
@@ -49,8 +47,6 @@ func TestParseStateRecordFromRow(t *testing.T) {
 			name: "row without travel type",
 			row: []interface{}{
 				"2022-01-01 00:00:00",        // Timestamp
-				"2022-01-01",                 // Date
-				"00:00:00",                   // Time
 				"12346",                      // Member ID
 				"TestPlayer2",                // Member Name
 				"1001",                       // Faction ID
@@ -77,8 +73,6 @@ func TestParseStateRecordFromRow(t *testing.T) {
 			name: "row with regular travel type",
 			row: []interface{}{
 				"2022-01-01 00:00:00",        // Timestamp
-				"2022-01-01",                 // Date
-				"00:00:00",                   // Time
 				"12347",                      // Member ID
 				"TestPlayer3",                // Member Name
 				"1001",                       // Faction ID
@@ -151,8 +145,6 @@ func TestTravelSpeedBugFix(t *testing.T) {
 	// Test that airstrip travel type is preserved and not overwritten with empty string
 	row := []interface{}{
 		"2022-01-01 00:00:00",        // Timestamp
-		"2022-01-01",                 // Date
-		"00:00:00",                   // Time
 		"12345",                      // Member ID
 		"TestPlayer",                 // Member Name
 		"1001",                       // Faction ID
@@ -176,7 +168,7 @@ func TestTravelSpeedBugFix(t *testing.T) {
 	}
 
 	// Test regular travel too
-	row[11] = "regular"
+	row[9] = "regular"
 	record, err = service.parseStateRecordFromRow(row)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)

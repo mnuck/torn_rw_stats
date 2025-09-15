@@ -229,7 +229,7 @@ func TestTravelTimeServiceCalculateTravelTimesFromDeparture(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tts.CalculateTravelTimesFromDeparture(
 				ctx, tt.userID, tt.destination, tt.departureStr,
-				tt.existingArrivalStr, tt.travelType, currentTime, ls,
+				tt.existingArrivalStr, tt.travelType, currentTime, ls, "",
 			)
 
 			if tt.expectNil {

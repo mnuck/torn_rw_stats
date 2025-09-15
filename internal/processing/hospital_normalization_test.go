@@ -47,6 +47,16 @@ func TestNormalizeHospitalDescription(t *testing.T) {
 			description: "In a Swiss hospital for 1hr 20mins",
 			expected:    "In hospital",
 		},
+		{
+			name:        "Emirati hospital with countdown (uses 'an')",
+			description: "In an Emirati hospital for 25 mins",
+			expected:    "In hospital",
+		},
+		{
+			name:        "American hospital with countdown (uses 'an')",
+			description: "In an American hospital for 45 mins",
+			expected:    "In hospital",
+		},
 		// Case variations
 		{
 			name:        "Mixed case country hospital",
@@ -102,12 +112,12 @@ func TestNormalizeHospitalDescription(t *testing.T) {
 func TestHospitalCountdownStateChangeIgnored(t *testing.T) {
 	service := NewStateChangeDetectionService(nil)
 
-	// Create two member states representing the bug scenario
+	// Create two member states representing the bug scenario with "an" article
 	oldMember := app.FactionMember{
-		Name:  "fangYuannn",
+		Name:  "testMember",
 		Level: 50,
 		Status: app.MemberStatus{
-			Description: "In a South African hospital for 33 mins",
+			Description: "In an Emirati hospital for 25 mins",
 			State:       "Hospital",
 			Color:       "red",
 			Details:     "Mugged by someone",
@@ -118,10 +128,10 @@ func TestHospitalCountdownStateChangeIgnored(t *testing.T) {
 	}
 
 	newMember := app.FactionMember{
-		Name:  "fangYuannn",
+		Name:  "testMember",
 		Level: 50,
 		Status: app.MemberStatus{
-			Description: "In a South African hospital for 28 mins", // Countdown decreased
+			Description: "In an Emirati hospital for 21 mins", // Countdown decreased
 			State:       "Hospital",
 			Color:       "red",
 			Details:     "Mugged by someone",
