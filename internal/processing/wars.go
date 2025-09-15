@@ -487,12 +487,6 @@ func (wp *WarProcessor) calculateTravelTimes(ctx context.Context, userID int, de
 	return wp.travelTimeService.CalculateTravelTimes(ctx, userID, destination, travelType, currentTime, wp.config.UpdateInterval)
 }
 
-// calculateTravelTimesFromDeparture calculates arrival and countdown based on existing departure time
-func (wp *WarProcessor) calculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time) *TravelTimeData {
-	return wp.travelTimeService.CalculateTravelTimesFromDeparture(ctx, userID, destination, departureStr, existingArrivalStr, travelType, currentTime, wp.locationService)
-}
-
-
 // getFactionTypeForLogging determines faction type string for logging
 func (wp *WarProcessor) getFactionTypeForLogging(factionID int) string {
 	if factionID == wp.ourFactionID {

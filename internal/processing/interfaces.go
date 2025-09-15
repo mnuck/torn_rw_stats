@@ -54,7 +54,7 @@ type TravelTimeServiceInterface interface {
 	GetTravelTime(destination string, travelType string) time.Duration
 	FormatTravelTime(d time.Duration) string
 	CalculateTravelTimes(ctx context.Context, userID int, destination string, travelType string, currentTime time.Time, updateInterval time.Duration) *TravelTimeData
-	CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService LocationServiceInterface) *TravelTimeData
+	CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService LocationServiceInterface, statusDescription string) *TravelTimeData
 }
 
 // AttackProcessingServiceInterface defines the interface for attack processing

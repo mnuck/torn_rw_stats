@@ -141,6 +141,7 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 				stateRecord.StatusTravelType,
 				currentTime,
 				s.locationService,
+				stateRecord.StatusDescription,
 			)
 
 			if travelData != nil {
@@ -352,7 +353,8 @@ func (s *StatusV2Service) ReadAllStateRecords(ctx context.Context, spreadsheetID
 func (s *StatusV2Service) parseStateRecordFromRow(row []interface{}) (app.StateRecord, error) {
 	var record app.StateRecord
 
-	// Actual Changed States format: [Timestamp, Member ID, Member Name, Faction ID, Faction Name, Last Action Status, Status Description, Status State, Status Until (optional)]
+	// Actual Changed States format: [Timestamp, Member ID, Member Name, Faction ID, Faction Name, Last Action Status, Status Description, Status State, Status Until, Status Travel Type]
+	// NOTE: The sheet does NOT have Date and Time columns, so indices are shifted left by 2 from the header definition
 
 	// Parse timestamp from column 0 - this is already formatted as "2025-09-15 1:08:57"
 	if timestampStr, ok := row[0].(string); ok {
@@ -378,8 +380,10 @@ func (s *StatusV2Service) parseStateRecordFromRow(row []interface{}) (app.StateR
 		}
 	}
 
-	// StatusTravelType is not present in this format
-	record.StatusTravelType = ""
+	// Parse StatusTravelType from column 9 (optional - only present for traveling status)
+	if len(row) > 9 {
+		record.StatusTravelType = getString(row, 9)
+	}
 
 	return record, nil
 }
