@@ -26,9 +26,9 @@ func NewStateChangeDetectionService(sheetsClient SheetsClientInterface) *StateCh
 
 // NormalizeHospitalDescription removes countdown from hospital descriptions for comparison
 func (scds *StateChangeDetectionService) NormalizeHospitalDescription(description string) string {
-	// Match "In hospital for X hrs Y mins" and "In a [Country/Countries] hospital for X mins" patterns
-	// Handles single words (British, Mexican) and multi-word countries (South African)
-	hospitalRegex := regexp.MustCompile(`(?i)^in\s+(a\s+[\w\s]+\s+)?hospital(\s+for\s+.*)?$`)
+	// Match "In hospital for X hrs Y mins" and "In a/an [Country/Countries] hospital for X mins" patterns
+	// Handles single words (British, Mexican, Emirati) and multi-word countries (South African)
+	hospitalRegex := regexp.MustCompile(`(?i)^in\s+(an?\s+[\w\s]+\s+)?hospital(\s+for\s+.*)?$`)
 	if hospitalRegex.MatchString(description) {
 		return "In hospital"
 	}
