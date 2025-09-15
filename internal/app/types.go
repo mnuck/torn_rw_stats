@@ -240,3 +240,15 @@ type StateRecord struct {
 	StatusUntil       time.Time `json:"status_until"`
 	StatusTravelType  string    `json:"status_travel_type"`
 }
+
+// StatusV2Record represents a member's data for Status v2 sheets
+type StatusV2Record struct {
+	Name      string `json:"name"`
+	Level     int    `json:"level"`
+	State     string `json:"state"`     // LastActionStatus from StateRecord
+	Status    string `json:"status"`    // StatusDescription from StateRecord
+	Location  string `json:"location"`  // Destination for traveling, otherwise current location
+	Countdown string `json:"countdown"` // Calculated from StatusUntil field
+	Departure string `json:"departure"` // Manual adjustment preserved
+	Arrival   string `json:"arrival"`   // Manual adjustment preserved
+}

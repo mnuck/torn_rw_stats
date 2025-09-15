@@ -17,6 +17,7 @@ type OptimizedWarProcessor struct {
 	tracker         *APICallTracker
 	stateManager    *WarStateManager
 	stateTracker    *StateTrackingService
+	statusV2Processor *StatusV2Processor
 	spreadsheetID   string
 }
 
@@ -39,6 +40,9 @@ func NewOptimizedWarProcessor(
 	// Create state tracking service with raw client
 	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
 
+	// Create Status v2 processor
+	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient)
+
 	// Create processor with raw client
 	processor := NewWarProcessor(
 		tornClient,
@@ -52,12 +56,13 @@ func NewOptimizedWarProcessor(
 	)
 
 	return &OptimizedWarProcessor{
-		processor:     processor,
-		tornClient:    tornClient,
-		tracker:       tracker,
-		stateManager:  stateManager,
-		stateTracker:  stateTracker,
-		spreadsheetID: config.SpreadsheetID,
+		processor:         processor,
+		tornClient:        tornClient,
+		tracker:           tracker,
+		stateManager:      stateManager,
+		stateTracker:      stateTracker,
+		statusV2Processor: statusV2Processor,
+		spreadsheetID:     config.SpreadsheetID,
 	}
 }
 
@@ -297,6 +302,22 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		log.Debug().
 			Ints("faction_ids", factionIDs).
 			Msg("Successfully processed state changes")
+	}
+
+	// Process Status v2 sheets for all factions
+	log.Debug().
+		Ints("faction_ids", factionIDs).
+		Msg("Processing Status v2 for factions")
+
+	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs); err != nil {
+		log.Error().
+			Err(err).
+			Ints("faction_ids", factionIDs).
+			Msg("Failed to process Status v2 - continuing with main processing")
+	} else {
+		log.Debug().
+			Ints("faction_ids", factionIDs).
+			Msg("Successfully processed Status v2")
 	}
 }
 
