@@ -399,69 +399,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 	})
 }
 
-// TestTravelStatusSheets tests travel status sheet operations
-func TestTravelStatusSheets(t *testing.T) {
-
-	t.Run("SheetCreation", func(t *testing.T) {
-		factionID := 1001
-		manager := NewTravelStatusManager(NewMockSheetsAPI())
-		expectedSheetName := manager.GenerateTravelSheetName(factionID)
-
-		if expectedSheetName != "Status - 1001" {
-			t.Errorf("Expected sheet name 'Status - 1001', got %s", expectedSheetName)
-		}
-	})
-
-	t.Run("TravelRecordConversion", func(t *testing.T) {
-		records := []app.TravelRecord{
-			{
-				Name:      "TestPlayer",
-				Level:     50,
-				Location:  "Mexico",
-				State:     "Traveling",
-				Departure: "2024-01-15 12:00:00",
-				Countdown: "01:30:00",
-				Arrival:   "2024-01-15 12:26:00",
-			},
-		}
-
-		// Test convertTravelRecordsToRows logic
-		rows := convertTravelRecordsToRows(records)
-		if len(rows) != 1 {
-			t.Errorf("Expected 1 row, got %d", len(rows))
-		}
-
-		row := rows[0]
-		if len(row) != 7 {
-			t.Errorf("Expected 7 columns, got %d", len(row))
-		}
-
-		// Verify fields (layout: Name, Level, Status, Location, Countdown, Departure, Arrival)
-		if row[0] != "TestPlayer" {
-			t.Errorf("Expected Name 'TestPlayer', got %v", row[0])
-		}
-		if row[1] != 50 {
-			t.Errorf("Expected Level 50, got %v", row[1])
-		}
-		if row[2] != "Traveling" {
-			t.Errorf("Expected State 'Traveling', got %v", row[2])
-		}
-		if row[3] != "Mexico" {
-			t.Errorf("Expected Location 'Mexico', got %v", row[3])
-		}
-		if row[4] != "01:30:00" {
-			t.Errorf("Expected Countdown '01:30:00', got %v", row[4])
-		}
-		if row[5] != "2024-01-15 12:00:00" {
-			t.Errorf("Expected Departure '2024-01-15 12:00:00', got %v", row[5])
-		}
-		if row[6] != "2024-01-15 12:26:00" {
-			t.Errorf("Expected Arrival '2024-01-15 12:26:00', got %v", row[6])
-		}
-	})
-}
-
-// Helper function to convert records to rows (extracted from wars.go for testing)
+// Helper function to convert attack records to rows (for testing)
 func convertRecordsToRows(records []app.AttackRecord) [][]interface{} {
 	var rows [][]interface{}
 
@@ -508,28 +446,10 @@ func convertRecordsToRows(records []app.AttackRecord) [][]interface{} {
 			record.FinishingHitName,
 			record.FinishingHitValue,
 		}
+
 		rows = append(rows, row)
 	}
 
 	return rows
 }
 
-// Helper function to convert travel records to rows (extracted from wars.go for testing)
-func convertTravelRecordsToRows(records []app.TravelRecord) [][]interface{} {
-	var rows [][]interface{}
-
-	for _, record := range records {
-		row := []interface{}{
-			record.Name,      // Player Name
-			record.Level,     // Level
-			record.State,     // Status
-			record.Location,  // Location
-			record.Countdown, // Countdown
-			record.Departure, // Departure
-			record.Arrival,   // Arrival
-		}
-		rows = append(rows, row)
-	}
-
-	return rows
-}

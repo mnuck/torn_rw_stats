@@ -14,11 +14,9 @@ type SheetsClient interface {
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
-	EnsureTravelStatusSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error)
 	StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error
-	UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error
 	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
 
@@ -41,7 +39,6 @@ type MockSheetsClient struct {
 	EnsureWarSheetsResponse               *app.SheetConfig
 	ReadExistingRecordsResponse           *sheets.ExistingRecordsInfo
 	ReadSheetResponse                     [][]interface{}
-	EnsureTravelStatusSheetResponse       string
 	EnsurePreviousStateSheetResponse      string
 	LoadPreviousMemberStatesResponse      map[string]app.FactionMember
 	EnsureStateChangeRecordsSheetResponse string
@@ -54,11 +51,9 @@ type MockSheetsClient struct {
 	UpdateWarSummaryError              error
 	UpdateAttackRecordsError           error
 	ReadSheetError                     error
-	EnsureTravelStatusSheetError       error
 	EnsurePreviousStateSheetError      error
 	LoadPreviousMemberStatesError      error
 	StorePreviousMemberStatesError     error
-	UpdateTravelStatusError            error
 	EnsureStateChangeRecordsSheetError error
 	AddStateChangeRecordError          error
 	UpdateRangeError                   error
@@ -76,11 +71,9 @@ type MockSheetsClient struct {
 	UpdateWarSummaryCalled              bool
 	UpdateAttackRecordsCalled           bool
 	ReadSheetCalled                     bool
-	EnsureTravelStatusSheetCalled       bool
 	EnsurePreviousStateSheetCalled      bool
 	LoadPreviousMemberStatesCalled      bool
 	StorePreviousMemberStatesCalled     bool
-	UpdateTravelStatusCalled            bool
 	EnsureStateChangeRecordsSheetCalled bool
 	AddStateChangeRecordCalled          bool
 
@@ -107,10 +100,6 @@ type MockSheetsClient struct {
 		SpreadsheetID string
 		Range         string
 	}
-	EnsureTravelStatusSheetCalledWith struct {
-		SpreadsheetID string
-		FactionID     int
-	}
 	EnsurePreviousStateSheetCalledWith struct {
 		SpreadsheetID string
 		FactionID     int
@@ -123,11 +112,6 @@ type MockSheetsClient struct {
 		SpreadsheetID string
 		SheetName     string
 		Members       map[string]app.FactionMember
-	}
-	UpdateTravelStatusCalledWith struct {
-		SpreadsheetID string
-		SheetName     string
-		Records       []app.TravelRecord
 	}
 	EnsureStateChangeRecordsSheetCalledWith struct {
 		SpreadsheetID string
@@ -182,12 +166,6 @@ func (m *MockSheetsClient) ReadSheet(ctx context.Context, spreadsheetID, range_ 
 	return m.ReadSheetResponse, m.ReadSheetError
 }
 
-func (m *MockSheetsClient) EnsureTravelStatusSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	m.EnsureTravelStatusSheetCalled = true
-	m.EnsureTravelStatusSheetCalledWith.SpreadsheetID = spreadsheetID
-	m.EnsureTravelStatusSheetCalledWith.FactionID = factionID
-	return m.EnsureTravelStatusSheetResponse, m.EnsureTravelStatusSheetError
-}
 
 func (m *MockSheetsClient) EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	m.EnsurePreviousStateSheetCalled = true
@@ -211,13 +189,6 @@ func (m *MockSheetsClient) StorePreviousMemberStates(ctx context.Context, spread
 	return m.StorePreviousMemberStatesError
 }
 
-func (m *MockSheetsClient) UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error {
-	m.UpdateTravelStatusCalled = true
-	m.UpdateTravelStatusCalledWith.SpreadsheetID = spreadsheetID
-	m.UpdateTravelStatusCalledWith.SheetName = sheetName
-	m.UpdateTravelStatusCalledWith.Records = records
-	return m.UpdateTravelStatusError
-}
 
 func (m *MockSheetsClient) EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	m.EnsureStateChangeRecordsSheetCalled = true
@@ -240,7 +211,6 @@ func (m *MockSheetsClient) Reset() {
 	m.EnsureWarSheetsResponse = nil
 	m.ReadExistingRecordsResponse = nil
 	m.ReadSheetResponse = nil
-	m.EnsureTravelStatusSheetResponse = ""
 	m.EnsurePreviousStateSheetResponse = ""
 	m.LoadPreviousMemberStatesResponse = nil
 	m.EnsureStateChangeRecordsSheetResponse = ""
@@ -251,11 +221,9 @@ func (m *MockSheetsClient) Reset() {
 	m.UpdateWarSummaryError = nil
 	m.UpdateAttackRecordsError = nil
 	m.ReadSheetError = nil
-	m.EnsureTravelStatusSheetError = nil
 	m.EnsurePreviousStateSheetError = nil
 	m.LoadPreviousMemberStatesError = nil
 	m.StorePreviousMemberStatesError = nil
-	m.UpdateTravelStatusError = nil
 	m.EnsureStateChangeRecordsSheetError = nil
 	m.AddStateChangeRecordError = nil
 
@@ -265,11 +233,9 @@ func (m *MockSheetsClient) Reset() {
 	m.UpdateWarSummaryCalled = false
 	m.UpdateAttackRecordsCalled = false
 	m.ReadSheetCalled = false
-	m.EnsureTravelStatusSheetCalled = false
 	m.EnsurePreviousStateSheetCalled = false
 	m.LoadPreviousMemberStatesCalled = false
 	m.StorePreviousMemberStatesCalled = false
-	m.UpdateTravelStatusCalled = false
 	m.EnsureStateChangeRecordsSheetCalled = false
 	m.AddStateChangeRecordCalled = false
 
@@ -296,10 +262,6 @@ func (m *MockSheetsClient) Reset() {
 		SpreadsheetID string
 		Range         string
 	}{}
-	m.EnsureTravelStatusSheetCalledWith = struct {
-		SpreadsheetID string
-		FactionID     int
-	}{}
 	m.EnsurePreviousStateSheetCalledWith = struct {
 		SpreadsheetID string
 		FactionID     int
@@ -312,11 +274,6 @@ func (m *MockSheetsClient) Reset() {
 		SpreadsheetID string
 		SheetName     string
 		Members       map[string]app.FactionMember
-	}{}
-	m.UpdateTravelStatusCalledWith = struct {
-		SpreadsheetID string
-		SheetName     string
-		Records       []app.TravelRecord
 	}{}
 	m.EnsureStateChangeRecordsSheetCalledWith = struct {
 		SpreadsheetID string

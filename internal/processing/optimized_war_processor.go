@@ -228,18 +228,7 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 		return fmt.Errorf("our faction ID is not set")
 	}
 
-	// Create a dummy war structure for travel processing (needed for the existing processTravelStatus method)
-	dummyWar := &app.War{
-		ID: 0, // Use 0 to indicate "no war"
-		Factions: []app.Faction{
-			{ID: ourFactionID}, // Just our faction
-		},
-	}
 
-	// Process our faction's travel status using existing method
-	if err := owp.processor.processTravelStatus(ctx, dummyWar, ourFactionID, owp.processor.config.SpreadsheetID); err != nil {
-		return fmt.Errorf("failed to process our faction travel status: %w", err)
-	}
 
 	log.Info().
 		Int("faction_id", ourFactionID).
