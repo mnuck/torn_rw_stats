@@ -156,7 +156,15 @@ type FactionInfoResponse struct {
 
 // FactionBasicResponse represents response from /faction/{id}?selections=basic
 type FactionBasicResponse struct {
-	Members map[string]FactionMember `json:"members"`
+	ID       int                      `json:"ID"`
+	Name     string                   `json:"name"`
+	Tag      string                   `json:"tag"`
+	TagImage string                   `json:"tag_image"`
+	Leader   int                      `json:"leader"`
+	CoLeader int                      `json:"co-leader"`
+	Respect  int                      `json:"respect"`
+	Age      int                      `json:"age"`
+	Members  map[string]FactionMember `json:"members"`
 }
 
 // FactionMember represents a faction member's data
@@ -217,4 +225,18 @@ type StateChangeRecord struct {
 	NewState             string    `json:"new_state"`
 	OldLastAction        string    `json:"old_last_action"`
 	NewLastAction        string    `json:"new_last_action"`
+}
+
+// StateRecord represents a point-in-time snapshot of a member's state
+type StateRecord struct {
+	Timestamp         time.Time `json:"timestamp"`
+	MemberName        string    `json:"member_name"`
+	MemberID          string    `json:"member_id"`
+	FactionName       string    `json:"faction_name"`
+	FactionID         string    `json:"faction_id"`
+	LastActionStatus  string    `json:"last_action_status"`
+	StatusDescription string    `json:"status_description"`
+	StatusState       string    `json:"status_state"`
+	StatusUntil       time.Time `json:"status_until"`
+	StatusTravelType  string    `json:"status_travel_type"`
 }
