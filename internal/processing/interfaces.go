@@ -24,11 +24,9 @@ type SheetsClientInterface interface {
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
-	EnsureTravelStatusSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error)
 	StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error
-	UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error
 	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
 

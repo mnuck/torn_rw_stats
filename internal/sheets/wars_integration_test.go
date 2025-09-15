@@ -119,83 +119,6 @@ func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 	}
 }
 
-// TestConvertTravelRecordsToRows tests travel record conversion
-func TestConvertTravelRecordsToRows(t *testing.T) {
-	client := &Client{}
-
-	records := []app.TravelRecord{
-		{
-			Name:      "TestPlayer1",
-			Level:     50,
-			Location:  "Mexico",
-			State:     "Traveling",
-			Departure: "2024-01-15 12:00:00",
-			Countdown: "01:30:00",
-			Arrival:   "2024-01-15 12:26:00",
-		},
-		{
-			Name:      "TestPlayer2",
-			Level:     35,
-			Location:  "Torn",
-			State:     "Okay",
-			Departure: "",
-			Countdown: "",
-			Arrival:   "",
-		},
-	}
-
-	rows := client.convertTravelRecordsToRows(records)
-
-	if len(rows) != 2 {
-		t.Fatalf("Expected 2 rows, got %d", len(rows))
-	}
-
-	// Test first row (traveling player)
-	row1 := rows[0]
-	if len(row1) != 7 {
-		t.Fatalf("Expected 7 columns, got %d", len(row1))
-	}
-	if row1[0] != "TestPlayer1" { // Player Name
-		t.Errorf("Expected Name 'TestPlayer1', got %v", row1[0])
-	}
-	if row1[1] != 50 { // Level
-		t.Errorf("Expected Level 50, got %v", row1[1])
-	}
-	if row1[2] != "Traveling" { // Status
-		t.Errorf("Expected State 'Traveling', got %v", row1[2])
-	}
-	if row1[3] != "Mexico" { // Location
-		t.Errorf("Expected Location 'Mexico', got %v", row1[3])
-	}
-	if row1[4] != "01:30:00" { // Countdown
-		t.Errorf("Expected Countdown '01:30:00', got %v", row1[4])
-	}
-	if row1[5] != "2024-01-15 12:00:00" { // Departure
-		t.Errorf("Expected Departure '2024-01-15 12:00:00', got %v", row1[5])
-	}
-	if row1[6] != "2024-01-15 12:26:00" { // Arrival
-		t.Errorf("Expected Arrival '2024-01-15 12:26:00', got %v", row1[6])
-	}
-
-	// Test second row (non-traveling player)
-	row2 := rows[1]
-	if row2[0] != "TestPlayer2" { // Player Name
-		t.Errorf("Expected Name 'TestPlayer2', got %v", row2[0])
-	}
-	if row2[2] != "Okay" { // Status
-		t.Errorf("Expected State 'Okay', got %v", row2[2])
-	}
-	// Empty fields should be empty strings
-	if row2[4] != "" { // Countdown
-		t.Errorf("Expected empty Countdown, got %v", row2[4])
-	}
-	if row2[5] != "" { // Departure
-		t.Errorf("Expected empty Departure, got %v", row2[5])
-	}
-	if row2[6] != "" { // Arrival
-		t.Errorf("Expected empty Arrival, got %v", row2[6])
-	}
-}
 
 // TestConvertMembersToStateRows tests member state conversion
 func TestConvertMembersToStateRows(t *testing.T) {
@@ -357,13 +280,6 @@ func TestEmptyRecordHandling(t *testing.T) {
 		}
 	})
 
-	t.Run("empty travel records", func(t *testing.T) {
-		records := []app.TravelRecord{}
-		rows := client.convertTravelRecordsToRows(records)
-		if len(rows) != 0 {
-			t.Errorf("Expected 0 rows for empty records, got %d", len(rows))
-		}
-	})
 
 	t.Run("empty member map", func(t *testing.T) {
 		members := make(map[string]app.FactionMember)

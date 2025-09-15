@@ -189,18 +189,32 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord, existing *RecordsInfo) []app.AttackRecord {
 	var newRecords []app.AttackRecord
 
-	// Filter out duplicates using attack codes (guaranteed unique strings)
+	// Filter out duplicates using attack codes AND records older than existing timestamp
 	duplicates := 0
 	for _, record := range records {
-		if !existing.AttackCodes[record.Code] {
-			newRecords = append(newRecords, record)
-		} else {
+		// Skip if duplicate attack code
+		if existing.AttackCodes[record.Code] {
 			duplicates++
 			log.Debug().
 				Str("attack_code", record.Code).
 				Int64("attack_id", record.AttackID).
 				Msg("Filtered duplicate attack")
+			continue
 		}
+
+		// Skip if record is older than or equal to existing timestamp (already processed)
+		if record.Started.Unix() <= existing.LatestTimestamp {
+			duplicates++
+			log.Debug().
+				Int64("attack_id", record.AttackID).
+				Int64("record_timestamp", record.Started.Unix()).
+				Int64("existing_timestamp", existing.LatestTimestamp).
+				Msg("Filtered old attack (timestamp)")
+			continue
+		}
+
+		// Record is new and recent enough
+		newRecords = append(newRecords, record)
 	}
 
 	// Log some example attack codes for debugging

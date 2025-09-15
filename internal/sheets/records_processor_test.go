@@ -215,19 +215,19 @@ func TestAttackRecordsProcessorConvertRecordsToRowsComprehensive(t *testing.T) {
 	}
 
 	expectedValues1 := []interface{}{
-		int64(1640995200), // Timestamp
-		"2022-01-01",      // Date
-		"00:00:00",        // Time
-		"Outgoing",        // Direction
-		"TestAttacker",    // Attacker
-		"AttackerFaction", // Attacker Faction
-		"TestDefender",    // Defender
-		"DefenderFaction", // Defender Faction
-		"Win",             // Code
-		0,                 // Respect (placeholder)
-		0,                 // Chain (placeholder)
-		"",                // Respect/Chain (placeholder)
-		int64(123456),     // Attack ID
+		int64(123456),           // AttackID
+		"Win",                   // Code
+		"2022-01-01 00:00:00",   // Started (formatted)
+		"0001-01-01 00:00:00",   // Ended (default zero time)
+		"Outgoing",              // Direction
+		0,                       // AttackerID
+		"TestAttacker",          // AttackerName
+		0,                       // AttackerLevel
+		"",                      // AttackerFactionID (nil converted to "")
+		"AttackerFaction",       // AttackerFactionName
+		0,                       // DefenderID
+		"TestDefender",          // DefenderName
+		0,                       // DefenderLevel
 	}
 
 	for i, expected := range expectedValues1 {
@@ -243,24 +243,24 @@ func TestAttackRecordsProcessorConvertRecordsToRowsComprehensive(t *testing.T) {
 	}
 
 	// Check key fields for second record
-	if row2[0] != int64(1640998800) { // 1 hour later
-		t.Errorf("Expected timestamp 1640998800, got %v", row2[0])
+	if row2[0] != int64(789012) { // AttackID
+		t.Errorf("Expected AttackID 789012, got %v", row2[0])
 	}
 
-	if row2[3] != "Incoming" {
-		t.Errorf("Expected direction 'Incoming', got %v", row2[3])
+	if row2[4] != "Incoming" { // Direction
+		t.Errorf("Expected direction 'Incoming', got %v", row2[4])
 	}
 
-	if row2[4] != "EnemyAttacker" {
-		t.Errorf("Expected attacker 'EnemyAttacker', got %v", row2[4])
+	if row2[6] != "EnemyAttacker" { // AttackerName
+		t.Errorf("Expected attacker 'EnemyAttacker', got %v", row2[6])
 	}
 
-	if row2[8] != "Loss" {
-		t.Errorf("Expected code 'Loss', got %v", row2[8])
+	if row2[1] != "Loss" { // Code
+		t.Errorf("Expected code 'Loss', got %v", row2[1])
 	}
 
-	if row2[10] != 0 {
-		t.Errorf("Expected respect (placeholder) 0, got %v", row2[10])
+	if row2[10] != 0 { // DefenderID
+		t.Errorf("Expected DefenderID 0, got %v", row2[10])
 	}
 }
 
@@ -307,8 +307,8 @@ func TestAttackRecordsProcessorUpdateAttackRecords(t *testing.T) {
 	// Verify first record data
 	if len(sheetData) > 0 {
 		row := sheetData[0]
-		if len(row) > 4 && row[4] != "Player1" {
-			t.Errorf("Expected attacker 'Player1', got %v", row[4])
+		if len(row) > 6 && row[6] != "Player1" {
+			t.Errorf("Expected attacker 'Player1', got %v", row[6])
 		}
 	}
 }
@@ -410,12 +410,10 @@ func TestAttackRecordsProcessorTimeFormatting(t *testing.T) {
 			t.Fatalf("Expected at least 3 columns, got %d", len(row))
 		}
 
-		if row[1] != tc.expectedDate {
-			t.Errorf("Timestamp %d: expected date '%s', got %v", tc.timestamp, tc.expectedDate, row[1])
-		}
-
-		if row[2] != tc.expectedTime {
-			t.Errorf("Timestamp %d: expected time '%s', got %v", tc.timestamp, tc.expectedTime, row[2])
+		// Check that the datetime formatting is correct (row[2] is Started formatted)
+		expectedDatetime := tc.expectedDate + " " + tc.expectedTime
+		if row[2] != expectedDatetime {
+			t.Errorf("Timestamp %d: expected datetime '%s', got %v", tc.timestamp, expectedDatetime, row[2])
 		}
 	}
 }

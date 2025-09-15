@@ -39,11 +39,6 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 
 // Travel and State Management Functions - delegate to specialized managers
 
-// convertTravelRecordsToRows converts TravelRecord structs to sheet row format
-func (c *Client) convertTravelRecordsToRows(records []app.TravelRecord) [][]interface{} {
-	manager := NewTravelStatusManager(c)
-	return manager.ConvertTravelRecordsToRows(records)
-}
 
 // convertMembersToStateRows converts member map to sheet row format
 func (c *Client) convertMembersToStateRows(members map[string]app.FactionMember) [][]interface{} {
@@ -51,17 +46,6 @@ func (c *Client) convertMembersToStateRows(members map[string]app.FactionMember)
 	return manager.ConvertMembersToStateRows(members)
 }
 
-// EnsureTravelStatusSheet creates travel status sheet for a faction if it doesn't exist
-func (c *Client) EnsureTravelStatusSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	manager := NewTravelStatusManager(c)
-	return manager.EnsureTravelStatusSheet(ctx, spreadsheetID, factionID)
-}
-
-// UpdateTravelStatus updates the travel status sheet with current member data
-func (c *Client) UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error {
-	manager := NewTravelStatusManager(c)
-	return manager.UpdateTravelStatus(ctx, spreadsheetID, sheetName, records)
-}
 
 // EnsureStatusV2Sheet creates Status v2 sheet for a faction if it doesn't exist
 func (c *Client) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
