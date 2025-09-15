@@ -10,6 +10,7 @@ import (
 // StateRecordComparator handles comparison logic for StateRecords
 type StateRecordComparator struct {
 	hospitalRegex *regexp.Regexp
+	jailRegex     *regexp.Regexp
 }
 
 // NewStateRecordComparator creates a new StateRecord comparator
@@ -17,8 +18,12 @@ func NewStateRecordComparator() *StateRecordComparator {
 	// Compile hospital regex once for reuse (copied from existing logic)
 	hospitalRegex := regexp.MustCompile(`(?i)^in\s+(a\s+[\w\s]+\s+)?hospital(\s+for\s+.*)?$`)
 
+	// Compile jail regex to handle jail countdown variations
+	jailRegex := regexp.MustCompile(`(?i)^in\s+jail\s+for\s+.*$`)
+
 	return &StateRecordComparator{
 		hospitalRegex: hospitalRegex,
+		jailRegex:     jailRegex,
 	}
 }
 
@@ -63,9 +68,9 @@ func (c *StateRecordComparator) HasStateChanged(previous, current app.StateRecor
 		return true
 	}
 
-	// Compare StatusDescription with hospital normalization
-	prevDesc := c.normalizeHospitalDescription(previous.StatusDescription)
-	currDesc := c.normalizeHospitalDescription(current.StatusDescription)
+	// Compare StatusDescription with hospital and jail normalization
+	prevDesc := c.normalizeStatusDescription(previous.StatusDescription)
+	currDesc := c.normalizeStatusDescription(current.StatusDescription)
 	if prevDesc != currDesc {
 		return true
 	}
@@ -110,12 +115,19 @@ func (c *StateRecordComparator) CreatePreviousStateCollection(currentStates []ap
 	return result
 }
 
-// normalizeHospitalDescription removes countdown from hospital descriptions for comparison
-// Copied from existing logic in state_change_service.go
-func (c *StateRecordComparator) normalizeHospitalDescription(description string) string {
+// normalizeStatusDescription removes countdown from hospital and jail descriptions for comparison
+// Prevents noise from countdown timer changes in Changed States tracking
+func (c *StateRecordComparator) normalizeStatusDescription(description string) string {
+	// Hospital normalization (copied from existing logic in state_change_service.go)
 	if c.hospitalRegex.MatchString(description) {
 		return "In hospital"
 	}
+
+	// Jail normalization - handles variations like "In jail for 4 hrs 14 mins" vs "In jail for 4 hours 12 mins"
+	if c.jailRegex.MatchString(description) {
+		return "In jail"
+	}
+
 	return description
 }
 
