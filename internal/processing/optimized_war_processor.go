@@ -10,18 +10,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// OptimizedWarProcessor wraps WarProcessor with API call optimizations
+// OptimizedWarProcessor wraps WarProcessor with war state management
 type OptimizedWarProcessor struct {
 	processor       *WarProcessor
-	cachedClient    *CachedTornClient
-	optimizer       *APIOptimizer
+	tornClient      TornClientInterface
 	tracker         *APICallTracker
 	stateManager    *WarStateManager
 	stateTracker    *StateTrackingService
 	spreadsheetID   string
 }
 
-// NewOptimizedWarProcessor creates a WarProcessor with API optimizations enabled
+// NewOptimizedWarProcessor creates a WarProcessor with war state management
 func NewOptimizedWarProcessor(
 	tornClient TornClientInterface,
 	sheetsClient SheetsClientInterface,
@@ -33,18 +32,16 @@ func NewOptimizedWarProcessor(
 	config *app.Config,
 ) *OptimizedWarProcessor {
 
-	// Create optimization layer
+	// Create war state management
 	tracker := NewAPICallTracker()
 	stateManager := NewWarStateManager()
-	cachedClient := NewCachedTornClientWithWarStateManager(tornClient, tracker, stateManager)
-	optimizer := NewAPIOptimizer(cachedClient, tracker)
 
-	// Create state tracking service with raw client for real-time faction data
+	// Create state tracking service with raw client
 	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
 
-	// Create processor with optimized client
+	// Create processor with raw client
 	processor := NewWarProcessor(
-		cachedClient, // Use cached client instead of raw client
+		tornClient,
 		sheetsClient,
 		locationService,
 		travelTimeService,
@@ -56,8 +53,7 @@ func NewOptimizedWarProcessor(
 
 	return &OptimizedWarProcessor{
 		processor:     processor,
-		cachedClient:  cachedClient,
-		optimizer:     optimizer,
+		tornClient:    tornClient,
 		tracker:       tracker,
 		stateManager:  stateManager,
 		stateTracker:  stateTracker,
@@ -65,13 +61,13 @@ func NewOptimizedWarProcessor(
 	}
 }
 
-// ProcessActiveWars processes wars with sophisticated state-based optimization
+// ProcessActiveWars processes wars with state-based scheduling
 func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force bool) error {
 	// Always fetch war data first to determine actual current state
 	log.Debug().
 		Msg("Fetching war data to determine current state")
 
-	warResponse, err := owp.cachedClient.GetFactionWars(ctx)
+	warResponse, err := owp.tornClient.GetFactionWars(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch wars for state analysis: %w", err)
 	}
@@ -178,41 +174,16 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		}
 	}
 
-	// Log optimization results
-	owp.LogOptimizationResults(ctx)
+	// Log processing results
+	owp.LogProcessingResults(ctx)
 
 	return nil
 }
 
-// LogOptimizationResults logs the impact of API optimizations
-func (owp *OptimizedWarProcessor) LogOptimizationResults(ctx context.Context) {
+// LogProcessingResults logs the processing session results
+func (owp *OptimizedWarProcessor) LogProcessingResults(ctx context.Context) {
 	// Get current session stats
 	owp.tracker.LogSessionSummary(ctx)
-
-	// Get cache statistics
-	cacheStats := owp.cachedClient.GetCacheStats()
-	log.Info().
-		Int("cache_valid_entries", cacheStats.ValidEntries).
-		Int("cache_expired_entries", cacheStats.ExpiredEntries).
-		Int("cache_total_entries", cacheStats.TotalEntries).
-		Msg("API cache statistics")
-
-	// Get optimizer statistics
-	optimizerStats := owp.optimizer.GetOptimizationStats()
-	log.Info().
-		Int("known_active_wars", optimizerStats.KnownActiveWars).
-		Int("consecutive_empty_checks", optimizerStats.ConsecutiveEmpty).
-		Dur("next_check_interval", optimizerStats.NextCheckInterval).
-		Msg("API optimizer statistics")
-
-	// Estimate calls for next period
-	estimate := owp.optimizer.EstimateCallsForPeriod(optimizerStats.NextCheckInterval)
-	log.Info().
-		Int64("estimated_war_checks", estimate.WarChecks).
-		Int64("estimated_attack_calls", estimate.AttackCalls).
-		Int64("estimated_total_calls", estimate.TotalEstimate).
-		Dur("for_period", estimate.Period).
-		Msg("API call estimate for next period")
 }
 
 // GetAPICallCount returns the current API call count
@@ -225,39 +196,18 @@ func (owp *OptimizedWarProcessor) GetNextCheckTime() time.Time {
 	return owp.stateManager.GetNextCheckTime()
 }
 
-// GetOptimizationSummary returns a summary of optimization effectiveness
-func (owp *OptimizedWarProcessor) GetOptimizationSummary() OptimizationSummary {
+// GetProcessingSummary returns a summary of processing session
+func (owp *OptimizedWarProcessor) GetProcessingSummary() ProcessingSummary {
 	stats := owp.tracker.GetSessionStats()
-	cacheStats := owp.cachedClient.GetCacheStats()
-	optimizerStats := owp.optimizer.GetOptimizationStats()
 
-	return OptimizationSummary{
-		SessionAPICalls:      stats.SessionCalls,
-		TotalAPICalls:        stats.TotalCalls,
-		CallsPerMinute:       stats.CallsPerMinute,
-		SessionDuration:      stats.SessionDuration,
-		CacheHitRate:         calculateCacheHitRate(stats.CallsByEndpoint, cacheStats),
-		ActiveWarsDetected:   optimizerStats.KnownActiveWars,
-		ConsecutiveEmptyRuns: optimizerStats.ConsecutiveEmpty,
-		NextCheckIn:          optimizerStats.NextCheckInterval,
+	return ProcessingSummary{
+		SessionAPICalls: stats.SessionCalls,
+		TotalAPICalls:   stats.TotalCalls,
+		CallsPerMinute:  stats.CallsPerMinute,
+		SessionDuration: stats.SessionDuration,
 	}
 }
 
-// calculateCacheHitRate estimates cache effectiveness based on call patterns
-func calculateCacheHitRate(callsByEndpoint map[string]int64, cacheStats CacheStats) float64 {
-	if cacheStats.TotalEntries == 0 {
-		return 0.0
-	}
-
-	// Rough estimation: valid cache entries vs total potential cacheable calls
-	cacheableCalls := callsByEndpoint["GetOwnFaction"] + callsByEndpoint["GetFactionWars"] + callsByEndpoint["GetFactionBasic"]
-	if cacheableCalls == 0 {
-		return 0.0
-	}
-
-	// This is a simplified calculation - in reality we'd track cache hits vs misses
-	return float64(cacheStats.ValidEntries) / float64(cacheableCalls+int64(cacheStats.ValidEntries)) * 100
-}
 
 // processOurFactionOnly processes just our faction's status when no wars exist
 func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) error {
@@ -365,14 +315,10 @@ func (owp *OptimizedWarProcessor) removeDuplicateFactionIDs(factionIDs []int) []
 	return result
 }
 
-// OptimizationSummary provides a summary of API optimization effectiveness
-type OptimizationSummary struct {
-	SessionAPICalls      int64
-	TotalAPICalls        int64
-	CallsPerMinute       float64
-	SessionDuration      time.Duration
-	CacheHitRate         float64
-	ActiveWarsDetected   int
-	ConsecutiveEmptyRuns int
-	NextCheckIn          time.Duration
+// ProcessingSummary provides a summary of processing session
+type ProcessingSummary struct {
+	SessionAPICalls int64
+	TotalAPICalls   int64
+	CallsPerMinute  float64
+	SessionDuration time.Duration
 }
