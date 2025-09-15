@@ -146,6 +146,21 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 	memberLatest := make(map[string]app.StateRecord)
 	matchingRecords := 0
 
+	// Debug: Show what we're actually reading from each column
+	if len(allStateRecords) > 0 {
+		firstRecord := allStateRecords[0]
+		log.Info().
+			Str("member_id", firstRecord.MemberID).
+			Str("member_name", firstRecord.MemberName).
+			Str("faction_id", firstRecord.FactionID).
+			Str("faction_name", firstRecord.FactionName).
+			Str("last_action_status", firstRecord.LastActionStatus).
+			Str("status_description", firstRecord.StatusDescription).
+			Str("status_state", firstRecord.StatusState).
+			Str("status_travel_type", firstRecord.StatusTravelType).
+			Msg("DEBUG: First record parsed values")
+	}
+
 	for _, record := range allStateRecords {
 		if record.FactionID != factionIDStr {
 			continue
@@ -158,8 +173,10 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 		}
 	}
 
-	log.Debug().
+	log.Info().
 		Int("faction_id", factionID).
+		Str("faction_id_str", factionIDStr).
+		Int("total_records_checked", len(allStateRecords)).
 		Int("matching_faction_records", matchingRecords).
 		Int("unique_members", len(memberLatest)).
 		Msg("Faction filtering progress")
