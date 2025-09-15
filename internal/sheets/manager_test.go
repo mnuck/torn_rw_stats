@@ -38,6 +38,9 @@ func (m *MockSheetsAPI) ReadSheet(ctx context.Context, spreadsheetID, range_ str
 		sheetName = range_[:exclamationIndex]
 	}
 
+	// Remove quotes if present
+	sheetName = strings.Trim(sheetName, "'\"")
+
 	if data, exists := m.data[sheetName]; exists {
 		return data, nil
 	}
@@ -56,6 +59,7 @@ func (m *MockSheetsAPI) UpdateRange(ctx context.Context, spreadsheetID, range_ s
 	if exclamationIndex := strings.Index(range_, "!"); exclamationIndex != -1 {
 		sheetName = range_[:exclamationIndex]
 	}
+	sheetName = strings.Trim(sheetName, "'\"")
 	m.data[sheetName] = values
 	return nil
 }
@@ -69,6 +73,7 @@ func (m *MockSheetsAPI) ClearRange(ctx context.Context, spreadsheetID, range_ st
 	if exclamationIndex := strings.Index(range_, "!"); exclamationIndex != -1 {
 		sheetName = range_[:exclamationIndex]
 	}
+	sheetName = strings.Trim(sheetName, "'\"")
 	delete(m.data, sheetName)
 	return nil
 }
@@ -83,6 +88,7 @@ func (m *MockSheetsAPI) AppendRows(ctx context.Context, spreadsheetID, range_ st
 	if exclamationIndex := strings.Index(range_, "!"); exclamationIndex != -1 {
 		sheetName = range_[:exclamationIndex]
 	}
+	sheetName = strings.Trim(sheetName, "'\"")
 
 	if existing, exists := m.data[sheetName]; exists {
 		m.data[sheetName] = append(existing, rows...)

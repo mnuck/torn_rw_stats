@@ -39,6 +39,10 @@ type SheetsClientInterface interface {
 	CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error
 	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
 	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
+
+	// Status v2 methods
+	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
+	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error
 }
 
 // LocationServiceInterface defines the location service methods used by WarProcessor

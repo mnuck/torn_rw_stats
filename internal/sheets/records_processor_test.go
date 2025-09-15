@@ -22,9 +22,9 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 		{
 			name: "valid timestamps",
 			data: [][]interface{}{
-				{"1000", "data1", "data2"},
-				{"2000", "data3", "data4"},
-				{"1500", "data5", "data6"},
+				{1000, "code1", "1970-01-01 00:16:40", "1970-01-01 00:17:40"},
+				{2000, "code2", "1970-01-01 00:33:20", "1970-01-01 00:34:20"},
+				{1500, "code3", "1970-01-01 00:25:00", "1970-01-01 00:26:00"},
 			},
 			expectedLast:  2000,
 			expectedCount: 3,
@@ -33,13 +33,13 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 		{
 			name: "mixed valid and invalid timestamps",
 			data: [][]interface{}{
-				{"1000", "data1"},
-				{"invalid", "data2"},
-				{"2500", "data3"},
-				{"", "data4"},
+				{1000, "code1", "1970-01-01 00:16:40"},
+				{1001, "", "invalid_date"},        // Empty code
+				{2500, "code2", "1970-01-01 00:41:40"},
+				{1002, "", "1970-01-01 00:16:42"}, // Empty code
 			},
 			expectedLast:  2500,
-			expectedCount: 2, // Only valid timestamps are counted
+			expectedCount: 2, // Only valid codes are counted
 			expectError:   false,
 		},
 		{
@@ -53,11 +53,11 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 			name: "rows with insufficient columns",
 			data: [][]interface{}{
 				{},
-				{"1000"},
-				{"2000", "data"},
+				{1000},
+				{2000, "code1", "1970-01-01 00:33:20"},
 			},
 			expectedLast:  2000,
-			expectedCount: 2, // Only rows with valid timestamps are counted
+			expectedCount: 1, // Only rows with sufficient columns and valid data
 			expectError:   false,
 		},
 	}

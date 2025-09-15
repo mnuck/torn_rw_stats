@@ -21,6 +21,18 @@ type SheetsClient interface {
 	UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetName string, records []app.TravelRecord) error
 	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
+
+	// Additional methods for state tracking
+	UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error
+	ClearRange(ctx context.Context, spreadsheetID, range_ string) error
+	AppendRows(ctx context.Context, spreadsheetID, range_ string, rows [][]interface{}) error
+	CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error
+	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
+	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
+
+	// Status v2 methods
+	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
+	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error
 }
 
 // MockSheetsClient is a test double for the sheets.Client
@@ -33,6 +45,8 @@ type MockSheetsClient struct {
 	EnsurePreviousStateSheetResponse      string
 	LoadPreviousMemberStatesResponse      map[string]app.FactionMember
 	EnsureStateChangeRecordsSheetResponse string
+	SheetExistsResponse                   bool
+	EnsureStatusV2SheetResponse           string
 
 	// Errors to return
 	EnsureWarSheetsError               error
@@ -47,6 +61,14 @@ type MockSheetsClient struct {
 	UpdateTravelStatusError            error
 	EnsureStateChangeRecordsSheetError error
 	AddStateChangeRecordError          error
+	UpdateRangeError                   error
+	ClearRangeError                    error
+	AppendRowsError                    error
+	CreateSheetError                   error
+	SheetExistsError                   error
+	EnsureSheetCapacityError           error
+	EnsureStatusV2SheetError           error
+	UpdateStatusV2Error                error
 
 	// Call tracking
 	EnsureWarSheetsCalled               bool
@@ -305,4 +327,38 @@ func (m *MockSheetsClient) Reset() {
 		SheetName     string
 		Record        app.StateChangeRecord
 	}{}
+}
+
+// Additional state tracking methods
+func (m *MockSheetsClient) UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error {
+	return m.UpdateRangeError
+}
+
+func (m *MockSheetsClient) ClearRange(ctx context.Context, spreadsheetID, range_ string) error {
+	return m.ClearRangeError
+}
+
+func (m *MockSheetsClient) AppendRows(ctx context.Context, spreadsheetID, range_ string, rows [][]interface{}) error {
+	return m.AppendRowsError
+}
+
+func (m *MockSheetsClient) CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error {
+	return m.CreateSheetError
+}
+
+func (m *MockSheetsClient) SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error) {
+	return m.SheetExistsResponse, m.SheetExistsError
+}
+
+func (m *MockSheetsClient) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error {
+	return m.EnsureSheetCapacityError
+}
+
+// Status v2 methods
+func (m *MockSheetsClient) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
+	return m.EnsureStatusV2SheetResponse, m.EnsureStatusV2SheetError
+}
+
+func (m *MockSheetsClient) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
+	return m.UpdateStatusV2Error
 }

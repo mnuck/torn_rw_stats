@@ -63,6 +63,18 @@ func (c *Client) UpdateTravelStatus(ctx context.Context, spreadsheetID, sheetNam
 	return manager.UpdateTravelStatus(ctx, spreadsheetID, sheetName, records)
 }
 
+// EnsureStatusV2Sheet creates Status v2 sheet for a faction if it doesn't exist
+func (c *Client) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
+	manager := NewStatusV2Manager(c)
+	return manager.EnsureStatusV2Sheet(ctx, spreadsheetID, factionID)
+}
+
+// UpdateStatusV2 updates the Status v2 sheet with current state record data
+func (c *Client) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
+	manager := NewStatusV2Manager(c)
+	return manager.UpdateStatusV2(ctx, spreadsheetID, sheetName, records)
+}
+
 // EnsureStateChangeRecordsSheet creates state change records sheet for a faction if it doesn't exist
 func (c *Client) EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	manager := NewStateChangeManager(c)
