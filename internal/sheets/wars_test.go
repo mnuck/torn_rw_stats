@@ -452,4 +452,3 @@ func convertRecordsToRows(records []app.AttackRecord) [][]interface{} {
 
 	return rows
 }
-

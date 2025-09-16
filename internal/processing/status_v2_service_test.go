@@ -19,16 +19,16 @@ func TestParseStateRecordFromRow(t *testing.T) {
 		{
 			name: "complete row with travel type",
 			row: []interface{}{
-				"2022-01-01 00:00:00",        // Timestamp
-				"12345",                      // Member ID
-				"TestPlayer",                 // Member Name
-				"1001",                       // Faction ID
-				"Test Faction",               // Faction Name
-				"Online",                     // Last Action Status
-				"Traveling to Mexico",        // Status Description
-				"Traveling",                  // Status State
-				"2022-01-01 00:26:00",       // Status Until
-				"airstrip",                   // Status Travel Type
+				"2022-01-01 00:00:00", // Timestamp
+				"12345",               // Member ID
+				"TestPlayer",          // Member Name
+				"1001",                // Faction ID
+				"Test Faction",        // Faction Name
+				"Online",              // Last Action Status
+				"Traveling to Mexico", // Status Description
+				"Traveling",           // Status State
+				"2022-01-01 00:26:00", // Status Until
+				"airstrip",            // Status Travel Type
 			},
 			expected: app.StateRecord{
 				Timestamp:         time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -46,15 +46,15 @@ func TestParseStateRecordFromRow(t *testing.T) {
 		{
 			name: "row without travel type",
 			row: []interface{}{
-				"2022-01-01 00:00:00",        // Timestamp
-				"12346",                      // Member ID
-				"TestPlayer2",                // Member Name
-				"1001",                       // Faction ID
-				"Test Faction",               // Faction Name
-				"Online",                     // Last Action Status
-				"Okay",                       // Status Description
-				"Okay",                       // Status State
-				"",                           // Status Until (empty)
+				"2022-01-01 00:00:00", // Timestamp
+				"12346",               // Member ID
+				"TestPlayer2",         // Member Name
+				"1001",                // Faction ID
+				"Test Faction",        // Faction Name
+				"Online",              // Last Action Status
+				"Okay",                // Status Description
+				"Okay",                // Status State
+				"",                    // Status Until (empty)
 			},
 			expected: app.StateRecord{
 				Timestamp:         time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -72,16 +72,16 @@ func TestParseStateRecordFromRow(t *testing.T) {
 		{
 			name: "row with regular travel type",
 			row: []interface{}{
-				"2022-01-01 00:00:00",        // Timestamp
-				"12347",                      // Member ID
-				"TestPlayer3",                // Member Name
-				"1001",                       // Faction ID
-				"Test Faction",               // Faction Name
-				"Online",                     // Last Action Status
-				"Traveling to UK",            // Status Description
-				"Traveling",                  // Status State
-				"",                           // Status Until (empty)
-				"regular",                    // Status Travel Type
+				"2022-01-01 00:00:00", // Timestamp
+				"12347",               // Member ID
+				"TestPlayer3",         // Member Name
+				"1001",                // Faction ID
+				"Test Faction",        // Faction Name
+				"Online",              // Last Action Status
+				"Traveling to UK",     // Status Description
+				"Traveling",           // Status State
+				"",                    // Status Until (empty)
+				"regular",             // Status Travel Type
 			},
 			expected: app.StateRecord{
 				Timestamp:         time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -144,16 +144,16 @@ func TestParseStateRecordFromRow(t *testing.T) {
 func TestTravelSpeedBugFix(t *testing.T) {
 	// Test that airstrip travel type is preserved and not overwritten with empty string
 	row := []interface{}{
-		"2022-01-01 00:00:00",        // Timestamp
-		"12345",                      // Member ID
-		"TestPlayer",                 // Member Name
-		"1001",                       // Faction ID
-		"Test Faction",               // Faction Name
-		"Online",                     // Last Action Status
-		"Traveling to Mexico",        // Status Description
-		"Traveling",                  // Status State
-		"2022-01-01 00:26:00",       // Status Until
-		"airstrip",                   // Status Travel Type - this should be preserved!
+		"2022-01-01 00:00:00", // Timestamp
+		"12345",               // Member ID
+		"TestPlayer",          // Member Name
+		"1001",                // Faction ID
+		"Test Faction",        // Faction Name
+		"Online",              // Last Action Status
+		"Traveling to Mexico", // Status Description
+		"Traveling",           // Status State
+		"2022-01-01 00:26:00", // Status Until
+		"airstrip",            // Status Travel Type - this should be preserved!
 	}
 
 	service := &StatusV2Service{}

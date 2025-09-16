@@ -166,7 +166,6 @@ func (m *MockSheetsClient) ReadSheet(ctx context.Context, spreadsheetID, range_ 
 	return m.ReadSheetResponse, m.ReadSheetError
 }
 
-
 func (m *MockSheetsClient) EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	m.EnsurePreviousStateSheetCalled = true
 	m.EnsurePreviousStateSheetCalledWith.SpreadsheetID = spreadsheetID
@@ -188,7 +187,6 @@ func (m *MockSheetsClient) StorePreviousMemberStates(ctx context.Context, spread
 	m.StorePreviousMemberStatesCalledWith.Members = members
 	return m.StorePreviousMemberStatesError
 }
-
 
 func (m *MockSheetsClient) EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	m.EnsureStateChangeRecordsSheetCalled = true

@@ -79,8 +79,8 @@ func (m *StatusV2Manager) GenerateStatusV2Headers() [][]interface{} {
 		{
 			"Player Name",
 			"Level",
-			"State",     // NEW: LastActionStatus from StateRecord
-			"Status",    // Status Description
+			"State",  // NEW: LastActionStatus from StateRecord
+			"Status", // Status Description
 			"Location",
 			"Countdown",
 			"Departure",

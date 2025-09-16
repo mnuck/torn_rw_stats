@@ -14,16 +14,16 @@ import (
 // StatusV2Service handles conversion of StateRecords to StatusV2Records
 // and tracks departure times for traveling players
 type StatusV2Service struct {
-	sheetsClient     SheetsClientInterface
-	locationService  *LocationService
+	sheetsClient      SheetsClientInterface
+	locationService   *LocationService
 	travelTimeService *TravelTimeService
 }
 
 // NewStatusV2Service creates a new Status v2 service
 func NewStatusV2Service(sheetsClient SheetsClientInterface) *StatusV2Service {
 	return &StatusV2Service{
-		sheetsClient:     sheetsClient,
-		locationService:  NewLocationService(),
+		sheetsClient:      sheetsClient,
+		locationService:   NewLocationService(),
 		travelTimeService: NewTravelTimeService(),
 	}
 }
@@ -68,6 +68,16 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 			Str("member_name", stateRecord.MemberName).
 			Str("status_state", stateRecord.StatusState).
 			Msg("Converting individual state record")
+
+		// Skip members who are no longer in the faction
+		if _, exists := factionMembers[stateRecord.MemberID]; !exists {
+			log.Debug().
+				Int("faction_id", factionID).
+				Str("member_id", stateRecord.MemberID).
+				Str("member_name", stateRecord.MemberName).
+				Msg("Skipping member who is no longer in faction")
+			continue
+		}
 
 		record := s.convertSingleStateRecord(ctx, stateRecord, factionMembers, existingData, departureMap, currentTime)
 		records = append(records, record)
@@ -150,7 +160,6 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 			}
 		}
 
-
 		// Preserve manual adjustments if they exist (override calculated values)
 		if hasExisting && existing.Departure != "" {
 			departure = existing.Departure
@@ -179,7 +188,6 @@ func (s *StatusV2Service) calculateLocation(stateRecord app.StateRecord) string 
 	return s.locationService.ParseLocation(stateRecord.StatusDescription)
 }
 
-
 // calculateCountdown calculates countdown string from StatusUntil timestamp
 func (s *StatusV2Service) calculateCountdown(statusUntil time.Time, currentTime time.Time) string {
 	if statusUntil.IsZero() {
@@ -198,7 +206,6 @@ func (s *StatusV2Service) calculateCountdown(statusUntil time.Time, currentTime 
 
 	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
 }
-
 
 // buildDepartureMap builds a map of member departure times from state changes
 func (s *StatusV2Service) buildDepartureMap(ctx context.Context, spreadsheetID string, currentStateRecords []app.StateRecord) (map[string]time.Time, error) {
