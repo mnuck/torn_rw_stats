@@ -206,7 +206,6 @@ func TestProcessWarIntegrationWithMocks(t *testing.T) {
 
 	mockTornClient.AllAttacksForWarResponse = testAttacks
 
-
 	mockTornClient.FactionBasicResponse = &app.FactionBasicResponse{
 		Members: map[string]app.FactionMember{
 			"123": {

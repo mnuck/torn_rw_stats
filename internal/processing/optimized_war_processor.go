@@ -12,13 +12,13 @@ import (
 
 // OptimizedWarProcessor wraps WarProcessor with war state management
 type OptimizedWarProcessor struct {
-	processor       *WarProcessor
-	tornClient      TornClientInterface
-	tracker         *APICallTracker
-	stateManager    *WarStateManager
-	stateTracker    *StateTrackingService
+	processor         *WarProcessor
+	tornClient        TornClientInterface
+	tracker           *APICallTracker
+	stateManager      *WarStateManager
+	stateTracker      *StateTrackingService
 	statusV2Processor *StatusV2Processor
-	spreadsheetID   string
+	spreadsheetID     string
 }
 
 // NewOptimizedWarProcessor creates a WarProcessor with war state management
@@ -191,7 +191,6 @@ func (owp *OptimizedWarProcessor) GetProcessingSummary() ProcessingSummary {
 	}
 }
 
-
 // processOurFactionOnly processes just our faction's status when no wars exist
 func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) error {
 	log.Info().Msg("Processing our faction status only (no active wars)")
@@ -205,8 +204,6 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 	if ourFactionID == 0 {
 		return fmt.Errorf("our faction ID is not set")
 	}
-
-
 
 	log.Info().
 		Int("faction_id", ourFactionID).

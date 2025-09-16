@@ -119,7 +119,6 @@ func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 	}
 }
 
-
 // TestConvertMembersToStateRows tests member state conversion
 func TestConvertMembersToStateRows(t *testing.T) {
 	stateManager := &StateChangeManager{}
@@ -279,7 +278,6 @@ func TestEmptyRecordHandling(t *testing.T) {
 			t.Errorf("Expected 0 rows for empty records, got %d", len(rows))
 		}
 	})
-
 
 	t.Run("empty member map", func(t *testing.T) {
 		members := make(map[string]app.FactionMember)

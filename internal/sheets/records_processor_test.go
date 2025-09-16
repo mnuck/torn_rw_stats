@@ -34,7 +34,7 @@ func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
 			name: "mixed valid and invalid timestamps",
 			data: [][]interface{}{
 				{1000, "code1", "1970-01-01 00:16:40"},
-				{1001, "", "invalid_date"},        // Empty code
+				{1001, "", "invalid_date"}, // Empty code
 				{2500, "code2", "1970-01-01 00:41:40"},
 				{1002, "", "1970-01-01 00:16:42"}, // Empty code
 			},
@@ -215,19 +215,19 @@ func TestAttackRecordsProcessorConvertRecordsToRowsComprehensive(t *testing.T) {
 	}
 
 	expectedValues1 := []interface{}{
-		int64(123456),           // AttackID
-		"Win",                   // Code
-		"2022-01-01 00:00:00",   // Started (formatted)
-		"0001-01-01 00:00:00",   // Ended (default zero time)
-		"Outgoing",              // Direction
-		0,                       // AttackerID
-		"TestAttacker",          // AttackerName
-		0,                       // AttackerLevel
-		"",                      // AttackerFactionID (nil converted to "")
-		"AttackerFaction",       // AttackerFactionName
-		0,                       // DefenderID
-		"TestDefender",          // DefenderName
-		0,                       // DefenderLevel
+		int64(123456),         // AttackID
+		"Win",                 // Code
+		"2022-01-01 00:00:00", // Started (formatted)
+		"0001-01-01 00:00:00", // Ended (default zero time)
+		"Outgoing",            // Direction
+		0,                     // AttackerID
+		"TestAttacker",        // AttackerName
+		0,                     // AttackerLevel
+		"",                    // AttackerFactionID (nil converted to "")
+		"AttackerFaction",     // AttackerFactionName
+		0,                     // DefenderID
+		"TestDefender",        // DefenderName
+		0,                     // DefenderLevel
 	}
 
 	for i, expected := range expectedValues1 {

@@ -176,7 +176,7 @@ func (m *ChangedStatesSheetManager) ConvertStateRecordToRow(record app.StateReco
 		record.LastActionStatus,  // Last Action Status
 		record.StatusDescription, // Status Description
 		record.StatusState,       // Status State
-		statusUntilStr,          // Status Until
+		statusUntilStr,           // Status Until
 		record.StatusTravelType,  // Status Travel Type
 	}
 }

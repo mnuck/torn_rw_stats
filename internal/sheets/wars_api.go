@@ -39,13 +39,11 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 
 // Travel and State Management Functions - delegate to specialized managers
 
-
 // convertMembersToStateRows converts member map to sheet row format
 func (c *Client) convertMembersToStateRows(members map[string]app.FactionMember) [][]interface{} {
 	manager := NewStateChangeManager(c)
 	return manager.ConvertMembersToStateRows(members)
 }
-
 
 // EnsureStatusV2Sheet creates Status v2 sheet for a faction if it doesn't exist
 func (c *Client) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {

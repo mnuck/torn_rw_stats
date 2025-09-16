@@ -240,8 +240,6 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		return fmt.Errorf("failed to update attack records: %w", err)
 	}
 
-
-
 	log.Info().
 		Int("war_id", war.ID).
 		Int("attacks_processed", len(attacks)).
@@ -495,8 +493,6 @@ func (wp *WarProcessor) getFactionTypeForLogging(factionID int) string {
 	return "enemy faction"
 }
 
-
-
 // handleStateChangeDetection manages state change detection and persistence
 func (wp *WarProcessor) handleStateChangeDetection(ctx context.Context, war *app.War, factionID int, factionData *app.FactionBasicResponse, spreadsheetID string) (map[string]app.FactionMember, error) {
 	factionName := wp.getFactionName(war, factionID)
@@ -560,6 +556,3 @@ func (wp *WarProcessor) handleStateChangeDetection(ctx context.Context, war *app
 
 	return previousMembers, nil
 }
-
-
-
