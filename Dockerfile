@@ -1,5 +1,5 @@
-# Build stage - Use latest 1.24.4 Alpine image
-FROM golang:1.24.4-alpine AS builder
+# Build stage - Use latest 1.25.1 Alpine image
+FROM golang:1.25.1-alpine AS builder
 
 WORKDIR /app
 
@@ -20,16 +20,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o torn_rw_stats \
     .
 
-# Final stage - Use latest distroless static image
+# Final stage - Use distroless for security and minimal attack surface
 FROM gcr.io/distroless/static:nonroot
 
 # Copy binary from builder stage
 COPY --from=builder /app/torn_rw_stats /app/torn_rw_stats
 
 WORKDIR /app
-
-# Use built-in nonroot user (UID 65532)
-USER 65532:65532
 
 # Set default command
 CMD ["./torn_rw_stats"]
