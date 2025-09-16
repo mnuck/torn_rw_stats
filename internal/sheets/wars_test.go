@@ -8,7 +8,6 @@ import (
 	"torn_rw_stats/internal/app"
 )
 
-
 // TestEnsureWarSheets tests war sheet creation and initialization
 func TestEnsureWarSheets(t *testing.T) {
 	war := &app.War{

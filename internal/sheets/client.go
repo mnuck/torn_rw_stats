@@ -206,4 +206,3 @@ func (c *Client) FormatStatusSheet(ctx context.Context, spreadsheetID, sheetName
 		Msg("Skipping automatic formatting - handled manually")
 	return nil
 }
-

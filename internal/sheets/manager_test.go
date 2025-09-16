@@ -235,19 +235,30 @@ func TestWarSheetsManagerGenerateHeaders(t *testing.T) {
 		t.Error("Expected records headers to be generated")
 	}
 
-	// Check for key columns
+	// Check that all 32 columns are present and in correct order
 	headerRow := recordsHeaders[0]
-	expectedCols := []string{"Timestamp", "Date", "Time", "Direction", "Attacker", "Defender"}
-	for _, expectedCol := range expectedCols {
-		found := false
-		for _, actualCol := range headerRow {
-			if actualCol == expectedCol {
-				found = true
-				break
-			}
+	expectedCols := []string{
+		"Attack ID", "Code", "Started", "Ended", "Direction",
+		"Attacker ID", "Attacker Name", "Attacker Level", "Attacker Faction ID", "Attacker Faction Name",
+		"Defender ID", "Defender Name", "Defender Level", "Defender Faction ID", "Defender Faction Name",
+		"Result", "Respect Gain", "Respect Loss", "Chain",
+		"Is Interrupted", "Is Stealthed", "Is Raid", "Is Ranked War",
+		"Modifier Fair Fight", "Modifier War", "Modifier Retaliation", "Modifier Group",
+		"Modifier Overseas", "Modifier Chain", "Modifier Warlord",
+		"Finishing Hit Name", "Finishing Hit Value",
+	}
+
+	if len(headerRow) != len(expectedCols) {
+		t.Errorf("Expected %d columns, got %d", len(expectedCols), len(headerRow))
+	}
+
+	for i, expectedCol := range expectedCols {
+		if i >= len(headerRow) {
+			t.Errorf("Missing column at index %d: expected '%s'", i, expectedCol)
+			continue
 		}
-		if !found {
-			t.Errorf("Expected to find column '%s' in records headers", expectedCol)
+		if headerRow[i] != expectedCol {
+			t.Errorf("Column %d mismatch: expected '%s', got '%s'", i, expectedCol, headerRow[i])
 		}
 	}
 }

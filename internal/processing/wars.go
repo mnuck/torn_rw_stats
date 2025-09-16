@@ -479,4 +479,3 @@ func (wp *WarProcessor) parseHospitalCountdown(description string) string {
 		Msg("No hospital countdown found")
 	return ""
 }
-
