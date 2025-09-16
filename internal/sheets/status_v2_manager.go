@@ -119,9 +119,9 @@ func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, she
 		return fmt.Errorf("failed to ensure sheet capacity: %w", err)
 	}
 
-	// Write the data starting from row 2
-	dataRangeSpec := fmt.Sprintf("%s!A2", sheetName)
-	if err := m.api.AppendRows(ctx, spreadsheetID, dataRangeSpec, rows); err != nil {
+	// Write the data starting from row 2 using UpdateRange to avoid blank row accumulation
+	dataRangeSpec := fmt.Sprintf("%s!A2:H%d", sheetName, len(rows)+1)
+	if err := m.api.UpdateRange(ctx, spreadsheetID, dataRangeSpec, rows); err != nil {
 		return fmt.Errorf("failed to update Status v2 records: %w", err)
 	}
 
