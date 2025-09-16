@@ -19,6 +19,7 @@ type OptimizedWarProcessor struct {
 	stateTracker      *StateTrackingService
 	statusV2Processor *StatusV2Processor
 	spreadsheetID     string
+	config            *app.Config
 }
 
 // NewOptimizedWarProcessor creates a WarProcessor with war state management
@@ -61,6 +62,7 @@ func NewOptimizedWarProcessor(
 		stateTracker:      stateTracker,
 		statusV2Processor: statusV2Processor,
 		spreadsheetID:     config.SpreadsheetID,
+		config:            config,
 	}
 }
 
@@ -271,7 +273,7 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		Ints("faction_ids", factionIDs).
 		Msg("Processing Status v2 for factions")
 
-	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs, stateInfo.UpdateInterval); err != nil {
+	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs, owp.config.UpdateInterval); err != nil {
 		log.Error().
 			Err(err).
 			Ints("faction_ids", factionIDs).
