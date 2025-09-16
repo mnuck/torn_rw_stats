@@ -158,3 +158,72 @@ go test ./internal/processing -v -run TestAPICallEfficiency
 - **Priority War Selection**: Multiple/overlapping war scenario handling
 - **API Call Optimization**: Measures actual vs expected API usage reduction
 - **Travel Time Calculations**: Location parsing and countdown accuracy
+
+## Release Process
+
+When making changes and preparing for release, follow this standardized process:
+
+### Pre-Release Validation
+1. **Run all tests** - ALL tests must pass:
+   ```bash
+   go test ./...
+   ```
+
+2. **Run code analysis** - Fix all issues:
+   ```bash
+   go vet ./...
+   ```
+
+3. **Format code** - Apply standard formatting:
+   ```bash
+   go fmt ./...
+   ```
+
+### Release Workflow
+4. **Create feature branch** (if not already on one):
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+5. **Commit changes** to the feature branch:
+   ```bash
+   git add .
+   git commit -m "Descriptive commit message"
+   ```
+
+6. **Push feature branch** to origin:
+   ```bash
+   git push -u origin feature/your-feature-name
+   ```
+
+7. **Create Pull Request** using GitHub CLI or web interface:
+   ```bash
+   gh pr create --title "PR Title" --body "PR Description"
+   ```
+
+8. **Get PR reviewed and merged**:
+   - If reviewer has comments, read and address them
+   - Work collaboratively to get the PR approved and merged
+
+### Post-Release Cleanup
+9. **Switch to main branch**:
+   ```bash
+   git checkout main
+   ```
+
+10. **Pull latest changes** from origin:
+    ```bash
+    git pull origin main
+    ```
+
+11. **Delete feature branch** locally and on origin:
+    ```bash
+    git branch -d feature/your-feature-name
+    git push origin --delete feature/your-feature-name
+    ```
+
+### Important Notes
+- **Never skip pre-release validation** - All tests, vetting, and formatting must be clean
+- **Use descriptive commit messages** that explain the "why" not just the "what"
+- **Address reviewer feedback promptly** and work collaboratively
+- **Clean up branches** after successful merge to keep repository organized
