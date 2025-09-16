@@ -31,13 +31,13 @@ func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsCli
 }
 
 // ProcessStatusV2ForFactions processes Status v2 sheets for multiple factions
-func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int) error {
+func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int, updateInterval time.Duration) error {
 	log.Info().
 		Int("faction_count", len(factionIDs)).
 		Msg("Processing Status v2 for factions")
 
 	for _, factionID := range factionIDs {
-		if err := p.ProcessStatusV2ForFaction(ctx, spreadsheetID, factionID); err != nil {
+		if err := p.ProcessStatusV2ForFaction(ctx, spreadsheetID, factionID, updateInterval); err != nil {
 			log.Error().
 				Err(err).
 				Int("faction_id", factionID).
@@ -54,7 +54,7 @@ func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spre
 }
 
 // ProcessStatusV2ForFaction processes Status v2 sheet for a single faction
-func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, spreadsheetID string, factionID int) error {
+func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, spreadsheetID string, factionID int, updateInterval time.Duration) error {
 	// Step 1: Ensure Status v2 sheet exists
 	sheetName, err := p.sheetsClient.EnsureStatusV2Sheet(ctx, spreadsheetID, factionID)
 	if err != nil {
@@ -136,7 +136,7 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 
 	// Step 7: Export JSON alongside sheet update (only for opposing factions)
 	if factionID != p.ourFactionID {
-		if err := p.exportJSON(statusV2Records, factionData.Name, factionID); err != nil {
+		if err := p.exportJSON(statusV2Records, factionData.Name, factionID, updateInterval); err != nil {
 			log.Warn().
 				Err(err).
 				Int("faction_id", factionID).
@@ -215,11 +215,11 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 }
 
 // exportJSON converts StatusV2Records to JSON format and writes to file
-func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName string, factionID int) error {
+func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
 	currentTime := time.Now()
 
 	// Convert to JSON format using the service
-	jsonData := p.service.ConvertToJSON(records, factionName, currentTime)
+	jsonData := p.service.ConvertToJSON(records, factionName, currentTime, updateInterval)
 
 	// Marshal to JSON bytes
 	jsonBytes, err := json.MarshalIndent(jsonData, "", "    ")

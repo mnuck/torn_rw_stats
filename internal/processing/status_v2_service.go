@@ -408,7 +408,7 @@ func getString(row []interface{}, index int) string {
 }
 
 // ConvertToJSON converts StatusV2Records to the JSON export format
-func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionName string, currentTime time.Time) app.StatusV2JSON {
+func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionName string, currentTime time.Time, updateInterval time.Duration) app.StatusV2JSON {
 	locations := make(map[string]app.LocationData)
 
 	for _, record := range records {
@@ -470,6 +470,7 @@ func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionNam
 	return app.StatusV2JSON{
 		Faction:   factionName,
 		Updated:   currentTime.Format(time.RFC3339),
+		Interval:  int(updateInterval.Seconds()),
 		Locations: filteredLocations,
 	}
 }

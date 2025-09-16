@@ -115,7 +115,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	}
 
 	// Process state changes for all observed factions
-	owp.processStateChanges(ctx, warResponse)
+	owp.processStateChanges(ctx, warResponse, stateInfo)
 
 	// Handle different states
 	switch currentState {
@@ -211,7 +211,7 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 }
 
 // processStateChanges handles state tracking for all observed factions
-func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse) {
+func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse, stateInfo WarStateInfo) {
 	// Determine which factions to track based on current wars
 	var factionIDs []int
 
@@ -271,7 +271,7 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		Ints("faction_ids", factionIDs).
 		Msg("Processing Status v2 for factions")
 
-	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs); err != nil {
+	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs, stateInfo.UpdateInterval); err != nil {
 		log.Error().
 			Err(err).
 			Ints("faction_ids", factionIDs).
