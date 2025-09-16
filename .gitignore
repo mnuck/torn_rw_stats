@@ -49,4 +49,4 @@ coverage.out
 coverage.html
 
 # Go module cache
-go.sum
+# go.sum should be committed for reproducible builds
