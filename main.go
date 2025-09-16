@@ -54,7 +54,7 @@ func main() {
 		// Reset API call counter at the start of each cycle
 		tornClient.ResetAPICallCount()
 
-		if err := warProcessor.ProcessActiveWars(ctx, true); err != nil {
+		if err := warProcessor.ProcessActiveWars(ctx); err != nil {
 			log.Error().Err(err).Msg("Failed to process active wars")
 			return *interval // Use CLI interval as fallback on error
 		}
