@@ -66,8 +66,8 @@ func NewOptimizedWarProcessor(
 	}
 }
 
-// ProcessActiveWars processes wars with state-based scheduling
-func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force bool) error {
+// ProcessActiveWars processes wars with continuous monitoring
+func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	// Always fetch war data first to determine actual current state
 	log.Debug().
 		Msg("Fetching war data to determine current state")
@@ -90,20 +90,10 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		Dur("time_until_next_check", stateInfo.TimeUntilCheck).
 		Msg("Starting war processor loop")
 
-	// Now check if we should do full processing based on updated state
-	if !force && !owp.stateManager.ShouldProcessNow() {
-		log.Info().
-			Str("current_state", stateInfo.State.String()).
-			Dur("time_until_next_check", stateInfo.TimeUntilCheck).
-			Msg("Skipping full processing - not time for next check")
-		return nil
-	}
-
-	if force {
-		log.Info().
-			Str("current_state", stateInfo.State.String()).
-			Msg("Force flag enabled - bypassing state-based optimization")
-	}
+	// Continuous monitoring enabled - always process all states
+	log.Debug().
+		Str("current_state", stateInfo.State.String()).
+		Msg("Continuous monitoring enabled - processing all states")
 
 	// Log pre-processing stats
 	preStats := owp.tracker.GetSessionStats()
@@ -132,29 +122,17 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 	// Handle different states
 	switch currentState {
 	case NoWars:
-		if !force {
-			log.Info().
-				Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-				Msg("No active wars - processor will pause until next Tuesday matchmaking")
-			return nil
-		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("No active wars - but force flag enabled, processing our faction status only")
+			Msg("No active wars - processing our faction status only")
 
 		// Process just our faction's status when no wars exist
 		return owp.processOurFactionOnly(ctx)
 
 	case PostWar:
-		if !force {
-			log.Info().
-				Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-				Msg("War completed - processor will pause until next week's matchmaking")
-			return nil
-		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("War completed - but force flag enabled, continuing processing")
+			Msg("War completed - continuing processing for post-war analysis")
 
 	case PreWar:
 		log.Info().
@@ -169,8 +147,8 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		// Continue to full processing
 	}
 
-	// Only process if we have wars that need attention (PreWar or ActiveWar) or force flag is enabled
-	if currentState == PreWar || currentState == ActiveWar || force {
+	// Process wars for PreWar and ActiveWar states (NoWars and PostWar are handled above)
+	if currentState == PreWar || currentState == ActiveWar {
 		// Process wars using existing logic but with optimized client
 		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
 		err = owp.processor.ProcessActiveWars(ctx)
