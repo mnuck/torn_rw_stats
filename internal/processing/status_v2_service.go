@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -404,4 +405,71 @@ func getString(row []interface{}, index int) string {
 		return str
 	}
 	return ""
+}
+
+// ConvertToJSON converts StatusV2Records to the JSON export format
+func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionName string, currentTime time.Time) app.StatusV2JSON {
+	locations := make(map[string]app.LocationData)
+
+	for _, record := range records {
+		location := record.Location
+		if location == "" {
+			continue
+		}
+
+		// Ensure location exists in map
+		if _, exists := locations[location]; !exists {
+			locations[location] = app.LocationData{
+				Traveling: []app.JSONMember{},
+				LocatedIn: []app.JSONMember{},
+			}
+		}
+
+		// Create JSON member
+		member := app.JSONMember{
+			Name:  record.Name,
+			State: record.State,
+		}
+
+		// Add Status and Countdown based on the member's situation
+		isTraveling := strings.Contains(strings.ToLower(record.Status), "traveling")
+
+		if isTraveling {
+			// For traveling members, countdown shows time until arrival
+			if record.Countdown != "" && record.Countdown != "00:00:00" {
+				member.Countdown = strings.TrimPrefix(record.Countdown, "'")
+			}
+			// Add to traveling array
+			locationData := locations[location]
+			locationData.Traveling = append(locationData.Traveling, member)
+			locations[location] = locationData
+		} else {
+			// For located members, show their status (Hospital, Jail, etc.)
+			if record.Status != "" && record.Status != "Okay" {
+				member.Status = record.Status
+				// Add countdown for timed statuses like Hospital, Jail
+				if record.Countdown != "" && record.Countdown != "00:00:00" {
+					member.Countdown = strings.TrimPrefix(record.Countdown, "'")
+				}
+			}
+			// Add to located array
+			locationData := locations[location]
+			locationData.LocatedIn = append(locationData.LocatedIn, member)
+			locations[location] = locationData
+		}
+	}
+
+	// Remove locations with no members (both arrays empty)
+	filteredLocations := make(map[string]app.LocationData)
+	for location, data := range locations {
+		if len(data.Traveling) > 0 || len(data.LocatedIn) > 0 {
+			filteredLocations[location] = data
+		}
+	}
+
+	return app.StatusV2JSON{
+		Faction:   factionName,
+		Updated:   currentTime.Format(time.RFC3339),
+		Locations: filteredLocations,
+	}
 }

@@ -2,7 +2,10 @@ package processing
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"time"
 
 	"torn_rw_stats/internal/app"
 
@@ -14,14 +17,16 @@ type StatusV2Processor struct {
 	tornClient   TornClientInterface
 	sheetsClient SheetsClientInterface
 	service      *StatusV2Service
+	ourFactionID int
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface) *StatusV2Processor {
+func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, ourFactionID int) *StatusV2Processor {
 	return &StatusV2Processor{
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
 		service:      NewStatusV2Service(sheetsClient),
+		ourFactionID: ourFactionID,
 	}
 }
 
@@ -129,6 +134,20 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 		Int("faction_members", len(factionData.Members)).
 		Msg("Successfully updated Status v2 sheet")
 
+	// Step 7: Export JSON alongside sheet update (only for opposing factions)
+	if factionID != p.ourFactionID {
+		if err := p.exportJSON(statusV2Records, factionData.Name, factionID); err != nil {
+			log.Warn().
+				Err(err).
+				Int("faction_id", factionID).
+				Msg("Failed to export Status v2 JSON - continuing with processing")
+		}
+	} else {
+		log.Debug().
+			Int("faction_id", factionID).
+			Msg("Skipping JSON export for our own faction")
+	}
+
 	return nil
 }
 
@@ -193,4 +212,34 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 		Msg("Completed faction filtering")
 
 	return currentRecords
+}
+
+// exportJSON converts StatusV2Records to JSON format and writes to file
+func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName string, factionID int) error {
+	currentTime := time.Now()
+
+	// Convert to JSON format using the service
+	jsonData := p.service.ConvertToJSON(records, factionName, currentTime)
+
+	// Marshal to JSON bytes
+	jsonBytes, err := json.MarshalIndent(jsonData, "", "    ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	// Create filename
+	filename := fmt.Sprintf("status_v2_%d.json", factionID)
+
+	// Write to file
+	if err := os.WriteFile(filename, jsonBytes, 0644); err != nil {
+		return fmt.Errorf("failed to write JSON file: %w", err)
+	}
+
+	log.Info().
+		Int("faction_id", factionID).
+		Str("filename", filename).
+		Int("locations_count", len(jsonData.Locations)).
+		Msg("Successfully exported Status v2 JSON")
+
+	return nil
 }
