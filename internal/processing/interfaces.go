@@ -24,11 +24,6 @@ type SheetsClientInterface interface {
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
-	EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error)
-	StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error
-	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
 
 	// Additional methods for state tracking
 	UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error
@@ -65,13 +60,6 @@ type AttackProcessingServiceInterface interface {
 // WarSummaryServiceInterface defines the interface for war summary generation
 type WarSummaryServiceInterface interface {
 	GenerateWarSummary(war *app.War, attacks []app.Attack) *app.WarSummary
-}
-
-// StateChangeDetectionServiceInterface defines the interface for state change detection
-type StateChangeDetectionServiceInterface interface {
-	NormalizeHospitalDescription(description string) string
-	HasStatusChanged(oldMember, newMember app.FactionMember) bool
-	ProcessStateChanges(ctx context.Context, factionID int, factionName string, oldMembers, newMembers map[string]app.FactionMember, spreadsheetID string) error
 }
 
 // WarStateManagerInterface defines the interface for war state management

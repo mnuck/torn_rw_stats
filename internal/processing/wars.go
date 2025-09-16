@@ -16,15 +16,14 @@ import (
 
 // WarProcessor handles war detection and processing
 type WarProcessor struct {
-	tornClient         TornClientInterface
-	sheetsClient       SheetsClientInterface
-	config             *app.Config
-	ourFactionID       int // Cached faction ID from API
-	locationService    LocationServiceInterface
-	travelTimeService  TravelTimeServiceInterface
-	attackService      AttackProcessingServiceInterface
-	summaryService     WarSummaryServiceInterface
-	stateChangeService StateChangeDetectionServiceInterface
+	tornClient        TornClientInterface
+	sheetsClient      SheetsClientInterface
+	config            *app.Config
+	ourFactionID      int // Cached faction ID from API
+	locationService   LocationServiceInterface
+	travelTimeService TravelTimeServiceInterface
+	attackService     AttackProcessingServiceInterface
+	summaryService    WarSummaryServiceInterface
 }
 
 // NewWarProcessor creates a WarProcessor with interface dependencies for testability
@@ -35,19 +34,17 @@ func NewWarProcessor(
 	travelTimeService TravelTimeServiceInterface,
 	attackService AttackProcessingServiceInterface,
 	summaryService WarSummaryServiceInterface,
-	stateChangeService StateChangeDetectionServiceInterface,
 	config *app.Config,
 ) *WarProcessor {
 	return &WarProcessor{
-		tornClient:         tornClient,
-		sheetsClient:       sheetsClient,
-		config:             config,
-		ourFactionID:       0, // Will be initialized on first use
-		locationService:    locationService,
-		travelTimeService:  travelTimeService,
-		attackService:      attackService,
-		summaryService:     summaryService,
-		stateChangeService: stateChangeService,
+		tornClient:        tornClient,
+		sheetsClient:      sheetsClient,
+		config:            config,
+		ourFactionID:      0, // Will be initialized on first use
+		locationService:   locationService,
+		travelTimeService: travelTimeService,
+		attackService:     attackService,
+		summaryService:    summaryService,
 	}
 }
 
@@ -57,7 +54,6 @@ func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, s
 	// Create the attack processing service
 	attackService := NewAttackProcessingService(config.OurFactionID)
 	summaryService := NewWarSummaryService(attackService)
-	stateChangeService := NewStateChangeDetectionService(sheetsClient)
 
 	return NewOptimizedWarProcessor(
 		tornClient,
@@ -66,7 +62,6 @@ func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, s
 		NewTravelTimeService(),
 		attackService,
 		summaryService,
-		stateChangeService,
 		config,
 	)
 }

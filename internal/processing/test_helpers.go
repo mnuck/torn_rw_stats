@@ -8,7 +8,6 @@ import (
 func newTestWarProcessor(config *app.Config) *WarProcessor {
 	attackService := NewAttackProcessingService(12345) // Default test faction ID
 	summaryService := NewWarSummaryService(attackService)
-	stateChangeService := NewStateChangeDetectionService(nil) // No sheets client for most unit tests
 
 	return NewWarProcessor(
 		nil, // tornClient - not needed for most unit tests
@@ -17,7 +16,6 @@ func newTestWarProcessor(config *app.Config) *WarProcessor {
 		NewTravelTimeService(),
 		attackService,
 		summaryService,
-		stateChangeService,
 		config,
 	)
 }
@@ -30,7 +28,6 @@ func newTestWarProcessorWithMocks(
 ) *WarProcessor {
 	attackService := NewAttackProcessingService(12345) // Default test faction ID
 	summaryService := NewWarSummaryService(attackService)
-	stateChangeService := NewStateChangeDetectionService(sheetsClient)
 
 	return NewWarProcessor(
 		tornClient,
@@ -39,7 +36,6 @@ func newTestWarProcessorWithMocks(
 		NewTravelTimeService(),
 		attackService,
 		summaryService,
-		stateChangeService,
 		config,
 	)
 }

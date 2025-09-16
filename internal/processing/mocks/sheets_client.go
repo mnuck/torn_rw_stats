@@ -14,11 +14,6 @@ type SheetsClient interface {
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
-	EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error)
-	StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error
-	EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error
 
 	// Additional methods for state tracking
 	UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error
@@ -36,46 +31,33 @@ type SheetsClient interface {
 // MockSheetsClient is a test double for the sheets.Client
 type MockSheetsClient struct {
 	// Responses to return
-	EnsureWarSheetsResponse               *app.SheetConfig
-	ReadExistingRecordsResponse           *sheets.ExistingRecordsInfo
-	ReadSheetResponse                     [][]interface{}
-	EnsurePreviousStateSheetResponse      string
-	LoadPreviousMemberStatesResponse      map[string]app.FactionMember
-	EnsureStateChangeRecordsSheetResponse string
-	SheetExistsResponse                   bool
-	EnsureStatusV2SheetResponse           string
+	EnsureWarSheetsResponse     *app.SheetConfig
+	ReadExistingRecordsResponse *sheets.ExistingRecordsInfo
+	ReadSheetResponse           [][]interface{}
+	SheetExistsResponse         bool
+	EnsureStatusV2SheetResponse string
 
 	// Errors to return
-	EnsureWarSheetsError               error
-	ReadExistingRecordsError           error
-	UpdateWarSummaryError              error
-	UpdateAttackRecordsError           error
-	ReadSheetError                     error
-	EnsurePreviousStateSheetError      error
-	LoadPreviousMemberStatesError      error
-	StorePreviousMemberStatesError     error
-	EnsureStateChangeRecordsSheetError error
-	AddStateChangeRecordError          error
-	UpdateRangeError                   error
-	ClearRangeError                    error
-	AppendRowsError                    error
-	CreateSheetError                   error
-	SheetExistsError                   error
-	EnsureSheetCapacityError           error
-	EnsureStatusV2SheetError           error
-	UpdateStatusV2Error                error
+	EnsureWarSheetsError     error
+	ReadExistingRecordsError error
+	UpdateWarSummaryError    error
+	UpdateAttackRecordsError error
+	ReadSheetError           error
+	UpdateRangeError         error
+	ClearRangeError          error
+	AppendRowsError          error
+	CreateSheetError         error
+	SheetExistsError         error
+	EnsureSheetCapacityError error
+	EnsureStatusV2SheetError error
+	UpdateStatusV2Error      error
 
 	// Call tracking
-	EnsureWarSheetsCalled               bool
-	ReadExistingRecordsCalled           bool
-	UpdateWarSummaryCalled              bool
-	UpdateAttackRecordsCalled           bool
-	ReadSheetCalled                     bool
-	EnsurePreviousStateSheetCalled      bool
-	LoadPreviousMemberStatesCalled      bool
-	StorePreviousMemberStatesCalled     bool
-	EnsureStateChangeRecordsSheetCalled bool
-	AddStateChangeRecordCalled          bool
+	EnsureWarSheetsCalled     bool
+	ReadExistingRecordsCalled bool
+	UpdateWarSummaryCalled    bool
+	UpdateAttackRecordsCalled bool
+	ReadSheetCalled           bool
 
 	// Call parameters tracking
 	EnsureWarSheetsCalledWith struct {
@@ -99,28 +81,6 @@ type MockSheetsClient struct {
 	ReadSheetCalledWith struct {
 		SpreadsheetID string
 		Range         string
-	}
-	EnsurePreviousStateSheetCalledWith struct {
-		SpreadsheetID string
-		FactionID     int
-	}
-	LoadPreviousMemberStatesCalledWith struct {
-		SpreadsheetID string
-		SheetName     string
-	}
-	StorePreviousMemberStatesCalledWith struct {
-		SpreadsheetID string
-		SheetName     string
-		Members       map[string]app.FactionMember
-	}
-	EnsureStateChangeRecordsSheetCalledWith struct {
-		SpreadsheetID string
-		FactionID     int
-	}
-	AddStateChangeRecordCalledWith struct {
-		SpreadsheetID string
-		SheetName     string
-		Record        app.StateChangeRecord
 	}
 }
 
@@ -166,52 +126,12 @@ func (m *MockSheetsClient) ReadSheet(ctx context.Context, spreadsheetID, range_ 
 	return m.ReadSheetResponse, m.ReadSheetError
 }
 
-func (m *MockSheetsClient) EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	m.EnsurePreviousStateSheetCalled = true
-	m.EnsurePreviousStateSheetCalledWith.SpreadsheetID = spreadsheetID
-	m.EnsurePreviousStateSheetCalledWith.FactionID = factionID
-	return m.EnsurePreviousStateSheetResponse, m.EnsurePreviousStateSheetError
-}
-
-func (m *MockSheetsClient) LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error) {
-	m.LoadPreviousMemberStatesCalled = true
-	m.LoadPreviousMemberStatesCalledWith.SpreadsheetID = spreadsheetID
-	m.LoadPreviousMemberStatesCalledWith.SheetName = sheetName
-	return m.LoadPreviousMemberStatesResponse, m.LoadPreviousMemberStatesError
-}
-
-func (m *MockSheetsClient) StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error {
-	m.StorePreviousMemberStatesCalled = true
-	m.StorePreviousMemberStatesCalledWith.SpreadsheetID = spreadsheetID
-	m.StorePreviousMemberStatesCalledWith.SheetName = sheetName
-	m.StorePreviousMemberStatesCalledWith.Members = members
-	return m.StorePreviousMemberStatesError
-}
-
-func (m *MockSheetsClient) EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	m.EnsureStateChangeRecordsSheetCalled = true
-	m.EnsureStateChangeRecordsSheetCalledWith.SpreadsheetID = spreadsheetID
-	m.EnsureStateChangeRecordsSheetCalledWith.FactionID = factionID
-	return m.EnsureStateChangeRecordsSheetResponse, m.EnsureStateChangeRecordsSheetError
-}
-
-func (m *MockSheetsClient) AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error {
-	m.AddStateChangeRecordCalled = true
-	m.AddStateChangeRecordCalledWith.SpreadsheetID = spreadsheetID
-	m.AddStateChangeRecordCalledWith.SheetName = sheetName
-	m.AddStateChangeRecordCalledWith.Record = record
-	return m.AddStateChangeRecordError
-}
-
 // Reset clears all call tracking and responses
 func (m *MockSheetsClient) Reset() {
 	// Clear responses
 	m.EnsureWarSheetsResponse = nil
 	m.ReadExistingRecordsResponse = nil
 	m.ReadSheetResponse = nil
-	m.EnsurePreviousStateSheetResponse = ""
-	m.LoadPreviousMemberStatesResponse = nil
-	m.EnsureStateChangeRecordsSheetResponse = ""
 
 	// Clear errors
 	m.EnsureWarSheetsError = nil
@@ -219,11 +139,6 @@ func (m *MockSheetsClient) Reset() {
 	m.UpdateWarSummaryError = nil
 	m.UpdateAttackRecordsError = nil
 	m.ReadSheetError = nil
-	m.EnsurePreviousStateSheetError = nil
-	m.LoadPreviousMemberStatesError = nil
-	m.StorePreviousMemberStatesError = nil
-	m.EnsureStateChangeRecordsSheetError = nil
-	m.AddStateChangeRecordError = nil
 
 	// Clear call tracking
 	m.EnsureWarSheetsCalled = false
@@ -231,11 +146,6 @@ func (m *MockSheetsClient) Reset() {
 	m.UpdateWarSummaryCalled = false
 	m.UpdateAttackRecordsCalled = false
 	m.ReadSheetCalled = false
-	m.EnsurePreviousStateSheetCalled = false
-	m.LoadPreviousMemberStatesCalled = false
-	m.StorePreviousMemberStatesCalled = false
-	m.EnsureStateChangeRecordsSheetCalled = false
-	m.AddStateChangeRecordCalled = false
 
 	// Clear parameter tracking
 	m.EnsureWarSheetsCalledWith = struct {
@@ -259,28 +169,6 @@ func (m *MockSheetsClient) Reset() {
 	m.ReadSheetCalledWith = struct {
 		SpreadsheetID string
 		Range         string
-	}{}
-	m.EnsurePreviousStateSheetCalledWith = struct {
-		SpreadsheetID string
-		FactionID     int
-	}{}
-	m.LoadPreviousMemberStatesCalledWith = struct {
-		SpreadsheetID string
-		SheetName     string
-	}{}
-	m.StorePreviousMemberStatesCalledWith = struct {
-		SpreadsheetID string
-		SheetName     string
-		Members       map[string]app.FactionMember
-	}{}
-	m.EnsureStateChangeRecordsSheetCalledWith = struct {
-		SpreadsheetID string
-		FactionID     int
-	}{}
-	m.AddStateChangeRecordCalledWith = struct {
-		SpreadsheetID string
-		SheetName     string
-		Record        app.StateChangeRecord
 	}{}
 }
 

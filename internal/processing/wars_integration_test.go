@@ -223,11 +223,7 @@ func TestProcessWarIntegrationWithMocks(t *testing.T) {
 		},
 	}
 
-	mockSheetsClient.EnsurePreviousStateSheetResponse = "Previous State - 12345"
-	mockSheetsClient.LoadPreviousMemberStatesResponse = map[string]app.FactionMember{} // No previous states
-
 	// Do the same setup for enemy faction travel status
-	mockSheetsClient.EnsureStateChangeRecordsSheetResponse = "State Changes - 67890"
 
 	// Execute the method under test
 	ctx := context.Background()

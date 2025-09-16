@@ -39,12 +39,6 @@ func (c *Client) UpdateAttackRecords(ctx context.Context, spreadsheetID string, 
 
 // Travel and State Management Functions - delegate to specialized managers
 
-// convertMembersToStateRows converts member map to sheet row format
-func (c *Client) convertMembersToStateRows(members map[string]app.FactionMember) [][]interface{} {
-	manager := NewStateChangeManager(c)
-	return manager.ConvertMembersToStateRows(members)
-}
-
 // EnsureStatusV2Sheet creates Status v2 sheet for a faction if it doesn't exist
 func (c *Client) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
 	manager := NewStatusV2Manager(c)
@@ -55,34 +49,4 @@ func (c *Client) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, 
 func (c *Client) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
 	manager := NewStatusV2Manager(c)
 	return manager.UpdateStatusV2(ctx, spreadsheetID, sheetName, records)
-}
-
-// EnsureStateChangeRecordsSheet creates state change records sheet for a faction if it doesn't exist
-func (c *Client) EnsureStateChangeRecordsSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	manager := NewStateChangeManager(c)
-	return manager.EnsureStateChangeRecordsSheet(ctx, spreadsheetID, factionID)
-}
-
-// AddStateChangeRecord adds a new state change record to the sheet
-func (c *Client) AddStateChangeRecord(ctx context.Context, spreadsheetID, sheetName string, record app.StateChangeRecord) error {
-	manager := NewStateChangeManager(c)
-	return manager.AddStateChangeRecord(ctx, spreadsheetID, sheetName, record)
-}
-
-// EnsurePreviousStateSheet creates previous state sheet for a faction if it doesn't exist
-func (c *Client) EnsurePreviousStateSheet(ctx context.Context, spreadsheetID string, factionID int) (string, error) {
-	manager := NewStateChangeManager(c)
-	return manager.EnsurePreviousStateSheet(ctx, spreadsheetID, factionID)
-}
-
-// StorePreviousMemberStates stores current member states to the previous state sheet
-func (c *Client) StorePreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string, members map[string]app.FactionMember) error {
-	manager := NewStateChangeManager(c)
-	return manager.StorePreviousMemberStates(ctx, spreadsheetID, sheetName, members)
-}
-
-// LoadPreviousMemberStates loads previous member states from the sheet
-func (c *Client) LoadPreviousMemberStates(ctx context.Context, spreadsheetID, sheetName string) (map[string]app.FactionMember, error) {
-	manager := NewStateChangeManager(c)
-	return manager.LoadPreviousMemberStates(ctx, spreadsheetID, sheetName)
 }
