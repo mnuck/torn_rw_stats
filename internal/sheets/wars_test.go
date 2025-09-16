@@ -1,100 +1,12 @@
 package sheets
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"torn_rw_stats/internal/app"
 )
-
-// Mock client for testing without external dependencies
-type mockSheetsClient struct {
-	sheets              map[string]bool            // Track which sheets exist
-	data                map[string][][]interface{} // Store sheet data by range
-	createSheetError    error
-	sheetExistsError    error
-	updateRangeError    error
-	readSheetError      error
-	clearRangeError     error
-	ensureCapacityError error
-	appendRowsError     error
-	lastUpdateRange     string
-	lastUpdateValues    [][]interface{}
-	lastReadRange       string
-	lastClearRange      string
-	capacityUpdateCount int
-}
-
-func newMockSheetsClient() *mockSheetsClient {
-	return &mockSheetsClient{
-		sheets: make(map[string]bool),
-		data:   make(map[string][][]interface{}),
-	}
-}
-
-func (m *mockSheetsClient) CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error {
-	if m.createSheetError != nil {
-		return m.createSheetError
-	}
-	m.sheets[sheetName] = true
-	return nil
-}
-
-func (m *mockSheetsClient) SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error) {
-	if m.sheetExistsError != nil {
-		return false, m.sheetExistsError
-	}
-	return m.sheets[sheetName], nil
-}
-
-func (m *mockSheetsClient) UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error {
-	if m.updateRangeError != nil {
-		return m.updateRangeError
-	}
-	m.lastUpdateRange = range_
-	m.lastUpdateValues = values
-	m.data[range_] = values
-	return nil
-}
-
-func (m *mockSheetsClient) ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error) {
-	if m.readSheetError != nil {
-		return nil, m.readSheetError
-	}
-	m.lastReadRange = range_
-	if data, exists := m.data[range_]; exists {
-		return data, nil
-	}
-	return [][]interface{}{}, nil
-}
-
-func (m *mockSheetsClient) ClearRange(ctx context.Context, spreadsheetID, range_ string) error {
-	if m.clearRangeError != nil {
-		return m.clearRangeError
-	}
-	m.lastClearRange = range_
-	delete(m.data, range_)
-	return nil
-}
-
-func (m *mockSheetsClient) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error {
-	if m.ensureCapacityError != nil {
-		return m.ensureCapacityError
-	}
-	m.capacityUpdateCount++
-	return nil
-}
-
-func (m *mockSheetsClient) AppendRows(ctx context.Context, spreadsheetID, range_ string, rows [][]interface{}) error {
-	if m.appendRowsError != nil {
-		return m.appendRowsError
-	}
-	// Simulate appending by storing in data
-	m.data[range_] = rows
-	return nil
-}
 
 
 // TestEnsureWarSheets tests war sheet creation and initialization
