@@ -18,6 +18,7 @@ type Config struct {
 	CredentialsFile string
 	OurFactionID    int
 	UpdateInterval  time.Duration
+	DeployURL       string
 }
 
 // SetupEnvironment loads .env file and configures zerolog output and log level.
@@ -86,10 +87,13 @@ func LoadConfig() (*Config, error) {
 		credentialsFile = "credentials.json"
 	}
 
+	deployURL := os.Getenv("DEPLOY_URL")
+
 	return &Config{
 		TornAPIKey:      apiKey,
 		SpreadsheetID:   spreadsheetID,
 		CredentialsFile: credentialsFile,
+		DeployURL:       deployURL,
 	}, nil
 }
 

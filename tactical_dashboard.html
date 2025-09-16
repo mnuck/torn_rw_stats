@@ -432,6 +432,52 @@
             return date.toLocaleString();
         }
 
+        // Save current tab states for all locations
+        function saveTabStates() {
+            const tabStates = {};
+            const locationSections = document.querySelectorAll('.location-section');
+
+            locationSections.forEach(section => {
+                const locationHeader = section.querySelector('.location-header');
+                if (locationHeader) {
+                    const locationName = locationHeader.querySelector('span').textContent;
+                    const activeTab = section.querySelector('.tab-header.active');
+                    if (activeTab) {
+                        const tabText = activeTab.querySelector('span').textContent;
+                        tabStates[locationName] = tabText;
+                    }
+                }
+            });
+
+            return tabStates;
+        }
+
+        // Restore tab states after DOM update
+        function restoreTabStates(savedStates) {
+            if (!savedStates || Object.keys(savedStates).length === 0) {
+                return;
+            }
+
+            const locationSections = document.querySelectorAll('.location-section');
+
+            locationSections.forEach(section => {
+                const locationHeader = section.querySelector('.location-header');
+                if (locationHeader) {
+                    const locationName = locationHeader.querySelector('span').textContent;
+                    const savedTab = savedStates[locationName];
+
+                    if (savedTab) {
+                        const locationContent = section.querySelector('.location-content');
+                        const locationId = locationContent.id;
+
+                        // Determine which tab to activate based on saved state
+                        const tabType = savedTab === 'Traveling to' ? 'traveling' : 'located';
+                        switchTab(locationId, tabType);
+                    }
+                }
+            });
+        }
+
 
         // Start or restart auto-refresh with dynamic interval
         function startAutoRefresh(intervalSeconds) {
@@ -471,6 +517,9 @@
             document.getElementById('last-updated').textContent = `Last updated: ${formatDateTime(currentData.Updated)}`;
             document.getElementById('update-interval').textContent = `Update interval: ${currentData.Interval || 60} seconds`;
 
+            // Save current tab states before updating
+            const currentTabStates = saveTabStates();
+
             // Generate location sections - Torn always last
             const container = document.getElementById('locations-container');
             const locations = Object.entries(currentData.Locations);
@@ -487,6 +536,9 @@
                 .join('');
 
             container.innerHTML = locationsHtml;
+
+            // Restore tab states after updating
+            restoreTabStates(currentTabStates);
         }
 
         // Load data when page loads and start auto-refresh
