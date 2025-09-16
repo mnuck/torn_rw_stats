@@ -49,4 +49,4 @@ coverage.out
 coverage.html
 
 # Go module cache
-# go.sum should be committed for reproducible builds
+# go.sum should be committed for reproducible buildsstatus_v2_*.json
