@@ -156,10 +156,9 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 	sampleRows := make([]string, 0, 3)
 	for i, row := range rows {
 		if i < 3 && len(row) >= 2 {
-			if attackID, ok := row[0].(interface{}); ok {
-				if code, ok := row[1].(string); ok {
-					sampleRows = append(sampleRows, fmt.Sprintf("ID:%v Code:%s", attackID, code))
-				}
+			attackID := row[0]
+			if code, ok := row[1].(string); ok {
+				sampleRows = append(sampleRows, fmt.Sprintf("ID:%v Code:%s", attackID, code))
 			}
 		}
 	}

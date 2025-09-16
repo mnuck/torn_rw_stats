@@ -164,59 +164,64 @@ go test ./internal/processing -v -run TestAPICallEfficiency
 When making changes and preparing for release, follow this standardized process:
 
 ### Pre-Release Validation
-1. **Run all tests** - ALL tests must pass:
+1. **Tidy dependencies** - Ensure go.mod and go.sum are current:
+   ```bash
+   go mod tidy
+   ```
+
+2. **Run all tests** - ALL tests must pass:
    ```bash
    go test ./...
    ```
 
-2. **Run code analysis** - Fix all issues:
+3. **Run code analysis** - Fix all issues:
    ```bash
    go vet ./...
    ```
 
-3. **Format code** - Apply standard formatting:
+4. **Format code** - Apply standard formatting:
    ```bash
    go fmt ./...
    ```
 
 ### Release Workflow
-4. **Create feature branch** (if not already on one):
+5. **Create feature branch** (if not already on one):
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-5. **Commit changes** to the feature branch:
+6. **Commit changes** to the feature branch:
    ```bash
    git add .
    git commit -m "Descriptive commit message"
    ```
 
-6. **Push feature branch** to origin:
+7. **Push feature branch** to origin:
    ```bash
    git push -u origin feature/your-feature-name
    ```
 
-7. **Create Pull Request** using GitHub CLI or web interface:
+8. **Create Pull Request** using GitHub CLI or web interface:
    ```bash
    gh pr create --title "PR Title" --body "PR Description"
    ```
 
-8. **Get PR reviewed and merged**:
+9. **Get PR reviewed and merged**:
    - If reviewer has comments, read and address them
    - Work collaboratively to get the PR approved and merged
 
 ### Post-Release Cleanup
-9. **Switch to main branch**:
-   ```bash
-   git checkout main
-   ```
+10. **Switch to main branch**:
+    ```bash
+    git checkout main
+    ```
 
-10. **Pull latest changes** from origin:
+11. **Pull latest changes** from origin:
     ```bash
     git pull origin main
     ```
 
-11. **Delete feature branch** locally and on origin:
+12. **Delete feature branch** locally and on origin:
     ```bash
     git branch -d feature/your-feature-name
     git push origin --delete feature/your-feature-name

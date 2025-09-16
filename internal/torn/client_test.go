@@ -65,7 +65,7 @@ func TestMakeAPIRequest(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"test": "response"}`))
+		_, _ = w.Write([]byte(`{"test": "response"}`))
 	}))
 	defer server.Close()
 
@@ -94,7 +94,7 @@ func TestHandleAPIResponse(t *testing.T) {
 	t.Run("SuccessfulResponse", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"test": "data"}`))
+			_, _ = w.Write([]byte(`{"test": "data"}`))
 		}))
 		defer server.Close()
 
@@ -118,7 +118,7 @@ func TestHandleAPIResponse(t *testing.T) {
 	t.Run("ErrorResponse", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error": {"msg": "Invalid API key"}}`))
+			_, _ = w.Write([]byte(`{"error": {"msg": "Invalid API key"}}`))
 		}))
 		defer server.Close()
 

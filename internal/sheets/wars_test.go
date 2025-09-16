@@ -96,12 +96,6 @@ func (m *mockSheetsClient) AppendRows(ctx context.Context, spreadsheetID, range_
 	return nil
 }
 
-// Create a test client with the mock
-func newTestClient() *Client {
-	return &Client{
-		service: nil, // We'll intercept calls via interface
-	}
-}
 
 // TestEnsureWarSheets tests war sheet creation and initialization
 func TestEnsureWarSheets(t *testing.T) {

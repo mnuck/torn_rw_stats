@@ -11,9 +11,8 @@ func TestClient(t *testing.T) {
 	// Test client creation with nil service (we can't test Google API directly)
 	client := &Client{service: nil}
 
-	if client == nil {
-		t.Error("Expected non-nil client")
-	}
+	// Basic struct creation test - client will never be nil
+	_ = client
 }
 
 // TestSheetOperationLogic tests the business logic without external dependencies
