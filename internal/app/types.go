@@ -252,3 +252,24 @@ type StatusV2Record struct {
 	Departure string `json:"departure"` // Manual adjustment preserved
 	Arrival   string `json:"arrival"`   // Manual adjustment preserved
 }
+
+// JSONMember represents a member in the JSON export format
+type JSONMember struct {
+	Name      string `json:"Name"`
+	State     string `json:"State"`
+	Status    string `json:"Status,omitempty"`
+	Countdown string `json:"Countdown,omitempty"`
+}
+
+// LocationData represents the traveling and located members for a location
+type LocationData struct {
+	Traveling []JSONMember `json:"Traveling"`
+	LocatedIn []JSONMember `json:"Located In"`
+}
+
+// StatusV2JSON represents the complete JSON export structure
+type StatusV2JSON struct {
+	Faction   string                  `json:"Faction"`
+	Updated   string                  `json:"Updated"`
+	Locations map[string]LocationData `json:"Locations"`
+}
