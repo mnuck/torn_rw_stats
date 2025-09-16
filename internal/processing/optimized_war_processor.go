@@ -100,9 +100,9 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 	}
 
 	if force {
-		log.Info().
+		log.Debug().
 			Str("current_state", stateInfo.State.String()).
-			Msg("Force flag enabled - bypassing state-based optimization")
+			Msg("Continuous monitoring enabled - processing all states")
 	}
 
 	// Log pre-processing stats
@@ -140,7 +140,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("No active wars - but force flag enabled, processing our faction status only")
+			Msg("No active wars - processing our faction status only")
 
 		// Process just our faction's status when no wars exist
 		return owp.processOurFactionOnly(ctx)
@@ -154,7 +154,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		}
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("War completed - but force flag enabled, continuing processing")
+			Msg("War completed - continuing processing for post-war analysis")
 
 	case PreWar:
 		log.Info().
@@ -169,7 +169,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context, force b
 		// Continue to full processing
 	}
 
-	// Only process if we have wars that need attention (PreWar or ActiveWar) or force flag is enabled
+	// Only process if we have wars that need attention (PreWar or ActiveWar) or continuous monitoring is enabled
 	if currentState == PreWar || currentState == ActiveWar || force {
 		// Process wars using existing logic but with optimized client
 		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed

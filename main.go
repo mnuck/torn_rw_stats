@@ -19,13 +19,11 @@ func main() {
 	// Parse command line flags
 	interval := flag.Duration("interval", 5*time.Minute, "Interval between war updates (e.g., 5m, 10m)")
 	runOnce := flag.Bool("once", false, "Run once and exit (don't start scheduler)")
-	force := flag.Bool("force", false, "Force war processing to run regardless of war state (for debugging)")
 	flag.Parse()
 
 	log.Info().
 		Dur("interval", *interval).
 		Bool("run_once", *runOnce).
-		Bool("force", *force).
 		Msg("Starting Torn RW Stats application")
 
 	// Load configuration
@@ -56,7 +54,7 @@ func main() {
 		// Reset API call counter at the start of each cycle
 		tornClient.ResetAPICallCount()
 
-		if err := warProcessor.ProcessActiveWars(ctx, *force); err != nil {
+		if err := warProcessor.ProcessActiveWars(ctx, true); err != nil {
 			log.Error().Err(err).Msg("Failed to process active wars")
 			return *interval // Use CLI interval as fallback on error
 		}
