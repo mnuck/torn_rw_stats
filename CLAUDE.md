@@ -199,7 +199,7 @@ When making changes and preparing for release, follow this standardized process:
 
 5. **Run golangci-lint** - Fix all linting issues:
    ```bash
-   golangci-lint run
+   $HOME/go/bin/golangci-lint run
    ```
 
 ### Release Workflow
