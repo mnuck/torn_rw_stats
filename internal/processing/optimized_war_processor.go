@@ -29,7 +29,6 @@ func NewOptimizedWarProcessor(
 	travelTimeService TravelTimeServiceInterface,
 	attackService AttackProcessingServiceInterface,
 	warSummaryService WarSummaryServiceInterface,
-	stateChangeService StateChangeDetectionServiceInterface,
 	config *app.Config,
 ) *OptimizedWarProcessor {
 
@@ -51,7 +50,6 @@ func NewOptimizedWarProcessor(
 		travelTimeService,
 		attackService,
 		warSummaryService,
-		stateChangeService,
 		config,
 	)
 

@@ -244,47 +244,6 @@ func TestGetFactionName(t *testing.T) {
 }
 
 // Test status change detection
-func TestHasStatusChanged(t *testing.T) {
-	service := NewStateChangeDetectionService(nil)
-
-	// Test identical members - no change
-	member1 := app.FactionMember{
-		Name: "TestPlayer",
-		Status: app.MemberStatus{
-			Description: "Okay",
-			State:       "Okay",
-			Color:       "green",
-		},
-		LastAction: app.LastAction{
-			Status: "Online",
-		},
-	}
-	member2 := member1 // Identical
-
-	if service.HasStatusChanged(member1, member2) {
-		t.Error("Expected no status change for identical members")
-	}
-
-	// Test different last action status
-	member2.LastAction.Status = "Offline"
-	if !service.HasStatusChanged(member1, member2) {
-		t.Error("Expected status change when LastAction.Status differs")
-	}
-
-	// Test hospital countdown change (should NOT be considered a change)
-	member2 = member1 // Reset
-	member2.Status.Description = "In hospital for 30mins"
-	member1.Status.Description = "In hospital for 25mins"
-	if service.HasStatusChanged(member1, member2) {
-		t.Error("Expected no status change for hospital countdown differences")
-	}
-
-	// Test actual status description change
-	member2.Status.Description = "Traveling to Mexico"
-	if !service.HasStatusChanged(member1, member2) {
-		t.Error("Expected status change for different status descriptions")
-	}
-}
 
 // Test the WarProcessor wrapper method for processAttacksIntoRecords (currently 0% coverage)
 func TestWarProcessor_processAttacksIntoRecords(t *testing.T) {

@@ -120,105 +120,6 @@ func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 }
 
 // TestConvertMembersToStateRows tests member state conversion
-func TestConvertMembersToStateRows(t *testing.T) {
-	stateManager := &StateChangeManager{}
-
-	members := map[string]app.FactionMember{
-		"12345": {
-			Name:     "TestMember1",
-			Level:    45,
-			Position: "Member",
-			LastAction: app.LastAction{
-				Status:    "Online",
-				Timestamp: 1640995200,
-				Relative:  "2 minutes ago",
-			},
-			Status: app.MemberStatus{
-				Description: "Okay",
-				State:       "Okay",
-				Color:       "green",
-				Details:     "",
-				Until:       nil,
-			},
-		},
-		"12346": {
-			Name:     "TestMember2",
-			Level:    60,
-			Position: "Officer",
-			LastAction: app.LastAction{
-				Status:    "Offline",
-				Timestamp: 1640991600,
-				Relative:  "1 hour ago",
-			},
-			Status: app.MemberStatus{
-				Description: "In hospital for 30mins",
-				State:       "Hospital",
-				Color:       "red",
-				Details:     "Hospitalized",
-				Until:       int64Ptr(1640997000),
-			},
-		},
-	}
-
-	rows := stateManager.ConvertMembersToStateRows(members)
-
-	if len(rows) != 2 {
-		t.Fatalf("Expected 2 rows, got %d", len(rows))
-	}
-
-	// Verify both members are present (order not guaranteed due to map iteration)
-	memberFound := make(map[string]bool)
-	for _, row := range rows {
-		if len(row) != 9 {
-			t.Errorf("Expected 9 columns, got %d", len(row))
-			continue
-		}
-
-		memberName := row[1].(string)
-		memberFound[memberName] = true
-
-		if memberName == "TestMember1" {
-			if row[2] != 45 {
-				t.Errorf("Expected level 45, got %v", row[2])
-			}
-			if row[3] != "Okay" {
-				t.Errorf("Expected status description 'Okay', got %v", row[3])
-			}
-			if row[4] != int64(1640995200) {
-				t.Errorf("Expected last action timestamp 1640995200, got %v", row[4])
-			}
-			if row[5] != nil {
-				t.Errorf("Expected nil Until field, got %T: %v", row[5], row[5])
-			}
-			if row[7] != "Member" {
-				t.Errorf("Expected position 'Member', got %v", row[7])
-			}
-		} else if memberName == "TestMember2" {
-			if row[2] != 60 {
-				t.Errorf("Expected level 60, got %v", row[2])
-			}
-			if row[3] != "In hospital for 30mins" {
-				t.Errorf("Expected status description 'In hospital for 30mins', got %v", row[3])
-			}
-			if row[4] != int64(1640991600) {
-				t.Errorf("Expected last action timestamp 1640991600, got %v", row[4])
-			}
-			if untilValue, ok := row[5].(int64); !ok || untilValue != int64(1640997000) {
-				t.Errorf("Expected Until timestamp 1640997000, got %T: %v", row[5], row[5])
-			}
-			if row[7] != "Officer" {
-				t.Errorf("Expected position 'Officer', got %v", row[7])
-			}
-		}
-	}
-
-	if !memberFound["TestMember1"] {
-		t.Error("TestMember1 not found in converted rows")
-	}
-	if !memberFound["TestMember2"] {
-		t.Error("TestMember2 not found in converted rows")
-	}
-}
 
 // TestFilterAndSortRecords tests the record filtering and sorting logic
 func TestFilterAndSortRecords(t *testing.T) {
@@ -279,11 +180,4 @@ func TestEmptyRecordHandling(t *testing.T) {
 		}
 	})
 
-	t.Run("empty member map", func(t *testing.T) {
-		members := make(map[string]app.FactionMember)
-		rows := client.convertMembersToStateRows(members)
-		if len(rows) != 0 {
-			t.Errorf("Expected 0 rows for empty members, got %d", len(rows))
-		}
-	})
 }
