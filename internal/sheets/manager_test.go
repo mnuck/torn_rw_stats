@@ -237,7 +237,7 @@ func TestWarSheetsManagerGenerateHeaders(t *testing.T) {
 
 	// Check for key columns
 	headerRow := recordsHeaders[0]
-	expectedCols := []string{"Timestamp", "Date", "Time", "Direction", "Attacker", "Defender"}
+	expectedCols := []string{"Attack ID", "Code", "Started", "Direction", "Attacker Name", "Defender Name"}
 	for _, expectedCol := range expectedCols {
 		found := false
 		for _, actualCol := range headerRow {
