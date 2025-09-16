@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Torn RW Stats is a Go application that monitors faction wars in the Torn browser game and automatically updates Google Sheets with real-time war statistics and attack records. The application features sophisticated state-based optimization that adapts to Torn's weekly war cycle, reducing API usage by 45% while providing intelligent monitoring based on war phases.
 
+## Development Setup
+
+### Required Tools
+Install these tools for local development:
+
+```bash
+# Install golangci-lint (linting tool used by CI)
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
 ## Build Commands
 
 ```bash
@@ -23,6 +33,9 @@ go fmt ./...
 
 # Vet code for potential issues
 go vet ./...
+
+# Run linting (same as CI)
+golangci-lint run
 
 # Run with modules tidy
 go mod tidy
@@ -184,44 +197,49 @@ When making changes and preparing for release, follow this standardized process:
    go fmt ./...
    ```
 
+5. **Run golangci-lint** - Fix all linting issues:
+   ```bash
+   golangci-lint run
+   ```
+
 ### Release Workflow
-5. **Create feature branch** (if not already on one):
+6. **Create feature branch** (if not already on one):
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-6. **Commit changes** to the feature branch:
+7. **Commit changes** to the feature branch:
    ```bash
    git add .
    git commit -m "Descriptive commit message"
    ```
 
-7. **Push feature branch** to origin:
+8. **Push feature branch** to origin:
    ```bash
    git push -u origin feature/your-feature-name
    ```
 
-8. **Create Pull Request** using GitHub CLI or web interface:
+9. **Create Pull Request** using GitHub CLI or web interface:
    ```bash
    gh pr create --title "PR Title" --body "PR Description"
    ```
 
-9. **Get PR reviewed and merged**:
-   - If reviewer has comments, read and address them
-   - Work collaboratively to get the PR approved and merged
+10. **Get PR reviewed and merged**:
+    - If reviewer has comments, read and address them
+    - Work collaboratively to get the PR approved and merged
 
 ### Post-Release Cleanup
-10. **Switch to main branch**:
+11. **Switch to main branch**:
     ```bash
     git checkout main
     ```
 
-11. **Pull latest changes** from origin:
+12. **Pull latest changes** from origin:
     ```bash
     git pull origin main
     ```
 
-12. **Delete feature branch** locally and on origin:
+13. **Delete feature branch** locally and on origin:
     ```bash
     git branch -d feature/your-feature-name
     git push origin --delete feature/your-feature-name
