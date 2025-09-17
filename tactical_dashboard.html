@@ -202,6 +202,19 @@
             text-decoration: underline;
         }
 
+        .attack-link {
+            color: #dc3545;
+            text-decoration: none;
+            font-size: 0.9em;
+            margin-left: 8px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .attack-link:hover {
+            opacity: 1;
+        }
+
         .member-status {
             color: #666;
             font-size: 0.9em;
@@ -445,9 +458,9 @@
             const memberKey = `${locationId}-${member.Name.replace(/\s+/g, '-')}`;
             const countdownId = `countdown-${memberKey}`;
 
-            // Create member name with profile link if MemberID is available
+            // Create member name with profile link and attack link if MemberID is available
             const memberNameHtml = member.MemberID
-                ? `<a href="https://www.torn.com/profiles.php?XID=${member.MemberID}" target="_blank" class="member-link">${member.Name}</a>`
+                ? `<a href="https://www.torn.com/profiles.php?XID=${member.MemberID}" target="_blank" class="member-link">${member.Name}</a><a href="https://www.torn.com/loader.php?sid=attack&user2ID=${member.MemberID}" target="_blank" class="attack-link" title="Attack ${member.Name}">🔫</a>`
                 : member.Name;
 
             return `
