@@ -17,6 +17,7 @@ vendor/
 .env.local
 .env.*.local
 credentials.json
+deploy.pem
 *.json.bak
 
 # Logs

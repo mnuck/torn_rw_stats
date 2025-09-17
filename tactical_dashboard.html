@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Intelligence Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header .updated {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .location-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .location-header {
+            background: #4a90e2;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .location-header:hover {
+            background: #357abd;
+        }
+
+        .location-content {
+            display: none;
+            padding: 0;
+        }
+
+        .location-content.expanded {
+            display: block;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab-header {
+            flex: 1;
+            background: #4a90e2;
+            padding: 12px 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            border-bottom: 3px solid #2c5899;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab-header:first-child {
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .tab-header:first-child.active {
+            border-right: 3px solid #2c5899;
+        }
+
+        .tab-header:last-child.active {
+            border-left: 3px solid #2c5899;
+            margin-left: -1px;
+        }
+
+        .tab-header:hover:not(.active) {
+            background: #357abd;
+        }
+
+        .tab-header.active {
+            background: #f5f5f5;
+            color: #666;
+            border-top: 3px solid #2c5899;
+            border-bottom: none;
+            font-weight: bold;
+        }
+
+        .tab-header:first-child.active {
+            border-right: 3px solid #2c5899;
+        }
+
+        .tab-header:last-child.active {
+            border-left: 3px solid #2c5899;
+        }
+
+        .tab-header .count {
+            background: rgba(255, 255, 255, 0.2);
+            color: inherit;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            min-width: 20px;
+        }
+
+        .tab-header.active .count {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .member-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .member-row:last-child {
+            border-bottom: none;
+        }
+
+        .member-row:hover {
+            background: #f9f9f9;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .status-dot.online {
+            background: #4CAF50;
+        }
+
+        .status-dot.idle {
+            background: #FFC107;
+        }
+
+        .status-dot.offline {
+            background: #9E9E9E;
+        }
+
+        .member-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .member-status {
+            color: #666;
+            font-size: 0.9em;
+            margin-right: 15px;
+        }
+
+        .member-countdown {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #333;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .member-countdown.warning {
+            background: #F44336;
+            color: #fff;
+        }
+
+        .member-countdown.urgent {
+            background: #FFC107;
+            color: #000;
+        }
+
+        .expand-icon {
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+
+        .location-header.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .empty-section {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+
+        .note {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="faction-name">Loading...</h1>
+            <div class="updated" id="last-updated">Loading...</div>
+            <div class="updated" id="update-interval">Update interval: Loading...</div>
+        </div>
+
+        <div id="locations-container">
+            <!-- Locations will be populated by JavaScript -->
+        </div>
+
+        <div class="note">
+            <strong>Note:</strong> Green status indicates online players, yellow indicates idle players, grey indicates offline players. Travel countdowns show time until arrival. Status countdowns show remaining time in hospital, jail, etc. Red countdown backgrounds indicate immediate attention needed (less than 10 minutes), yellow countdown backgrounds indicate medium-term awareness (10-60 minutes).
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentData = null;
+        let refreshInterval = null;
+        let currentIntervalId = null;
+
+        // API endpoint for live data
+        const API_ENDPOINT = 'https://gefunkt.dev/travel_data.json';
+
+        // Fetch data from API
+        async function fetchData() {
+            try {
+                const response = await fetch(API_ENDPOINT);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return null;
+            }
+        }
+
+        function getStatusDotClass(state) {
+            switch (state.toLowerCase()) {
+                case 'online': return 'online';
+                case 'idle': return 'idle';
+                case 'offline': return 'offline';
+                default: return 'offline';
+            }
+        }
+
+        function parseTimeToMinutes(timeString) {
+            if (!timeString) return 0;
+
+            const parts = timeString.split(':');
+            if (parts.length === 3) {
+                // H:MM:SS format
+                const hours = parseInt(parts[0], 10);
+                const minutes = parseInt(parts[1], 10);
+                return hours * 60 + minutes;
+            } else if (parts.length === 2) {
+                // M:SS format
+                const minutes = parseInt(parts[0], 10);
+                return minutes;
+            }
+            return 0;
+        }
+
+        function getCountdownClass(countdown) {
+            if (!countdown) return '';
+
+            const totalMinutes = parseTimeToMinutes(countdown);
+            if (totalMinutes < 10) {
+                return 'warning';
+            } else if (totalMinutes >= 10 && totalMinutes <= 60) {
+                return 'urgent';
+            }
+            return '';
+        }
+
+        function createMemberRow(member) {
+            const statusClass = getStatusDotClass(member.State);
+            const statusText = member.Status || '';
+            const countdown = member.Countdown || '';
+            const countdownClass = getCountdownClass(countdown);
+
+            return `
+                <div class="member-row">
+                    <div class="status-dot ${statusClass}"></div>
+                    <div class="member-name">${member.Name}</div>
+                    ${statusText ? `<div class="member-status">${statusText}</div>` : ''}
+                    ${countdown ? `<div class="member-countdown ${countdownClass}">${countdown}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function createLocationTabs(locationData, locationId) {
+            const travelingMembers = locationData.Traveling;
+            const locatedMembers = locationData['Located In'];
+            const travelingCount = travelingMembers.length;
+            const locatedCount = locatedMembers.length;
+
+            const travelingMembersHtml = travelingMembers.map(createMemberRow).join('') || '<div class="empty-section">No members traveling</div>';
+            const locatedMembersHtml = locatedMembers.map(createMemberRow).join('') || '<div class="empty-section">No members located</div>';
+
+            const travelingId = `${locationId}-traveling`;
+            const locatedId = `${locationId}-located`;
+
+            // Determine which tab should be active by default
+            // Default to "Located in", but if nobody is located and someone is traveling, show traveling
+            const defaultToLocated = locatedCount > 0 || travelingCount === 0;
+            const travelingActive = !defaultToLocated ? 'active' : '';
+            const locatedActive = defaultToLocated ? 'active' : '';
+
+            return `
+                <div class="tab-container">
+                    <div class="tab-header ${travelingActive}" onclick="switchTab('${locationId}', 'traveling')">
+                        <span>Traveling to</span>
+                        <span class="count">${travelingCount}</span>
+                    </div>
+                    <div class="tab-header ${locatedActive}" onclick="switchTab('${locationId}', 'located')">
+                        <span>Located in</span>
+                        <span class="count">${locatedCount}</span>
+                    </div>
+                </div>
+                <div class="tab-content ${travelingActive}" id="${travelingId}">
+                    ${travelingMembersHtml}
+                </div>
+                <div class="tab-content ${locatedActive}" id="${locatedId}">
+                    ${locatedMembersHtml}
+                </div>
+            `;
+        }
+
+        function createLocationSection(locationName, locationData) {
+            const travelingCount = locationData.Traveling.length;
+            const locatedCount = locationData['Located In'].length;
+            const totalCount = travelingCount + locatedCount;
+
+            const locationId = `location-${locationName.replace(/\s+/g, '-').toLowerCase()}`;
+
+            const tabsContent = createLocationTabs(locationData, locationId);
+
+            return `
+                <div class="location-section">
+                    <div class="location-header expanded" onclick="toggleLocation('${locationId}')">
+                        <span>${locationName}</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.9em;">${totalCount} ${totalCount === 1 ? 'member' : 'members'}</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    <div class="location-content expanded" id="${locationId}">
+                        ${tabsContent}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleLocation(locationId) {
+            const content = document.getElementById(locationId);
+            const header = content.previousElementSibling;
+
+            content.classList.toggle('expanded');
+            header.classList.toggle('expanded');
+        }
+
+        function switchTab(locationId, tabType) {
+            // Get all tab headers and contents for this location
+            const locationElement = document.getElementById(locationId);
+            const tabHeaders = locationElement.querySelectorAll('.tab-header');
+            const tabContents = locationElement.querySelectorAll('.tab-content');
+
+            // Remove active class from all tabs
+            tabHeaders.forEach(header => header.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Add active class to clicked tab and corresponding content
+            const activeTabIndex = tabType === 'traveling' ? 0 : 1;
+            tabHeaders[activeTabIndex].classList.add('active');
+            tabContents[activeTabIndex].classList.add('active');
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString();
+        }
+
+        // Save current tab states for all locations
+        function saveTabStates() {
+            const tabStates = {};
+            const locationSections = document.querySelectorAll('.location-section');
+
+            locationSections.forEach(section => {
+                const locationHeader = section.querySelector('.location-header');
+                if (locationHeader) {
+                    const locationName = locationHeader.querySelector('span').textContent;
+                    const activeTab = section.querySelector('.tab-header.active');
+                    if (activeTab) {
+                        const tabText = activeTab.querySelector('span').textContent;
+                        tabStates[locationName] = tabText;
+                    }
+                }
+            });
+
+            return tabStates;
+        }
+
+        // Restore tab states after DOM update
+        function restoreTabStates(savedStates) {
+            if (!savedStates || Object.keys(savedStates).length === 0) {
+                return;
+            }
+
+            const locationSections = document.querySelectorAll('.location-section');
+
+            locationSections.forEach(section => {
+                const locationHeader = section.querySelector('.location-header');
+                if (locationHeader) {
+                    const locationName = locationHeader.querySelector('span').textContent;
+                    const savedTab = savedStates[locationName];
+
+                    if (savedTab) {
+                        const locationContent = section.querySelector('.location-content');
+                        const locationId = locationContent.id;
+
+                        // Determine which tab to activate based on saved state
+                        const tabType = savedTab === 'Traveling to' ? 'traveling' : 'located';
+                        switchTab(locationId, tabType);
+                    }
+                }
+            });
+        }
+
+
+        // Start or restart auto-refresh with dynamic interval
+        function startAutoRefresh(intervalSeconds) {
+            // Clear existing interval if any
+            if (currentIntervalId) {
+                clearInterval(currentIntervalId);
+            }
+
+            // Update refresh interval if it changed
+            refreshInterval = intervalSeconds * 1000; // Convert to milliseconds
+
+            // Start new interval
+            currentIntervalId = setInterval(loadData, refreshInterval);
+
+            console.log(`Auto-refresh started with ${intervalSeconds} second interval`);
+        }
+
+        // Enhanced loadData function that handles dynamic intervals
+        async function loadData() {
+            // Fetch fresh data from API
+            const data = await fetchData();
+            if (!data) {
+                console.error('No data received from API');
+                return;
+            }
+
+            currentData = data;
+
+            // Check if interval changed and restart auto-refresh if needed
+            if (data.Interval && data.Interval !== (refreshInterval / 1000)) {
+                console.log(`Interval changed from ${refreshInterval / 1000}s to ${data.Interval}s`);
+                startAutoRefresh(data.Interval);
+            }
+
+            // Set header information
+            document.getElementById('faction-name').textContent = currentData.Faction;
+            document.getElementById('last-updated').textContent = `Last updated: ${formatDateTime(currentData.Updated)}`;
+            document.getElementById('update-interval').textContent = `Update interval: ${currentData.Interval || 60} seconds`;
+
+            // Save current tab states before updating
+            const currentTabStates = saveTabStates();
+
+            // Generate location sections - Torn always last
+            const container = document.getElementById('locations-container');
+            const locations = Object.entries(currentData.Locations);
+
+            // Sort locations: Torn last, others alphabetically
+            const sortedLocations = locations.sort(([nameA], [nameB]) => {
+                if (nameA === 'Torn') return 1;
+                if (nameB === 'Torn') return -1;
+                return nameA.localeCompare(nameB);
+            });
+
+            const locationsHtml = sortedLocations
+                .map(([locationName, locationData]) => createLocationSection(locationName, locationData))
+                .join('');
+
+            container.innerHTML = locationsHtml;
+
+            // Restore tab states after updating
+            restoreTabStates(currentTabStates);
+        }
+
+        // Load data when page loads and start auto-refresh
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadData();
+
+            // Start auto-refresh with interval from API, fallback to 60 seconds
+            const initialInterval = currentData?.Interval || 60;
+            startAutoRefresh(initialInterval);
+        });
+    </script>
+</body>
+</html>

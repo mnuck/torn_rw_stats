@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/deployment"
 
 	"github.com/rs/zerolog/log"
 )
@@ -18,26 +19,33 @@ type StatusV2Processor struct {
 	sheetsClient SheetsClientInterface
 	service      *StatusV2Service
 	ourFactionID int
+	deployer     *deployment.SSHDeployer
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, ourFactionID int) *StatusV2Processor {
+func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, ourFactionID int, deployURL string) *StatusV2Processor {
+	var deployer *deployment.SSHDeployer
+	if deployURL != "" {
+		deployer = deployment.NewSSHDeployer(deployURL)
+	}
+
 	return &StatusV2Processor{
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
 		service:      NewStatusV2Service(sheetsClient),
 		ourFactionID: ourFactionID,
+		deployer:     deployer,
 	}
 }
 
 // ProcessStatusV2ForFactions processes Status v2 sheets for multiple factions
-func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int) error {
+func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int, updateInterval time.Duration) error {
 	log.Info().
 		Int("faction_count", len(factionIDs)).
 		Msg("Processing Status v2 for factions")
 
 	for _, factionID := range factionIDs {
-		if err := p.ProcessStatusV2ForFaction(ctx, spreadsheetID, factionID); err != nil {
+		if err := p.ProcessStatusV2ForFaction(ctx, spreadsheetID, factionID, updateInterval); err != nil {
 			log.Error().
 				Err(err).
 				Int("faction_id", factionID).
@@ -54,7 +62,7 @@ func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spre
 }
 
 // ProcessStatusV2ForFaction processes Status v2 sheet for a single faction
-func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, spreadsheetID string, factionID int) error {
+func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, spreadsheetID string, factionID int, updateInterval time.Duration) error {
 	// Step 1: Ensure Status v2 sheet exists
 	sheetName, err := p.sheetsClient.EnsureStatusV2Sheet(ctx, spreadsheetID, factionID)
 	if err != nil {
@@ -136,11 +144,11 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 
 	// Step 7: Export JSON alongside sheet update (only for opposing factions)
 	if factionID != p.ourFactionID {
-		if err := p.exportJSON(statusV2Records, factionData.Name, factionID); err != nil {
+		if err := p.exportAndDeployJSON(statusV2Records, factionData.Name, factionID, updateInterval); err != nil {
 			log.Warn().
 				Err(err).
 				Int("faction_id", factionID).
-				Msg("Failed to export Status v2 JSON - continuing with processing")
+				Msg("Failed to export/deploy Status v2 JSON - continuing with processing")
 		}
 	} else {
 		log.Debug().
@@ -214,12 +222,12 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 	return currentRecords
 }
 
-// exportJSON converts StatusV2Records to JSON format and writes to file
-func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName string, factionID int) error {
+// exportAndDeployJSON converts StatusV2Records to JSON format, writes to file, and deploys it
+func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
 	currentTime := time.Now()
 
 	// Convert to JSON format using the service
-	jsonData := p.service.ConvertToJSON(records, factionName, currentTime)
+	jsonData := p.service.ConvertToJSON(records, factionName, currentTime, updateInterval)
 
 	// Marshal to JSON bytes
 	jsonBytes, err := json.MarshalIndent(jsonData, "", "    ")
@@ -230,7 +238,7 @@ func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName
 	// Create filename
 	filename := fmt.Sprintf("status_v2_%d.json", factionID)
 
-	// Write to file
+	// Write to local file
 	if err := os.WriteFile(filename, jsonBytes, 0644); err != nil {
 		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
@@ -240,6 +248,26 @@ func (p *StatusV2Processor) exportJSON(records []app.StatusV2Record, factionName
 		Str("filename", filename).
 		Int("locations_count", len(jsonData.Locations)).
 		Msg("Successfully exported Status v2 JSON")
+
+	// Deploy to remote server if deployer is configured
+	if p.deployer != nil {
+		// Use a fixed filename for the remote deployment
+		remoteFilename := "status.json"
+
+		if err := p.deployer.DeployFile(filename, remoteFilename); err != nil {
+			return fmt.Errorf("failed to deploy JSON file: %w", err)
+		}
+
+		log.Info().
+			Int("faction_id", factionID).
+			Str("local_file", filename).
+			Str("remote_file", remoteFilename).
+			Msg("Successfully deployed Status v2 JSON")
+	} else {
+		log.Debug().
+			Int("faction_id", factionID).
+			Msg("No deployer configured - skipping remote deployment")
+	}
 
 	return nil
 }

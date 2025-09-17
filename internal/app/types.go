@@ -271,5 +271,6 @@ type LocationData struct {
 type StatusV2JSON struct {
 	Faction   string                  `json:"Faction"`
 	Updated   string                  `json:"Updated"`
+	Interval  int                     `json:"Interval"` // Update interval in seconds
 	Locations map[string]LocationData `json:"Locations"`
 }
