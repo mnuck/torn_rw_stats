@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/services"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
 
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Initialize optimized war processor with state-based optimization
-	warProcessor := processing.NewOptimizedWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
+	warProcessor := services.NewOptimizedWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
 
 	// Define the main processing function that returns next check time
 	processWars := func() time.Duration {

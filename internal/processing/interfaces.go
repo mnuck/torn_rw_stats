@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/travel"
+	"torn_rw_stats/internal/domain/war"
 	"torn_rw_stats/internal/sheets"
 )
 
@@ -48,8 +50,8 @@ type LocationServiceInterface interface {
 type TravelTimeServiceInterface interface {
 	GetTravelTime(destination string, travelType string) time.Duration
 	FormatTravelTime(d time.Duration) string
-	CalculateTravelTimes(ctx context.Context, userID int, destination string, travelType string, currentTime time.Time, updateInterval time.Duration) *TravelTimeData
-	CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService LocationServiceInterface, statusDescription string) *TravelTimeData
+	CalculateTravelTimes(ctx context.Context, userID int, destination string, travelType string, currentTime time.Time, updateInterval time.Duration) *travel.TravelTimeData
+	CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService *travel.LocationService, statusDescription string) *travel.TravelTimeData
 }
 
 // AttackProcessingServiceInterface defines the interface for attack processing
@@ -64,6 +66,6 @@ type WarSummaryServiceInterface interface {
 
 // WarStateManagerInterface defines the interface for war state management
 type WarStateManagerInterface interface {
-	GetCurrentState() WarState
+	GetCurrentState() war.WarState
 	GetCurrentWar() *app.War
 }

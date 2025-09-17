@@ -1,4 +1,4 @@
-package processing
+package services
 
 import (
 	"context"
@@ -9,21 +9,22 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/deployment"
+	"torn_rw_stats/internal/processing"
 
 	"github.com/rs/zerolog/log"
 )
 
 // StatusV2Processor handles Status v2 sheet processing
 type StatusV2Processor struct {
-	tornClient   TornClientInterface
-	sheetsClient SheetsClientInterface
+	tornClient   processing.TornClientInterface
+	sheetsClient processing.SheetsClientInterface
 	service      *StatusV2Service
 	ourFactionID int // cached faction ID, fetched via API
 	deployer     *deployment.SSHDeployer
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, deployURL string) *StatusV2Processor {
+func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface, deployURL string) *StatusV2Processor {
 	var deployer *deployment.SSHDeployer
 	if deployURL != "" {
 		deployer = deployment.NewSSHDeployer(deployURL)

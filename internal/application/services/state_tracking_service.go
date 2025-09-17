@@ -1,4 +1,4 @@
-package processing
+package services
 
 import (
 	"context"
@@ -6,25 +6,26 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/processing"
 
 	"github.com/rs/zerolog/log"
 )
 
 // StateTrackingService handles the complete state tracking workflow
 type StateTrackingService struct {
-	tornClient   TornClientInterface
-	sheetsClient SheetsClientInterface
-	converter    *StateRecordConverter
-	comparator   *StateRecordComparator
+	tornClient   processing.TornClientInterface
+	sheetsClient processing.SheetsClientInterface
+	converter    *processing.StateRecordConverter
+	comparator   *processing.StateRecordComparator
 }
 
 // NewStateTrackingService creates a new state tracking service
-func NewStateTrackingService(tornClient TornClientInterface, sheetsClient SheetsClientInterface) *StateTrackingService {
+func NewStateTrackingService(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface) *StateTrackingService {
 	return &StateTrackingService{
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
-		converter:    NewStateRecordConverter(),
-		comparator:   NewStateRecordComparator(),
+		converter:    processing.NewStateRecordConverter(),
+		comparator:   processing.NewStateRecordComparator(),
 	}
 }
 

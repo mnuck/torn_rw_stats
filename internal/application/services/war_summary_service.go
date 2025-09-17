@@ -1,21 +1,22 @@
-package processing
+package services
 
 import (
 	"fmt"
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/attack"
 
 	"github.com/rs/zerolog/log"
 )
 
 // WarSummaryService handles war summary generation and statistics calculation
 type WarSummaryService struct {
-	attackService *AttackProcessingService
+	attackService *attack.AttackProcessingService
 }
 
 // NewWarSummaryService creates a new war summary service
-func NewWarSummaryService(attackService *AttackProcessingService) *WarSummaryService {
+func NewWarSummaryService(attackService *attack.AttackProcessingService) *WarSummaryService {
 	return &WarSummaryService{
 		attackService: attackService,
 	}
