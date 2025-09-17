@@ -16,7 +16,6 @@ type Config struct {
 	TornAPIKey      string
 	SpreadsheetID   string
 	CredentialsFile string
-	OurFactionID    int
 	UpdateInterval  time.Duration
 	DeployURL       string
 }

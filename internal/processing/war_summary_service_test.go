@@ -7,7 +7,7 @@ import (
 )
 
 func TestWarSummaryServiceGenerateWarSummary(t *testing.T) {
-	attackService := NewAttackProcessingService(12345)
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	// Create test war data
@@ -53,7 +53,7 @@ func TestWarSummaryServiceGenerateWarSummary(t *testing.T) {
 		},
 	}
 
-	summary := summaryService.GenerateWarSummary(war, attacks)
+	summary := summaryService.GenerateWarSummary(war, attacks, 12345)
 
 	// Verify basic info
 	if summary.WarID != 2001 {
@@ -98,7 +98,7 @@ func TestWarSummaryServiceGenerateWarSummary(t *testing.T) {
 }
 
 func TestWarSummaryServiceIsSuccessfulAttack(t *testing.T) {
-	attackService := NewAttackProcessingService(12345)
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	tests := []struct {
@@ -125,7 +125,7 @@ func TestWarSummaryServiceIsSuccessfulAttack(t *testing.T) {
 }
 
 func TestWarSummaryServiceIsSuccessfulDefense(t *testing.T) {
-	attackService := NewAttackProcessingService(12345)
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	tests := []struct {

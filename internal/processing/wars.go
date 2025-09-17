@@ -52,7 +52,7 @@ func NewWarProcessor(
 // This is the recommended constructor for production use with state-based optimization
 func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
 	// Create the attack processing service
-	attackService := NewAttackProcessingService(config.OurFactionID)
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	return NewOptimizedWarProcessor(
@@ -202,8 +202,11 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		Int("attacks_count", len(attacks)).
 		Msg("Fetched attacks for war")
 
+	// Get our faction ID for processing
+	ourFactionID := wp.getOurFactionID(war)
+
 	// Process attack data into records
-	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war)
+	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war, ourFactionID)
 
 	// Check for duplicates in processed records
 	codeCount := make(map[string]int)
@@ -224,7 +227,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	}
 
 	// Generate war summary
-	summary := wp.summaryService.GenerateWarSummary(war, attacks)
+	summary := wp.summaryService.GenerateWarSummary(war, attacks, ourFactionID)
 
 	// Update sheets
 	if err := wp.sheetsClient.UpdateWarSummary(ctx, wp.config.SpreadsheetID, sheetConfig, summary); err != nil {

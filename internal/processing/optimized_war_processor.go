@@ -41,7 +41,7 @@ func NewOptimizedWarProcessor(
 	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
 
 	// Create Status v2 processor
-	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, config.OurFactionID, config.DeployURL)
+	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, config.DeployURL)
 
 	// Create processor with raw client
 	processor := NewWarProcessor(

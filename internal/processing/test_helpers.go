@@ -6,7 +6,7 @@ import (
 
 // newTestWarProcessor creates a WarProcessor for testing with concrete dependencies
 func newTestWarProcessor(config *app.Config) *WarProcessor {
-	attackService := NewAttackProcessingService(12345) // Default test faction ID
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	return NewWarProcessor(
@@ -26,7 +26,7 @@ func newTestWarProcessorWithMocks(
 	sheetsClient SheetsClientInterface,
 	config *app.Config,
 ) *WarProcessor {
-	attackService := NewAttackProcessingService(12345) // Default test faction ID
+	attackService := NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
 
 	return NewWarProcessor(
