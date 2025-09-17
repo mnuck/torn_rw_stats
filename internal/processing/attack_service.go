@@ -10,22 +10,16 @@ import (
 
 // AttackProcessingService handles attack data processing and analysis
 type AttackProcessingService struct {
-	ourFactionID int
 }
 
 // NewAttackProcessingService creates a new attack processing service
-func NewAttackProcessingService(ourFactionID int) *AttackProcessingService {
-	return &AttackProcessingService{
-		ourFactionID: ourFactionID,
-	}
+func NewAttackProcessingService() *AttackProcessingService {
+	return &AttackProcessingService{}
 }
 
 // ProcessAttacksIntoRecords converts attack data into detailed attack records
-func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War) []app.AttackRecord {
+func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War, ourFactionID int) []app.AttackRecord {
 	var records []app.AttackRecord
-
-	// Determine our faction ID from the war
-	ourFactionID := aps.getOurFactionID(war)
 
 	for _, attack := range attacks {
 		record := app.AttackRecord{
@@ -97,23 +91,4 @@ func (aps *AttackProcessingService) determineAttackDirection(attack app.Attack, 
 		return "Incoming"
 	}
 	return "Unknown"
-}
-
-// getOurFactionID determines which faction is "ours" in the war
-func (aps *AttackProcessingService) getOurFactionID(war *app.War) int {
-	if aps.ourFactionID != 0 {
-		// Check if our configured faction ID is in this war
-		for _, faction := range war.Factions {
-			if faction.ID == aps.ourFactionID {
-				return aps.ourFactionID
-			}
-		}
-	}
-
-	// Fallback: return the first faction (could be enhanced with better logic)
-	if len(war.Factions) > 0 {
-		return war.Factions[0].ID
-	}
-
-	return 0
 }

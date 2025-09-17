@@ -59,7 +59,7 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 		},
 	}
 
-	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war)
+	records := wp.attackService.ProcessAttacksIntoRecords(attacks, war, 12345)
 
 	// Verify we got the expected number of records
 	if len(records) != 1 {
@@ -140,7 +140,7 @@ func TestGenerateWarSummary(t *testing.T) {
 		},
 	}
 
-	summary := wp.summaryService.GenerateWarSummary(war, attacks)
+	summary := wp.summaryService.GenerateWarSummary(war, attacks, 12345)
 
 	// Verify basic info
 	if summary.WarID != 2001 {

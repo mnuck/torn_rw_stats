@@ -22,8 +22,7 @@ func NewWarSummaryService(attackService *AttackProcessingService) *WarSummarySer
 }
 
 // GenerateWarSummary creates a comprehensive summary of war statistics
-func (wss *WarSummaryService) GenerateWarSummary(war *app.War, attacks []app.Attack) *app.WarSummary {
-	ourFactionID := wss.attackService.getOurFactionID(war)
+func (wss *WarSummaryService) GenerateWarSummary(war *app.War, attacks []app.Attack, ourFactionID int) *app.WarSummary {
 
 	summary := &app.WarSummary{
 		WarID:       war.ID,

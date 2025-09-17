@@ -18,12 +18,12 @@ type StatusV2Processor struct {
 	tornClient   TornClientInterface
 	sheetsClient SheetsClientInterface
 	service      *StatusV2Service
-	ourFactionID int
+	ourFactionID int // cached faction ID, fetched via API
 	deployer     *deployment.SSHDeployer
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, ourFactionID int, deployURL string) *StatusV2Processor {
+func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsClientInterface, deployURL string) *StatusV2Processor {
 	var deployer *deployment.SSHDeployer
 	if deployURL != "" {
 		deployer = deployment.NewSSHDeployer(deployURL)
@@ -33,15 +33,41 @@ func NewStatusV2Processor(tornClient TornClientInterface, sheetsClient SheetsCli
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
 		service:      NewStatusV2Service(sheetsClient),
-		ourFactionID: ourFactionID,
+		ourFactionID: 0, // will be fetched via API when needed
 		deployer:     deployer,
 	}
 }
 
+// ensureOurFactionID fetches and caches our faction ID if not already set
+func (p *StatusV2Processor) ensureOurFactionID(ctx context.Context) error {
+	if p.ourFactionID == 0 {
+		log.Debug().Msg("StatusV2Processor: Fetching our faction ID from API")
+
+		factionInfo, err := p.tornClient.GetOwnFaction(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get own faction info: %w", err)
+		}
+
+		p.ourFactionID = factionInfo.ID
+		log.Info().
+			Int("faction_id", p.ourFactionID).
+			Str("faction_name", factionInfo.Name).
+			Str("faction_tag", factionInfo.Tag).
+			Msg("StatusV2Processor: Detected our faction ID")
+	}
+	return nil
+}
+
 // ProcessStatusV2ForFactions processes Status v2 sheets for multiple factions
 func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int, updateInterval time.Duration) error {
+	// Ensure our faction ID is loaded for proper filtering
+	if err := p.ensureOurFactionID(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to fetch our faction ID - continuing but filtering may be incorrect")
+	}
+
 	log.Info().
 		Int("faction_count", len(factionIDs)).
+		Int("our_faction_id", p.ourFactionID).
 		Msg("Processing Status v2 for factions")
 
 	for _, factionID := range factionIDs {

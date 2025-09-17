@@ -7,7 +7,7 @@ import (
 )
 
 func TestAttackProcessingServiceProcessAttacksIntoRecords(t *testing.T) {
-	service := NewAttackProcessingService(12345)
+	service := NewAttackProcessingService()
 
 	// Create test war data
 	war := &app.War{
@@ -57,7 +57,7 @@ func TestAttackProcessingServiceProcessAttacksIntoRecords(t *testing.T) {
 		},
 	}
 
-	records := service.ProcessAttacksIntoRecords(attacks, war)
+	records := service.ProcessAttacksIntoRecords(attacks, war, 12345)
 
 	// Verify we got the expected number of records
 	if len(records) != 1 {
@@ -91,7 +91,7 @@ func TestAttackProcessingServiceProcessAttacksIntoRecords(t *testing.T) {
 }
 
 func TestAttackProcessingServiceDetermineAttackDirection(t *testing.T) {
-	service := NewAttackProcessingService(12345)
+	service := NewAttackProcessingService()
 
 	tests := []struct {
 		name         string

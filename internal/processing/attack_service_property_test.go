@@ -13,14 +13,14 @@ import (
 
 // TestAttackProcessingServiceProperties uses property-based testing to verify invariants
 func TestAttackProcessingServiceProperties(t *testing.T) {
-	service := NewAttackProcessingService(12345)
+	service := NewAttackProcessingService()
 
 	properties := gopter.NewProperties(nil)
 
 	// Property: Number of records should equal number of input attacks
 	properties.Property("records count equals attacks count", prop.ForAll(
 		func(attacks []app.Attack, war *app.War) bool {
-			records := service.ProcessAttacksIntoRecords(attacks, war)
+			records := service.ProcessAttacksIntoRecords(attacks, war, 12345)
 			return len(records) == len(attacks)
 		},
 		genAttacks().SuchThat(func(attacks []app.Attack) bool {
@@ -32,7 +32,7 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 	// Property: All attack IDs should be preserved in records
 	properties.Property("attack IDs preserved", prop.ForAll(
 		func(attacks []app.Attack, war *app.War) bool {
-			records := service.ProcessAttacksIntoRecords(attacks, war)
+			records := service.ProcessAttacksIntoRecords(attacks, war, 12345)
 
 			if len(records) != len(attacks) {
 				return false
@@ -98,7 +98,7 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 	// Property: Respect values should be non-negative and preserved
 	properties.Property("respect values non-negative and preserved", prop.ForAll(
 		func(attacks []app.Attack, war *app.War) bool {
-			records := service.ProcessAttacksIntoRecords(attacks, war)
+			records := service.ProcessAttacksIntoRecords(attacks, war, 12345)
 
 			for i, record := range records {
 				if record.RespectGain < 0 || record.RespectLoss < 0 {

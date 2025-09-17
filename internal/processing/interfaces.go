@@ -54,12 +54,12 @@ type TravelTimeServiceInterface interface {
 
 // AttackProcessingServiceInterface defines the interface for attack processing
 type AttackProcessingServiceInterface interface {
-	ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War) []app.AttackRecord
+	ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War, ourFactionID int) []app.AttackRecord
 }
 
 // WarSummaryServiceInterface defines the interface for war summary generation
 type WarSummaryServiceInterface interface {
-	GenerateWarSummary(war *app.War, attacks []app.Attack) *app.WarSummary
+	GenerateWarSummary(war *app.War, attacks []app.Attack, ourFactionID int) *app.WarSummary
 }
 
 // WarStateManagerInterface defines the interface for war state management
