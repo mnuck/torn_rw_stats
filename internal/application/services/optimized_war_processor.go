@@ -1,4 +1,4 @@
-package processing
+package services
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/war"
+	"torn_rw_stats/internal/processing"
 
 	"github.com/rs/zerolog/log"
 )
@@ -13,9 +15,9 @@ import (
 // OptimizedWarProcessor wraps WarProcessor with war state management
 type OptimizedWarProcessor struct {
 	processor         *WarProcessor
-	tornClient        TornClientInterface
+	tornClient        processing.TornClientInterface
 	tracker           *APICallTracker
-	stateManager      *WarStateManager
+	stateManager      *war.WarStateManager
 	stateTracker      *StateTrackingService
 	statusV2Processor *StatusV2Processor
 	spreadsheetID     string
@@ -24,18 +26,18 @@ type OptimizedWarProcessor struct {
 
 // NewOptimizedWarProcessor creates a WarProcessor with war state management
 func NewOptimizedWarProcessor(
-	tornClient TornClientInterface,
-	sheetsClient SheetsClientInterface,
-	locationService LocationServiceInterface,
-	travelTimeService TravelTimeServiceInterface,
-	attackService AttackProcessingServiceInterface,
-	warSummaryService WarSummaryServiceInterface,
+	tornClient processing.TornClientInterface,
+	sheetsClient processing.SheetsClientInterface,
+	locationService processing.LocationServiceInterface,
+	travelTimeService processing.TravelTimeServiceInterface,
+	attackService processing.AttackProcessingServiceInterface,
+	warSummaryService processing.WarSummaryServiceInterface,
 	config *app.Config,
 ) *OptimizedWarProcessor {
 
 	// Create war state management
 	tracker := NewAPICallTracker()
-	stateManager := NewWarStateManager()
+	stateManager := war.NewWarStateManager()
 
 	// Create state tracking service with raw client
 	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
@@ -121,7 +123,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Handle different states
 	switch currentState {
-	case NoWars:
+	case war.NoWars:
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
 			Msg("No active wars - processing our faction status only")
@@ -129,18 +131,18 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 		// Process just our faction's status when no wars exist
 		return owp.processOurFactionOnly(ctx)
 
-	case PostWar:
+	case war.PostWar:
 		log.Info().
 			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
 			Msg("War completed - continuing processing for post-war analysis")
 
-	case PreWar:
+	case war.PreWar:
 		log.Info().
 			Dur("update_interval", stateInfo.UpdateInterval).
 			Msg("Pre-war reconnaissance mode - monitoring opponent")
 		// Continue to processing for reconnaissance data
 
-	case ActiveWar:
+	case war.ActiveWar:
 		log.Info().
 			Dur("update_interval", stateInfo.UpdateInterval).
 			Msg("Active war detected - real-time monitoring enabled")
@@ -148,7 +150,7 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	}
 
 	// Process wars for PreWar and ActiveWar states (NoWars and PostWar are handled above)
-	if currentState == PreWar || currentState == ActiveWar {
+	if currentState == war.PreWar || currentState == war.ActiveWar {
 		// Process wars using existing logic but with optimized client
 		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
 		err = owp.processor.ProcessActiveWars(ctx)
@@ -213,7 +215,7 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 }
 
 // processStateChanges handles state tracking for all observed factions
-func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse, stateInfo WarStateInfo) {
+func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse, stateInfo war.WarStateInfo) {
 	// Determine which factions to track based on current wars
 	var factionIDs []int
 

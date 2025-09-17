@@ -1,4 +1,4 @@
-package processing
+package travel
 
 import (
 	"context"
@@ -122,7 +122,7 @@ func (tts *TravelTimeService) CalculateTravelTimes(ctx context.Context, userID i
 }
 
 // CalculateTravelTimesFromDeparture calculates arrival and countdown based on existing departure time
-func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService LocationServiceInterface, statusDescription string) *TravelTimeData {
+func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Context, userID int, destination, departureStr, existingArrivalStr string, travelType string, currentTime time.Time, locationService *LocationService, statusDescription string) *TravelTimeData {
 	// Parse existing departure time as UTC to match how times are stored
 	departureTime, err := time.ParseInLocation("2006-01-02 15:04:05", departureStr, time.UTC)
 	if err != nil {

@@ -1,4 +1,4 @@
-package processing
+package services
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/travel"
+	"torn_rw_stats/internal/processing"
 
 	"github.com/rs/zerolog/log"
 )
@@ -15,17 +17,17 @@ import (
 // StatusV2Service handles conversion of StateRecords to StatusV2Records
 // and tracks departure times for traveling players
 type StatusV2Service struct {
-	sheetsClient      SheetsClientInterface
-	locationService   *LocationService
-	travelTimeService *TravelTimeService
+	sheetsClient      processing.SheetsClientInterface
+	locationService   *travel.LocationService
+	travelTimeService *travel.TravelTimeService
 }
 
 // NewStatusV2Service creates a new Status v2 service
-func NewStatusV2Service(sheetsClient SheetsClientInterface) *StatusV2Service {
+func NewStatusV2Service(sheetsClient processing.SheetsClientInterface) *StatusV2Service {
 	return &StatusV2Service{
 		sheetsClient:      sheetsClient,
-		locationService:   NewLocationService(),
-		travelTimeService: NewTravelTimeService(),
+		locationService:   travel.NewLocationService(),
+		travelTimeService: travel.NewTravelTimeService(),
 	}
 }
 
