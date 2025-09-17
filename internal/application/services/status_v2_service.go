@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -245,22 +246,45 @@ func (s *StatusV2Service) buildDepartureMap(ctx context.Context, spreadsheetID s
 
 // findMostRecentTravelingTransition finds when a member most recently started traveling to their current destination
 func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.StateRecord, memberID, currentDestination string) time.Time {
-	var mostRecent time.Time
-
+	// Sort records by timestamp to analyze in chronological order
+	memberRecords := make([]app.StateRecord, 0)
 	for _, record := range allRecords {
-		if record.MemberID != memberID {
-			continue
-		}
-
-		// Check if this record shows traveling to the current destination
-		if record.StatusState == "Traveling" && record.StatusDescription == currentDestination {
-			if record.Timestamp.After(mostRecent) {
-				mostRecent = record.Timestamp
-			}
+		if record.MemberID == memberID {
+			memberRecords = append(memberRecords, record)
 		}
 	}
 
-	return mostRecent
+	// Sort by timestamp (oldest first)
+	sort.Slice(memberRecords, func(i, j int) bool {
+		return memberRecords[i].Timestamp.Before(memberRecords[j].Timestamp)
+	})
+
+	var mostRecentDeparture time.Time
+	var previousStatus string
+	var previousDestination string
+
+	for _, record := range memberRecords {
+		// Check if this is a travel transition
+		if record.StatusState == "Traveling" {
+			// This is a new departure if:
+			// 1. Previous status was not traveling, OR
+			// 2. Previous destination was different from current destination
+			if previousStatus != "Traveling" || previousDestination != record.StatusDescription {
+				// This is a new journey - check if it's to our current destination
+				if record.StatusDescription == currentDestination {
+					mostRecentDeparture = record.Timestamp
+				}
+			}
+		}
+
+		// Update previous state
+		previousStatus = record.StatusState
+		if record.StatusState == "Traveling" {
+			previousDestination = record.StatusDescription
+		}
+	}
+
+	return mostRecentDeparture
 }
 
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
