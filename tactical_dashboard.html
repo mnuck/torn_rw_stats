@@ -267,6 +267,8 @@
         let currentData = null;
         let refreshInterval = null;
         let currentIntervalId = null;
+        let countdownTimers = new Map(); // Track countdown end times
+        let countdownIntervalId = null;
 
         // API endpoint for live data
         const API_ENDPOINT = 'https://gefunkt.dev/travel_data.json';
@@ -312,6 +314,104 @@
             return 0;
         }
 
+        function parseTimeToSeconds(timeString) {
+            if (!timeString) return 0;
+
+            const parts = timeString.split(':');
+            if (parts.length === 3) {
+                // H:MM:SS format
+                const hours = parseInt(parts[0], 10);
+                const minutes = parseInt(parts[1], 10);
+                const seconds = parseInt(parts[2], 10);
+                return hours * 3600 + minutes * 60 + seconds;
+            } else if (parts.length === 2) {
+                // M:SS format
+                const minutes = parseInt(parts[0], 10);
+                const seconds = parseInt(parts[1], 10);
+                return minutes * 60 + seconds;
+            }
+            return 0;
+        }
+
+        function formatSecondsToTime(totalSeconds) {
+            if (totalSeconds <= 0) return '0:00:00';
+
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startRealtimeCountdowns() {
+            // Clear existing countdown timer
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+            }
+
+            // Initialize countdown end times from DOM elements
+            countdownTimers.clear();
+            const countdownElements = document.querySelectorAll('.member-countdown[data-initial-countdown]');
+            const currentTime = Date.now();
+
+            countdownElements.forEach(element => {
+                const initialCountdown = element.getAttribute('data-initial-countdown');
+                if (initialCountdown && initialCountdown !== '0:00:00') {
+                    const totalSeconds = parseTimeToSeconds(initialCountdown);
+                    if (totalSeconds > 0) {
+                        const endTime = currentTime + (totalSeconds * 1000);
+                        countdownTimers.set(element.id, endTime);
+                    }
+                }
+            });
+
+            // Start the countdown update interval
+            countdownIntervalId = setInterval(updateCountdowns, 1000);
+        }
+
+        function updateCountdowns() {
+            const currentTime = Date.now();
+            let hasActiveCountdowns = false;
+
+            countdownTimers.forEach((endTime, countdownId) => {
+                const element = document.getElementById(countdownId);
+                if (!element) {
+                    countdownTimers.delete(countdownId);
+                    return;
+                }
+
+                const remainingMs = endTime - currentTime;
+                if (remainingMs <= 0) {
+                    element.textContent = '0:00:00';
+                    element.className = 'member-countdown warning';
+                    countdownTimers.delete(countdownId);
+                } else {
+                    hasActiveCountdowns = true;
+                    const remainingSeconds = Math.floor(remainingMs / 1000);
+                    const timeString = formatSecondsToTime(remainingSeconds);
+
+                    // Update the countdown text
+                    element.textContent = timeString;
+
+                    // Update the color class based on remaining time
+                    const remainingMinutes = Math.floor(remainingSeconds / 60);
+                    let newClass = 'member-countdown';
+                    if (remainingMinutes < 10) {
+                        newClass += ' warning';
+                    } else if (remainingMinutes >= 10 && remainingMinutes <= 60) {
+                        newClass += ' urgent';
+                    }
+                    element.className = newClass;
+                }
+            });
+
+            // Stop the interval if no active countdowns remain
+            if (!hasActiveCountdowns && countdownTimers.size === 0) {
+                clearInterval(countdownIntervalId);
+                countdownIntervalId = null;
+            }
+        }
+
         function getCountdownClass(countdown) {
             if (!countdown) return '';
 
@@ -324,18 +424,22 @@
             return '';
         }
 
-        function createMemberRow(member) {
+        function createMemberRow(member, locationId) {
             const statusClass = getStatusDotClass(member.State);
             const statusText = member.Status || '';
             const countdown = member.Countdown || '';
             const countdownClass = getCountdownClass(countdown);
+
+            // Create unique ID for this member's countdown
+            const memberKey = `${locationId}-${member.Name.replace(/\s+/g, '-')}`;
+            const countdownId = `countdown-${memberKey}`;
 
             return `
                 <div class="member-row">
                     <div class="status-dot ${statusClass}"></div>
                     <div class="member-name">${member.Name}</div>
                     ${statusText ? `<div class="member-status">${statusText}</div>` : ''}
-                    ${countdown ? `<div class="member-countdown ${countdownClass}">${countdown}</div>` : ''}
+                    ${countdown ? `<div class="member-countdown ${countdownClass}" id="${countdownId}" data-initial-countdown="${countdown}">${countdown}</div>` : ''}
                 </div>
             `;
         }
@@ -346,8 +450,8 @@
             const travelingCount = travelingMembers.length;
             const locatedCount = locatedMembers.length;
 
-            const travelingMembersHtml = travelingMembers.map(createMemberRow).join('') || '<div class="empty-section">No members traveling</div>';
-            const locatedMembersHtml = locatedMembers.map(createMemberRow).join('') || '<div class="empty-section">No members located</div>';
+            const travelingMembersHtml = travelingMembers.map(member => createMemberRow(member, locationId)).join('') || '<div class="empty-section">No members traveling</div>';
+            const locatedMembersHtml = locatedMembers.map(member => createMemberRow(member, locationId)).join('') || '<div class="empty-section">No members located</div>';
 
             const travelingId = `${locationId}-traveling`;
             const locatedId = `${locationId}-located`;
@@ -539,6 +643,9 @@
 
             // Restore tab states after updating
             restoreTabStates(currentTabStates);
+
+            // Start realtime countdown updates
+            startRealtimeCountdowns();
         }
 
         // Load data when page loads and start auto-refresh
