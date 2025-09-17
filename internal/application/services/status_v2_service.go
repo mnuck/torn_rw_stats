@@ -186,6 +186,7 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 		Countdown: countdown,
 		Departure: departure,
 		Arrival:   arrival,
+		Until:     stateRecord.StatusUntil,
 	}
 }
 
@@ -265,7 +266,7 @@ func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.Sta
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
 func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadsheetID string, factionID int) (map[string]app.StatusV2Record, error) {
 	sheetName := fmt.Sprintf("Status v2 - %d", factionID)
-	rangeSpec := fmt.Sprintf("%s!A2:H", sheetName)
+	rangeSpec := fmt.Sprintf("%s!A2:I", sheetName)
 
 	values, err := s.sheetsClient.ReadSheet(ctx, spreadsheetID, rangeSpec)
 	if err != nil {
@@ -296,6 +297,16 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			}
 		}
 
+		// Parse Until timestamp from column 8 (optional - only present in new sheets)
+		var until time.Time
+		if len(row) > 8 {
+			if untilStr := getString(row, 8); untilStr != "" {
+				if parsedUntil, err := time.Parse("2006-01-02 15:04:05", untilStr); err == nil {
+					until = parsedUntil.UTC()
+				}
+			}
+		}
+
 		record := app.StatusV2Record{
 			Name:      name,
 			MemberID:  "", // MemberID not stored in spreadsheet, populated from StateRecord
@@ -306,6 +317,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			Countdown: getString(row, 5),
 			Departure: getString(row, 6),
 			Arrival:   getString(row, 7),
+			Until:     until,
 		}
 
 		data[memberKey] = record
@@ -437,6 +449,11 @@ func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionNam
 			Name:     record.Name,
 			MemberID: record.MemberID,
 			State:    record.State,
+		}
+
+		// Add Until timestamp if available
+		if !record.Until.IsZero() {
+			member.Until = record.Until.Format(time.RFC3339)
 		}
 
 		// Add Status and Countdown based on the member's situation
