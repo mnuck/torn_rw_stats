@@ -464,6 +464,10 @@ func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionNam
 			if record.Countdown != "" && record.Countdown != "00:00:00" {
 				member.Countdown = strings.TrimPrefix(record.Countdown, "'")
 			}
+			// Add arrival time for traveling members
+			if record.Arrival != "" {
+				member.Arrival = record.Arrival
+			}
 			// Add to traveling array
 			locationData := locations[location]
 			locationData.Traveling = append(locationData.Traveling, member)

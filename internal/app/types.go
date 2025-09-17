@@ -263,6 +263,7 @@ type JSONMember struct {
 	Status    string `json:"Status,omitempty"`
 	Countdown string `json:"Countdown,omitempty"`
 	Until     string `json:"Until,omitempty"`
+	Arrival   string `json:"Arrival,omitempty"`
 }
 
 // LocationData represents the traveling and located members for a location
