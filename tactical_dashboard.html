@@ -412,6 +412,19 @@
                 }
             });
 
+            // Handle until-based countdown elements (for hospital/jail)
+            const untilElements = document.querySelectorAll('.member-countdown[data-until-time]');
+            untilElements.forEach(element => {
+                const untilTimeStr = element.getAttribute('data-until-time');
+                if (untilTimeStr) {
+                    // Parse until time (format: "2025-09-17T14:23:45Z")
+                    const untilTime = new Date(untilTimeStr).getTime();
+                    if (!isNaN(untilTime)) {
+                        countdownTimers.set(element.id, untilTime);
+                    }
+                }
+            });
+
             // Start the countdown update interval
             countdownIntervalId = setInterval(updateCountdowns, 1000);
         }
@@ -492,6 +505,7 @@
             const memberKey = `${locationId}-${member.Name.replace(/\s+/g, '-')}`;
             const countdownId = `countdown-${memberKey}`;
             const arrivalCountdownId = `arrival-countdown-${memberKey}`;
+            const untilCountdownId = `until-countdown-${memberKey}`;
 
             // Create member name with profile link and attack link if MemberID is available
             const memberNameHtml = member.MemberID
@@ -500,7 +514,7 @@
 
             // Build countdown displays
             let countdownHtml = '';
-            if (countdown || member.Arrival) {
+            if (countdown || member.Arrival || member.Until) {
                 countdownHtml = '<div class="countdown-container">';
 
                 if (countdown) {
@@ -510,9 +524,17 @@
                     </div>`;
                 }
 
-                // Add arrival-based countdown if available
+                // Add arrival-based countdown if available (for traveling members)
                 if (member.Arrival) {
                     countdownHtml += `<div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">
+                        <div style="font-size: 0.8em; color: #666;">Calculated:</div>
+                        <div>Calculating...</div>
+                    </div>`;
+                }
+
+                // Add until-based countdown if available (for hospital/jail members)
+                if (member.Until && !member.Arrival) {
+                    countdownHtml += `<div class="member-countdown" id="${untilCountdownId}" data-until-time="${member.Until}">
                         <div style="font-size: 0.8em; color: #666;">Calculated:</div>
                         <div>Calculating...</div>
                     </div>`;
