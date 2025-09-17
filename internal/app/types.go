@@ -244,6 +244,7 @@ type StateRecord struct {
 // StatusV2Record represents a member's data for Status v2 sheets
 type StatusV2Record struct {
 	Name      string `json:"name"`
+	MemberID  string `json:"member_id"`
 	Level     int    `json:"level"`
 	State     string `json:"state"`     // LastActionStatus from StateRecord
 	Status    string `json:"status"`    // StatusDescription from StateRecord
@@ -256,6 +257,7 @@ type StatusV2Record struct {
 // JSONMember represents a member in the JSON export format
 type JSONMember struct {
 	Name      string `json:"Name"`
+	MemberID  string `json:"MemberID"`
 	State     string `json:"State"`
 	Status    string `json:"Status,omitempty"`
 	Countdown string `json:"Countdown,omitempty"`
