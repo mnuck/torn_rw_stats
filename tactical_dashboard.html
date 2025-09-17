@@ -191,6 +191,17 @@
             font-weight: 500;
         }
 
+        .member-link {
+            color: #4a90e2;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .member-link:hover {
+            color: #357abd;
+            text-decoration: underline;
+        }
+
         .member-status {
             color: #666;
             font-size: 0.9em;
@@ -434,10 +445,15 @@
             const memberKey = `${locationId}-${member.Name.replace(/\s+/g, '-')}`;
             const countdownId = `countdown-${memberKey}`;
 
+            // Create member name with profile link if MemberID is available
+            const memberNameHtml = member.MemberID
+                ? `<a href="https://www.torn.com/profiles.php?XID=${member.MemberID}" target="_blank" class="member-link">${member.Name}</a>`
+                : member.Name;
+
             return `
                 <div class="member-row">
                     <div class="status-dot ${statusClass}"></div>
-                    <div class="member-name">${member.Name}</div>
+                    <div class="member-name">${memberNameHtml}</div>
                     ${statusText ? `<div class="member-status">${statusText}</div>` : ''}
                     ${countdown ? `<div class="member-countdown ${countdownClass}" id="${countdownId}" data-initial-countdown="${countdown}">${countdown}</div>` : ''}
                 </div>
