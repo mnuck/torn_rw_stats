@@ -243,15 +243,16 @@ type StateRecord struct {
 
 // StatusV2Record represents a member's data for Status v2 sheets
 type StatusV2Record struct {
-	Name      string `json:"name"`
-	MemberID  string `json:"member_id"`
-	Level     int    `json:"level"`
-	State     string `json:"state"`     // LastActionStatus from StateRecord
-	Status    string `json:"status"`    // StatusDescription from StateRecord
-	Location  string `json:"location"`  // Destination for traveling, otherwise current location
-	Countdown string `json:"countdown"` // Calculated from StatusUntil field
-	Departure string `json:"departure"` // Manual adjustment preserved
-	Arrival   string `json:"arrival"`   // Manual adjustment preserved
+	Name      string    `json:"name"`
+	MemberID  string    `json:"member_id"`
+	Level     int       `json:"level"`
+	State     string    `json:"state"`     // LastActionStatus from StateRecord
+	Status    string    `json:"status"`    // StatusDescription from StateRecord
+	Location  string    `json:"location"`  // Destination for traveling, otherwise current location
+	Countdown string    `json:"countdown"` // Calculated from StatusUntil field
+	Departure string    `json:"departure"` // Manual adjustment preserved
+	Arrival   string    `json:"arrival"`   // Manual adjustment preserved
+	Until     time.Time `json:"until"`     // StatusUntil timestamp from StateRecord
 }
 
 // JSONMember represents a member in the JSON export format
@@ -261,6 +262,8 @@ type JSONMember struct {
 	State     string `json:"State"`
 	Status    string `json:"Status,omitempty"`
 	Countdown string `json:"Countdown,omitempty"`
+	Until     string `json:"Until,omitempty"`
+	Arrival   string `json:"Arrival,omitempty"`
 }
 
 // LocationData represents the traveling and located members for a location
