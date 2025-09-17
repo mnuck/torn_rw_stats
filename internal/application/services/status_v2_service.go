@@ -97,9 +97,13 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 // convertSingleStateRecord converts a single StateRecord to StatusV2Record
 func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existingData map[string]app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) app.StatusV2Record {
 	memberKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberID)
+	nameKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberName)
 
-	// Get existing data to preserve manual adjustments
+	// Get existing data to preserve manual adjustments (try both keys)
 	existing, hasExisting := existingData[memberKey]
+	if !hasExisting {
+		existing, hasExisting = existingData[nameKey]
+	}
 
 	// Get member level from faction data
 	level := 0
@@ -174,6 +178,7 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 
 	return app.StatusV2Record{
 		Name:      stateRecord.MemberName,
+		MemberID:  stateRecord.MemberID,
 		Level:     level,
 		State:     stateRecord.LastActionStatus,
 		Status:    stateRecord.StatusState,
@@ -281,8 +286,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			continue
 		}
 
-		// We need member ID to create the key, but it's not in the sheet
-		// For now, use name as a simpler key
+		// We'll use name as key since MemberID isn't in the sheet
 		memberKey := fmt.Sprintf("%s_%s", factionIDStr, name)
 
 		level := 0
@@ -294,6 +298,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 
 		record := app.StatusV2Record{
 			Name:      name,
+			MemberID:  "", // MemberID not stored in spreadsheet, populated from StateRecord
 			Level:     level,
 			State:     getString(row, 2),
 			Status:    getString(row, 3),
@@ -429,8 +434,9 @@ func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionNam
 
 		// Create JSON member
 		member := app.JSONMember{
-			Name:  record.Name,
-			State: record.State,
+			Name:     record.Name,
+			MemberID: record.MemberID,
+			State:    record.State,
 		}
 
 		// Add Status and Countdown based on the member's situation
