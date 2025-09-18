@@ -154,8 +154,6 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 	return &attackResponse, nil
 }
 
-
-
 // GetFactionBasic fetches faction basic data from the API
 func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
 	url := fmt.Sprintf("https://api.torn.com/faction/%d?selections=basic&key=%s", factionID, c.apiKey)

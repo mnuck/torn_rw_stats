@@ -562,6 +562,7 @@ func (s *StatusV2Service) createJSONMember(record app.StatusV2Record) app.JSONMe
 	member := app.JSONMember{
 		Name:     record.Name,
 		MemberID: record.MemberID,
+		Level:    record.Level,
 		State:    record.State,
 	}
 

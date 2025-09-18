@@ -72,4 +72,3 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 		}
 	}
 }
-
