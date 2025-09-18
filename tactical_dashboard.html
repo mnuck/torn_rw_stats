@@ -221,6 +221,19 @@
             margin-right: 15px;
         }
 
+        .member-level {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 500;
+            margin-right: 8px;
+            min-width: 30px;
+            text-align: center;
+            border: 1px solid #bbdefb;
+        }
+
         .member-countdown {
             font-family: monospace;
             background: #f0f0f0;
@@ -501,10 +514,14 @@
                 countdownHtml = `<div class="member-countdown" id="${untilCountdownId}" data-until-time="${member.Until}">Calculating...</div>`;
             }
 
+            // Create level display if Level is available
+            const levelHtml = member.Level ? `<div class="member-level">Lv ${member.Level}</div>` : '';
+
             return `
                 <div class="member-row">
                     <div class="status-dot ${statusClass}"></div>
                     <div class="member-name">${memberNameHtml}</div>
+                    ${levelHtml}
                     ${statusText ? `<div class="member-status">${statusText}</div>` : ''}
                     ${countdownHtml}
                 </div>
