@@ -154,12 +154,6 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 	return &attackResponse, nil
 }
 
-// GetAllAttacksForWar is a convenience method that uses the AttackProcessor
-// Deprecated: Use AttackProcessor directly for better testability
-func (c *Client) GetAllAttacksForWar(ctx context.Context, war *app.War) ([]app.Attack, error) {
-	processor := NewAttackProcessor(c)
-	return processor.GetAllAttacksForWar(ctx, war)
-}
 
 // GetAttacksForTimeRange is a convenience method that uses the AttackProcessor
 // Deprecated: Use AttackProcessor directly for better testability

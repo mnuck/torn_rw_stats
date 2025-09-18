@@ -182,7 +182,8 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	if existingInfo.RecordCount == 0 {
 		// Full population mode
 		log.Debug().Int("war_id", war.ID).Msg("Using full population mode - no existing records")
-		attacks, err = wp.tornClient.GetAllAttacksForWar(ctx, war)
+		processor := torn.NewAttackProcessor(wp.tornClient)
+		attacks, err = processor.GetAllAttacksForWar(ctx, war)
 	} else {
 		// Incremental update mode
 		log.Debug().

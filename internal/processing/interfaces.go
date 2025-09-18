@@ -14,9 +14,12 @@ import (
 type TornClientInterface interface {
 	GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error)
 	GetFactionWars(ctx context.Context) (*app.WarResponse, error)
-	GetAllAttacksForWar(ctx context.Context, war *app.War) ([]app.Attack, error)
+	GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error)
 	GetAttacksForTimeRange(ctx context.Context, war *app.War, fromTime int64, latestExistingTimestamp *int64) ([]app.Attack, error)
 	GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error)
+	GetAPICallCount() int64
+	IncrementAPICall()
+	ResetAPICallCount()
 }
 
 // SheetsClientInterface defines the sheets API client methods used by WarProcessor
