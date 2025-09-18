@@ -40,6 +40,18 @@ func TestTravelTimeServiceGetTravelTime(t *testing.T) {
 			expected:    111 * time.Minute,
 		},
 		{
+			name:        "Mexico business class",
+			destination: "Mexico",
+			travelType:  "business",
+			expected:    8 * time.Minute,
+		},
+		{
+			name:        "Switzerland business class",
+			destination: "Switzerland",
+			travelType:  "business",
+			expected:    53 * time.Minute,
+		},
+		{
 			name:        "Unknown destination",
 			destination: "Unknown",
 			travelType:  "regular",
@@ -139,6 +151,13 @@ func TestTravelTimeServiceCalculateTravelTimes(t *testing.T) {
 			destination:      "United Kingdom",
 			travelType:       "airstrip",
 			expectedDuration: 111 * time.Minute,
+		},
+		{
+			name:             "Japan business class travel",
+			userID:           789,
+			destination:      "Japan",
+			travelType:       "business",
+			expectedDuration: 68 * time.Minute,
 		},
 	}
 
@@ -274,11 +293,18 @@ func TestTravelTimeServiceEdgeCases(t *testing.T) {
 	// Test airstrip vs regular times are different
 	mexicoRegular := tts.GetTravelTime("Mexico", "regular")
 	mexicoAirstrip := tts.GetTravelTime("Mexico", "airstrip")
+	mexicoBusiness := tts.GetTravelTime("Mexico", "business")
 	if mexicoRegular <= mexicoAirstrip {
 		t.Error("Regular travel should be slower than airstrip travel")
 	}
+	if mexicoAirstrip <= mexicoBusiness {
+		t.Error("Airstrip travel should be slower than business class travel")
+	}
+	if mexicoRegular <= mexicoBusiness {
+		t.Error("Regular travel should be slower than business class travel")
+	}
 
-	// Test all destinations have both regular and airstrip times
+	// Test all destinations have regular, airstrip, and business class times
 	destinations := []string{
 		"Mexico", "Cayman Islands", "Canada", "Hawaii", "United Kingdom",
 		"Argentina", "Switzerland", "Japan", "China", "UAE", "South Africa",
@@ -287,13 +313,20 @@ func TestTravelTimeServiceEdgeCases(t *testing.T) {
 	for _, dest := range destinations {
 		regular := tts.GetTravelTime(dest, "regular")
 		airstrip := tts.GetTravelTime(dest, "airstrip")
+		business := tts.GetTravelTime(dest, "business")
 
-		if regular == 30*time.Minute || airstrip == 30*time.Minute {
+		if regular == 30*time.Minute || airstrip == 30*time.Minute || business == 30*time.Minute {
 			t.Errorf("Destination %q should have predefined times, not fallback", dest)
 		}
 
 		if regular <= airstrip {
 			t.Errorf("Regular travel to %q should be slower than airstrip", dest)
+		}
+		if airstrip <= business {
+			t.Errorf("Airstrip travel to %q should be slower than business class", dest)
+		}
+		if regular <= business {
+			t.Errorf("Regular travel to %q should be slower than business class", dest)
 		}
 	}
 }
@@ -302,7 +335,7 @@ func TestTravelTimeServiceEdgeCases(t *testing.T) {
 func BenchmarkTravelTimeServiceGetTravelTime(b *testing.B) {
 	tts := NewTravelTimeService()
 	destinations := []string{"Mexico", "United Kingdom", "Japan", "Unknown"}
-	travelTypes := []string{"regular", "airstrip"}
+	travelTypes := []string{"regular", "airstrip", "business"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

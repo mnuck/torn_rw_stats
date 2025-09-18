@@ -10,8 +10,9 @@ import (
 
 // TravelTimeService handles travel time calculations and formatting
 type TravelTimeService struct {
-	regularTimes  map[string]int
-	airstripTimes map[string]int
+	regularTimes     map[string]int
+	airstripTimes    map[string]int
+	businessTimes    map[string]int
 }
 
 // NewTravelTimeService creates a new travel time service with predefined travel times
@@ -43,6 +44,21 @@ func NewTravelTimeService() *TravelTimeService {
 			"UAE":            190, // 3h 10m
 			"South Africa":   208, // 3h 28m
 		},
+		businessTimes: map[string]int{
+			// Business class travel times (fastest option)
+			// Note: API detection for business class is not yet implemented
+			"Mexico":         8,
+			"Cayman Islands": 11,
+			"Canada":         12,
+			"Hawaii":         40,
+			"United Kingdom": 48,
+			"Argentina":      50,
+			"Switzerland":    53,
+			"Japan":          68, // 1h 8m
+			"China":          72, // 1h 12m
+			"UAE":            81, // 1h 21m
+			"South Africa":   89, // 1h 29m
+		},
 	}
 }
 
@@ -54,11 +70,16 @@ type TravelTimeData struct {
 }
 
 // GetTravelTime returns travel duration based on destination and travel type
+// Travel types: "regular" (default), "airstrip" (private jet), "business" (business class)
+// Note: Business class detection from API is not currently implemented - this prepares the infrastructure
 func (tts *TravelTimeService) GetTravelTime(destination string, travelType string) time.Duration {
 	var minutes int
-	if travelType == "airstrip" {
+	switch travelType {
+	case "airstrip":
 		minutes = tts.airstripTimes[destination]
-	} else {
+	case "business":
+		minutes = tts.businessTimes[destination]
+	default:
 		minutes = tts.regularTimes[destination]
 	}
 
