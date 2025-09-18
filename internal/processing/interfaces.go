@@ -24,7 +24,7 @@ type TornClientInterface interface {
 // SheetsClientInterface defines the sheets API client methods used by WarProcessor
 type SheetsClientInterface interface {
 	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error)
-	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.ExistingRecordsInfo, error)
+	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
