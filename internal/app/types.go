@@ -261,6 +261,7 @@ type StatusV2Record struct {
 type JSONMember struct {
 	Name            string `json:"Name"`
 	MemberID        string `json:"MemberID"`
+	Level           int    `json:"Level"`
 	State           string `json:"State"`
 	Status          string `json:"Status,omitempty"`
 	Countdown       string `json:"Countdown,omitempty"`

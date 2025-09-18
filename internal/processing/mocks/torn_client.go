@@ -20,25 +20,25 @@ type TornClient interface {
 // MockTornClient is a test double for the torn.Client
 type MockTornClient struct {
 	// Responses to return
-	OwnFactionResponse          *app.FactionInfoResponse
-	FactionWarsResponse         *app.WarResponse
-	FactionAttacksResponse      *app.AttackResponse
-	FactionBasicResponse        *app.FactionBasicResponse
-	APICallCount                int64
+	OwnFactionResponse     *app.FactionInfoResponse
+	FactionWarsResponse    *app.WarResponse
+	FactionAttacksResponse *app.AttackResponse
+	FactionBasicResponse   *app.FactionBasicResponse
+	APICallCount           int64
 
 	// Errors to return
-	OwnFactionError          error
-	FactionWarsError         error
-	FactionAttacksError      error
-	FactionBasicError        error
+	OwnFactionError     error
+	FactionWarsError    error
+	FactionAttacksError error
+	FactionBasicError   error
 
 	// Call tracking
-	GetOwnFactionCalled              bool
-	GetFactionWarsCalled             bool
-	GetFactionAttacksCalled          bool
-	GetFactionBasicCalled            bool
-	GetFactionBasicCalledWithID      int
-	GetFactionAttacksCalledWith      struct {
+	GetOwnFactionCalled         bool
+	GetFactionWarsCalled        bool
+	GetFactionAttacksCalled     bool
+	GetFactionBasicCalled       bool
+	GetFactionBasicCalledWithID int
+	GetFactionAttacksCalledWith struct {
 		From int64
 		To   int64
 	}
@@ -65,8 +65,6 @@ func (m *MockTornClient) GetFactionAttacks(ctx context.Context, from, to int64) 
 	m.GetFactionAttacksCalledWith.To = to
 	return m.FactionAttacksResponse, m.FactionAttacksError
 }
-
-
 
 func (m *MockTornClient) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
 	m.GetFactionBasicCalled = true
