@@ -249,7 +249,9 @@ func (s *StatusV2Service) buildDepartureMap(ctx context.Context, spreadsheetID s
 		}
 
 		memberKey := fmt.Sprintf("%s_%s", currentRecord.FactionID, currentRecord.MemberID)
-		departureTime := s.findMostRecentTravelingTransition(allStateRecords, currentRecord.MemberID, currentRecord.StatusDescription)
+		// Parse the current destination location instead of using raw status description
+		currentParsedLocation := s.locationService.ParseLocation(currentRecord.StatusDescription)
+		departureTime := s.findMostRecentTravelingTransition(allStateRecords, currentRecord.MemberID, currentParsedLocation)
 
 		if !departureTime.IsZero() {
 			departureMap[memberKey] = departureTime
@@ -281,12 +283,15 @@ func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.Sta
 	for _, record := range memberRecords {
 		// Check if this is a travel transition
 		if record.StatusState == "Traveling" {
+			// Parse the destination location for proper comparison
+			recordParsedLocation := s.locationService.ParseLocation(record.StatusDescription)
+
 			// This is a new departure if:
 			// 1. Previous status was not traveling, OR
 			// 2. Previous destination was different from current destination
-			if previousStatus != "Traveling" || previousDestination != record.StatusDescription {
+			if previousStatus != "Traveling" || previousDestination != recordParsedLocation {
 				// This is a new journey - check if it's to our current destination
-				if record.StatusDescription == currentDestination {
+				if recordParsedLocation == currentDestination {
 					mostRecentDeparture = record.Timestamp
 				}
 			}
@@ -295,7 +300,8 @@ func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.Sta
 		// Update previous state
 		previousStatus = record.StatusState
 		if record.StatusState == "Traveling" {
-			previousDestination = record.StatusDescription
+			// Store parsed location for comparison
+			previousDestination = s.locationService.ParseLocation(record.StatusDescription)
 		}
 	}
 
