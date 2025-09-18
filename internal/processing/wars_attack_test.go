@@ -73,27 +73,3 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 	}
 }
 
-// Stub functions for remaining tests - they should be properly implemented with domain services
-func TestProcessAttacksIntoRecordsNoOurFaction(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
-
-func TestProcessAttacksIntoRecordsWithNilAttackerFaction(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
-
-func TestProcessAttacksIntoRecordsWithNilDefenderFaction(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
-
-func TestProcessAttacksIntoRecordsMultipleAttacks(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
-
-func TestProcessAttacksIntoRecordsEmptyAttacks(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
-
-func TestProcessAttacksIntoRecordsComplexScenario(t *testing.T) {
-	t.Skip("Test needs to be rewritten to use domain services directly")
-}
