@@ -123,6 +123,7 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 	// Handle departure and arrival times
 	departure := ""
 	arrival := ""
+	businessArrival := ""
 
 	if stateRecord.StatusState == "Traveling" {
 		// Use tracked departure time if available, otherwise use existing or current time
@@ -164,6 +165,7 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 
 			if travelData != nil {
 				arrival = travelData.Arrival
+				businessArrival = travelData.BusinessArrival
 				countdown = travelData.Countdown
 			}
 		}
@@ -175,19 +177,32 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 		if hasExisting && existing.Arrival != "" {
 			arrival = existing.Arrival
 		}
+		if hasExisting && existing.BusinessArrival != "" {
+			businessArrival = existing.BusinessArrival
+		}
+	} else {
+		// For non-traveling members, clear any existing travel-related data
+		// but preserve manual adjustments if member becomes traveling again
+		if hasExisting && stateRecord.StatusState != "Traveling" {
+			// Clear travel fields for non-traveling status
+			departure = ""
+			arrival = ""
+			businessArrival = ""
+		}
 	}
 
 	return app.StatusV2Record{
-		Name:      stateRecord.MemberName,
-		MemberID:  stateRecord.MemberID,
-		Level:     level,
-		State:     stateRecord.LastActionStatus,
-		Status:    stateRecord.StatusState,
-		Location:  location,
-		Countdown: countdown,
-		Departure: departure,
-		Arrival:   arrival,
-		Until:     stateRecord.StatusUntil,
+		Name:            stateRecord.MemberName,
+		MemberID:        stateRecord.MemberID,
+		Level:           level,
+		State:           stateRecord.LastActionStatus,
+		Status:          stateRecord.StatusState,
+		Location:        location,
+		Countdown:       countdown,
+		Departure:       departure,
+		Arrival:         arrival,
+		BusinessArrival: businessArrival,
+		Until:           stateRecord.StatusUntil,
 	}
 }
 
@@ -290,7 +305,7 @@ func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.Sta
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
 func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadsheetID string, factionID int) (map[string]app.StatusV2Record, error) {
 	sheetName := fmt.Sprintf("Status v2 - %d", factionID)
-	rangeSpec := fmt.Sprintf("%s!A2:I", sheetName)
+	rangeSpec := fmt.Sprintf("%s!A2:J", sheetName)
 
 	values, err := s.sheetsClient.ReadSheet(ctx, spreadsheetID, rangeSpec)
 	if err != nil {
@@ -321,10 +336,10 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			}
 		}
 
-		// Parse Until timestamp from column 8 (optional - only present in new sheets)
+		// Parse Until timestamp from column 9 (column J)
 		var until time.Time
-		if len(row) > 8 {
-			if untilStr := getString(row, 8); untilStr != "" {
+		if len(row) > 9 {
+			if untilStr := getString(row, 9); untilStr != "" {
 				if parsedUntil, err := time.Parse("2006-01-02 15:04:05", untilStr); err == nil {
 					until = parsedUntil.UTC()
 				}
@@ -332,16 +347,17 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 		}
 
 		record := app.StatusV2Record{
-			Name:      name,
-			MemberID:  "", // MemberID not stored in spreadsheet, populated from StateRecord
-			Level:     level,
-			State:     getString(row, 2),
-			Status:    getString(row, 3),
-			Location:  getString(row, 4),
-			Countdown: getString(row, 5),
-			Departure: getString(row, 6),
-			Arrival:   getString(row, 7),
-			Until:     until,
+			Name:            name,
+			MemberID:        "", // MemberID not stored in spreadsheet, populated from StateRecord
+			Level:           level,
+			State:           getString(row, 2),
+			Status:          getString(row, 3),
+			Location:        getString(row, 4),
+			Countdown:       getString(row, 5),
+			Departure:       getString(row, 6),
+			Arrival:         getString(row, 7),
+			BusinessArrival: getString(row, 8), // Column I
+			Until:           until,
 		}
 
 		data[memberKey] = record
@@ -491,6 +507,10 @@ func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionNam
 			// Add arrival time for traveling members
 			if record.Arrival != "" {
 				member.Arrival = record.Arrival
+			}
+			// Add business class arrival time for traveling members
+			if record.BusinessArrival != "" {
+				member.BusinessArrival = record.BusinessArrival
 			}
 			// Add to traveling array
 			locationData := locations[location]

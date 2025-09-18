@@ -244,6 +244,26 @@
             color: #000;
         }
 
+        .dual-arrival-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .arrival-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .arrival-label {
+            font-size: 0.8em;
+            color: #666;
+            min-width: 60px;
+            text-align: right;
+        }
+
 
         .expand-icon {
             font-size: 0.8em;
@@ -456,7 +476,25 @@
 
             // Show calculated countdown for traveling members (from Arrival)
             if (member.Arrival) {
-                countdownHtml = `<div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">Calculating...</div>`;
+                // If we have both arrival times, show both with labels
+                if (member.BusinessArrival && member.BusinessArrival !== member.Arrival) {
+                    const businessCountdownId = `business-countdown-${memberKey}`;
+                    countdownHtml = `
+                        <div class="dual-arrival-container">
+                            <div class="arrival-row">
+                                <span class="arrival-label">Regular:</span>
+                                <div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">Calculating...</div>
+                            </div>
+                            <div class="arrival-row">
+                                <span class="arrival-label">Business:</span>
+                                <div class="member-countdown" id="${businessCountdownId}" data-arrival-time="${member.BusinessArrival}">Calculating...</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Single arrival time
+                    countdownHtml = `<div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">Calculating...</div>`;
+                }
             }
             // Show calculated countdown for located members (from Until)
             else if (member.Until) {
