@@ -191,7 +191,8 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 			Int("existing_records", existingInfo.RecordCount).
 			Int64("latest_timestamp", existingInfo.LatestTimestamp).
 			Msg("Using incremental update mode - existing records found")
-		attacks, err = wp.tornClient.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
+		processor := torn.NewAttackProcessor(wp.tornClient)
+		attacks, err = processor.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
 	}
 
 	if err != nil {

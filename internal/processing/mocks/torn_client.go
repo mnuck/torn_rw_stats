@@ -11,7 +11,6 @@ type TornClient interface {
 	GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error)
 	GetFactionWars(ctx context.Context) (*app.WarResponse, error)
 	GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error)
-	GetAttacksForTimeRange(ctx context.Context, war *app.War, fromTime int64, latestExistingTimestamp *int64) ([]app.Attack, error)
 	GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error)
 	GetAPICallCount() int64
 	IncrementAPICall()
@@ -24,7 +23,6 @@ type MockTornClient struct {
 	OwnFactionResponse          *app.FactionInfoResponse
 	FactionWarsResponse         *app.WarResponse
 	FactionAttacksResponse      *app.AttackResponse
-	AttacksForTimeRangeResponse []app.Attack
 	FactionBasicResponse        *app.FactionBasicResponse
 	APICallCount                int64
 
@@ -32,24 +30,17 @@ type MockTornClient struct {
 	OwnFactionError          error
 	FactionWarsError         error
 	FactionAttacksError      error
-	AttacksForTimeRangeError error
 	FactionBasicError        error
 
 	// Call tracking
 	GetOwnFactionCalled              bool
 	GetFactionWarsCalled             bool
 	GetFactionAttacksCalled          bool
-	GetAttacksForTimeRangeCalled     bool
 	GetFactionBasicCalled            bool
 	GetFactionBasicCalledWithID      int
 	GetFactionAttacksCalledWith      struct {
 		From int64
 		To   int64
-	}
-	GetAttacksForTimeRangeCalledWith struct {
-		War                     *app.War
-		FromTime                int64
-		LatestExistingTimestamp *int64
 	}
 }
 
@@ -76,13 +67,6 @@ func (m *MockTornClient) GetFactionAttacks(ctx context.Context, from, to int64) 
 }
 
 
-func (m *MockTornClient) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromTime int64, latestExistingTimestamp *int64) ([]app.Attack, error) {
-	m.GetAttacksForTimeRangeCalled = true
-	m.GetAttacksForTimeRangeCalledWith.War = war
-	m.GetAttacksForTimeRangeCalledWith.FromTime = fromTime
-	m.GetAttacksForTimeRangeCalledWith.LatestExistingTimestamp = latestExistingTimestamp
-	return m.AttacksForTimeRangeResponse, m.AttacksForTimeRangeError
-}
 
 func (m *MockTornClient) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
 	m.GetFactionBasicCalled = true
@@ -107,29 +91,21 @@ func (m *MockTornClient) Reset() {
 	m.OwnFactionResponse = nil
 	m.FactionWarsResponse = nil
 	m.FactionAttacksResponse = nil
-	m.AttacksForTimeRangeResponse = nil
 	m.FactionBasicResponse = nil
 	m.APICallCount = 0
 
 	m.OwnFactionError = nil
 	m.FactionWarsError = nil
 	m.FactionAttacksError = nil
-	m.AttacksForTimeRangeError = nil
 	m.FactionBasicError = nil
 
 	m.GetOwnFactionCalled = false
 	m.GetFactionWarsCalled = false
 	m.GetFactionAttacksCalled = false
-	m.GetAttacksForTimeRangeCalled = false
 	m.GetFactionBasicCalled = false
 	m.GetFactionBasicCalledWithID = 0
 	m.GetFactionAttacksCalledWith = struct {
 		From int64
 		To   int64
-	}{}
-	m.GetAttacksForTimeRangeCalledWith = struct {
-		War                     *app.War
-		FromTime                int64
-		LatestExistingTimestamp *int64
 	}{}
 }

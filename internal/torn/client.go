@@ -155,12 +155,6 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 }
 
 
-// GetAttacksForTimeRange is a convenience method that uses the AttackProcessor
-// Deprecated: Use AttackProcessor directly for better testability
-func (c *Client) GetAttacksForTimeRange(ctx context.Context, war *app.War, fromTime int64, latestExistingTimestamp *int64) ([]app.Attack, error) {
-	processor := NewAttackProcessor(c)
-	return processor.GetAttacksForTimeRange(ctx, war, fromTime, latestExistingTimestamp)
-}
 
 // GetFactionBasic fetches faction basic data from the API
 func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
