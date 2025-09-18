@@ -23,7 +23,7 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			return duration > 0
 		},
 		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada", "UnknownPlace"),
-		gen.OneConstOf("regular", "airstrip"),
+		gen.OneConstOf("regular", "airstrip", "business"),
 	))
 
 	// Property: Airstrip travel should be faster than regular travel for known destinations
@@ -38,6 +38,23 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			}
 
 			return airstripTime <= regularTime
+		},
+		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
+	))
+
+	// Property: Business class should be fastest travel type for known destinations
+	properties.Property("business class fastest", prop.ForAll(
+		func(destination string) bool {
+			regularTime := service.GetTravelTime(destination, "regular")
+			airstripTime := service.GetTravelTime(destination, "airstrip")
+			businessTime := service.GetTravelTime(destination, "business")
+
+			// For unknown destinations, all might return default, so skip those
+			if regularTime == 30*time.Minute && airstripTime == 30*time.Minute && businessTime == 30*time.Minute {
+				return true // Skip unknown destinations
+			}
+
+			return businessTime <= airstripTime && businessTime <= regularTime
 		},
 		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
 	))
@@ -107,8 +124,10 @@ func TestTravelTimeServiceProperties(t *testing.T) {
 			time2 := service.GetTravelTime(destination, "regular")
 			time3 := service.GetTravelTime(destination, "airstrip")
 			time4 := service.GetTravelTime(destination, "airstrip")
+			time5 := service.GetTravelTime(destination, "business")
+			time6 := service.GetTravelTime(destination, "business")
 
-			return time1 == time2 && time3 == time4
+			return time1 == time2 && time3 == time4 && time5 == time6
 		},
 		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
 	))
