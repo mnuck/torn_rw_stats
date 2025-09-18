@@ -244,12 +244,6 @@
             color: #000;
         }
 
-        /* Style for countdown containers */
-        .countdown-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
 
         .expand-icon {
             font-size: 0.8em;
@@ -347,24 +341,6 @@
             return 0;
         }
 
-        function parseTimeToSeconds(timeString) {
-            if (!timeString) return 0;
-
-            const parts = timeString.split(':');
-            if (parts.length === 3) {
-                // H:MM:SS format
-                const hours = parseInt(parts[0], 10);
-                const minutes = parseInt(parts[1], 10);
-                const seconds = parseInt(parts[2], 10);
-                return hours * 3600 + minutes * 60 + seconds;
-            } else if (parts.length === 2) {
-                // M:SS format
-                const minutes = parseInt(parts[0], 10);
-                const seconds = parseInt(parts[1], 10);
-                return minutes * 60 + seconds;
-            }
-            return 0;
-        }
 
         function formatSecondsToTime(totalSeconds) {
             if (totalSeconds <= 0) return '0:00:00';
@@ -386,18 +362,7 @@
             countdownTimers.clear();
             const currentTime = Date.now();
 
-            // Handle original countdown elements
-            const countdownElements = document.querySelectorAll('.member-countdown[data-initial-countdown]');
-            countdownElements.forEach(element => {
-                const initialCountdown = element.getAttribute('data-initial-countdown');
-                if (initialCountdown && initialCountdown !== '0:00:00') {
-                    const totalSeconds = parseTimeToSeconds(initialCountdown);
-                    if (totalSeconds > 0) {
-                        const endTime = currentTime + (totalSeconds * 1000);
-                        countdownTimers.set(element.id, endTime);
-                    }
-                }
-            });
+            // Only handle calculated countdown elements now
 
             // Handle arrival-based countdown elements
             const arrivalElements = document.querySelectorAll('.member-countdown[data-arrival-time]');
@@ -442,13 +407,7 @@
 
                 const remainingMs = endTime - currentTime;
                 if (remainingMs <= 0) {
-                    // Find the time display div (second child)
-                    const timeDiv = element.children[1];
-                    if (timeDiv) {
-                        timeDiv.textContent = '0:00:00';
-                    } else {
-                        element.textContent = '0:00:00';
-                    }
+                    element.textContent = '0:00:00';
                     element.className = 'member-countdown warning';
                     countdownTimers.delete(countdownId);
                 } else {
@@ -456,13 +415,7 @@
                     const remainingSeconds = Math.floor(remainingMs / 1000);
                     const timeString = formatSecondsToTime(remainingSeconds);
 
-                    // Update the countdown text - check if we have nested structure
-                    const timeDiv = element.children[1];
-                    if (timeDiv) {
-                        timeDiv.textContent = timeString;
-                    } else {
-                        element.textContent = timeString;
-                    }
+                    element.textContent = timeString;
 
                     // Update the color class based on remaining time
                     const remainingMinutes = Math.floor(remainingSeconds / 60);
@@ -483,27 +436,13 @@
             }
         }
 
-        function getCountdownClass(countdown) {
-            if (!countdown) return '';
-
-            const totalMinutes = parseTimeToMinutes(countdown);
-            if (totalMinutes < 10) {
-                return 'warning';
-            } else if (totalMinutes >= 10 && totalMinutes <= 60) {
-                return 'urgent';
-            }
-            return '';
-        }
 
         function createMemberRow(member, locationId) {
             const statusClass = getStatusDotClass(member.State);
             const statusText = member.Status || '';
-            const countdown = member.Countdown || '';
-            const countdownClass = getCountdownClass(countdown);
 
             // Create unique ID for this member's countdown
             const memberKey = `${locationId}-${member.Name.replace(/\s+/g, '-')}`;
-            const countdownId = `countdown-${memberKey}`;
             const arrivalCountdownId = `arrival-countdown-${memberKey}`;
             const untilCountdownId = `until-countdown-${memberKey}`;
 
@@ -512,35 +451,16 @@
                 ? `<a href="https://www.torn.com/profiles.php?XID=${member.MemberID}" target="_blank" class="member-link">${member.Name}</a><a href="https://www.torn.com/loader.php?sid=attack&user2ID=${member.MemberID}" target="_blank" class="attack-link" title="Attack ${member.Name}">🔫</a>`
                 : member.Name;
 
-            // Build countdown displays
+            // Build countdown displays - use calculated countdowns only
             let countdownHtml = '';
-            if (countdown || member.Arrival || member.Until) {
-                countdownHtml = '<div class="countdown-container">';
 
-                if (countdown) {
-                    countdownHtml += `<div class="member-countdown ${countdownClass}" id="${countdownId}" data-initial-countdown="${countdown}">
-                        <div style="font-size: 0.8em; color: #666;">Original:</div>
-                        <div>${countdown}</div>
-                    </div>`;
-                }
-
-                // Add arrival-based countdown if available (for traveling members)
-                if (member.Arrival) {
-                    countdownHtml += `<div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">
-                        <div style="font-size: 0.8em; color: #666;">Calculated:</div>
-                        <div>Calculating...</div>
-                    </div>`;
-                }
-
-                // Add until-based countdown if available (for hospital/jail members)
-                if (member.Until && !member.Arrival) {
-                    countdownHtml += `<div class="member-countdown" id="${untilCountdownId}" data-until-time="${member.Until}">
-                        <div style="font-size: 0.8em; color: #666;">Calculated:</div>
-                        <div>Calculating...</div>
-                    </div>`;
-                }
-
-                countdownHtml += '</div>';
+            // Show calculated countdown for traveling members (from Arrival)
+            if (member.Arrival) {
+                countdownHtml = `<div class="member-countdown" id="${arrivalCountdownId}" data-arrival-time="${member.Arrival}">Calculating...</div>`;
+            }
+            // Show calculated countdown for located members (from Until)
+            else if (member.Until) {
+                countdownHtml = `<div class="member-countdown" id="${untilCountdownId}" data-until-time="${member.Until}">Calculating...</div>`;
             }
 
             return `
