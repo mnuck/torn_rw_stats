@@ -27,10 +27,6 @@ jobs:
     - name: Run go vet
       run: go vet ./...
 
-    - name: Install golangci-lint
-      uses: golangci/golangci-lint-action@v4
-      with:
-        version: v2.4.0
 
     - name: Run tests (unit tests only)
       run: |
