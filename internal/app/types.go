@@ -197,13 +197,14 @@ type MemberStatus struct {
 
 // TravelRecord represents a member's travel status record
 type TravelRecord struct {
-	Name      string `json:"name"`
-	Level     int    `json:"level"`
-	Location  string `json:"location"`
-	State     string `json:"state"`
-	Departure string `json:"departure"`
-	Countdown string `json:"countdown"`
-	Arrival   string `json:"arrival"`
+	Name            string `json:"name"`
+	Level           int    `json:"level"`
+	Location        string `json:"location"`
+	State           string `json:"state"`
+	Departure       string `json:"departure"`
+	Countdown       string `json:"countdown"`
+	Arrival         string `json:"arrival"`
+	BusinessArrival string `json:"business_arrival"` // Alternative arrival time assuming business class
 }
 
 // StateChangeRecord represents a member's state change record
@@ -243,27 +244,29 @@ type StateRecord struct {
 
 // StatusV2Record represents a member's data for Status v2 sheets
 type StatusV2Record struct {
-	Name      string    `json:"name"`
-	MemberID  string    `json:"member_id"`
-	Level     int       `json:"level"`
-	State     string    `json:"state"`     // LastActionStatus from StateRecord
-	Status    string    `json:"status"`    // StatusDescription from StateRecord
-	Location  string    `json:"location"`  // Destination for traveling, otherwise current location
-	Countdown string    `json:"countdown"` // Calculated from StatusUntil field
-	Departure string    `json:"departure"` // Manual adjustment preserved
-	Arrival   string    `json:"arrival"`   // Manual adjustment preserved
-	Until     time.Time `json:"until"`     // StatusUntil timestamp from StateRecord
+	Name            string    `json:"name"`
+	MemberID        string    `json:"member_id"`
+	Level           int       `json:"level"`
+	State           string    `json:"state"`            // LastActionStatus from StateRecord
+	Status          string    `json:"status"`           // StatusDescription from StateRecord
+	Location        string    `json:"location"`         // Destination for traveling, otherwise current location
+	Countdown       string    `json:"countdown"`        // Calculated from StatusUntil field
+	Departure       string    `json:"departure"`        // Manual adjustment preserved
+	Arrival         string    `json:"arrival"`          // Manual adjustment preserved
+	BusinessArrival string    `json:"business_arrival"` // Alternative arrival time assuming business class
+	Until           time.Time `json:"until"`            // StatusUntil timestamp from StateRecord
 }
 
 // JSONMember represents a member in the JSON export format
 type JSONMember struct {
-	Name      string `json:"Name"`
-	MemberID  string `json:"MemberID"`
-	State     string `json:"State"`
-	Status    string `json:"Status,omitempty"`
-	Countdown string `json:"Countdown,omitempty"`
-	Until     string `json:"Until,omitempty"`
-	Arrival   string `json:"Arrival,omitempty"`
+	Name            string `json:"Name"`
+	MemberID        string `json:"MemberID"`
+	State           string `json:"State"`
+	Status          string `json:"Status,omitempty"`
+	Countdown       string `json:"Countdown,omitempty"`
+	Until           string `json:"Until,omitempty"`
+	Arrival         string `json:"Arrival,omitempty"`
+	BusinessArrival string `json:"BusinessArrival,omitempty"`
 }
 
 // LocationData represents the traveling and located members for a location

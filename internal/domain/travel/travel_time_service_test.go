@@ -159,6 +159,13 @@ func TestTravelTimeServiceCalculateTravelTimes(t *testing.T) {
 			travelType:       "business",
 			expectedDuration: 68 * time.Minute,
 		},
+		{
+			name:             "Switzerland standard travel (with business arrival)",
+			userID:           999,
+			destination:      "Switzerland",
+			travelType:       "standard",
+			expectedDuration: 175 * time.Minute, // Regular duration
+		},
 	}
 
 	for _, tt := range tests {
@@ -195,6 +202,28 @@ func TestTravelTimeServiceCalculateTravelTimes(t *testing.T) {
 			// Check countdown format
 			if result.Countdown == "" {
 				t.Error("Countdown should not be empty")
+			}
+
+			// For "standard" travel type, check BusinessArrival is calculated
+			if tt.travelType == "standard" {
+				if result.BusinessArrival == "" {
+					t.Error("BusinessArrival should not be empty for standard travel")
+				}
+
+				// Parse business arrival time and verify it's before regular arrival
+				businessArrival, err := time.Parse("2006-01-02 15:04:05", result.BusinessArrival)
+				if err != nil {
+					t.Fatalf("Failed to parse business arrival time: %v", err)
+				}
+
+				if !businessArrival.Before(arrivalTime) {
+					t.Error("Business arrival should be before regular arrival for standard travel")
+				}
+			} else {
+				// Non-standard travel should not have BusinessArrival
+				if result.BusinessArrival != "" {
+					t.Error("BusinessArrival should be empty for non-standard travel")
+				}
 			}
 		})
 	}

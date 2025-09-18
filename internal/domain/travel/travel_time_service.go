@@ -10,9 +10,9 @@ import (
 
 // TravelTimeService handles travel time calculations and formatting
 type TravelTimeService struct {
-	regularTimes     map[string]int
-	airstripTimes    map[string]int
-	businessTimes    map[string]int
+	regularTimes  map[string]int
+	airstripTimes map[string]int
+	businessTimes map[string]int
 }
 
 // NewTravelTimeService creates a new travel time service with predefined travel times
@@ -64,9 +64,10 @@ func NewTravelTimeService() *TravelTimeService {
 
 // TravelTimeData holds calculated travel timing information
 type TravelTimeData struct {
-	Departure string
-	Arrival   string
-	Countdown string
+	Departure       string
+	Arrival         string
+	BusinessArrival string // Alternative arrival time assuming business class for "standard" travel
+	Countdown       string
 }
 
 // GetTravelTime returns travel duration based on destination and travel type
@@ -118,6 +119,14 @@ func (tts *TravelTimeService) CalculateTravelTimes(ctx context.Context, userID i
 	estimatedDepartureTime := currentTime.Add(-cycleInterval / 2)
 	arrivalTime := estimatedDepartureTime.Add(travelDuration)
 
+	// Calculate business class arrival time for "standard" travel type
+	var businessArrival string
+	if travelType == "standard" || travelType == "" {
+		businessDuration := tts.GetTravelTime(destination, "business")
+		businessArrivalTime := estimatedDepartureTime.Add(businessDuration)
+		businessArrival = businessArrivalTime.UTC().Format("2006-01-02 15:04:05")
+	}
+
 	// Calculate countdown
 	timeRemaining := arrivalTime.Sub(currentTime)
 	countdown := tts.FormatTravelTime(timeRemaining)
@@ -132,13 +141,15 @@ func (tts *TravelTimeService) CalculateTravelTimes(ctx context.Context, userID i
 		Str("destination", destination).
 		Str("travel_type", travelType).
 		Dur("travel_duration", travelDuration).
+		Str("business_arrival", businessArrival).
 		Str("countdown", countdown).
 		Msg("Calculated travel times")
 
 	return &TravelTimeData{
-		Departure: estimatedDepartureTime.UTC().Format("2006-01-02 15:04:05"),
-		Arrival:   arrivalTime.UTC().Format("2006-01-02 15:04:05"),
-		Countdown: countdown,
+		Departure:       estimatedDepartureTime.UTC().Format("2006-01-02 15:04:05"),
+		Arrival:         arrivalTime.UTC().Format("2006-01-02 15:04:05"),
+		BusinessArrival: businessArrival,
+		Countdown:       countdown,
 	}
 }
 
@@ -178,6 +189,16 @@ func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Cont
 		arrivalTime = departureTime.Add(travelDuration)
 	}
 
+	// Calculate business class arrival time for "standard" travel type
+	var businessArrivalTime time.Time
+	var businessArrival string
+	if travelType == "standard" || travelType == "" {
+		travelDestination := locationService.GetTravelDestinationForCalculation(statusDescription, destination)
+		businessDuration := tts.GetTravelTime(travelDestination, "business")
+		businessArrivalTime = departureTime.Add(businessDuration)
+		businessArrival = businessArrivalTime.UTC().Format("2006-01-02 15:04:05")
+	}
+
 	// Calculate countdown
 	timeRemaining := arrivalTime.Sub(currentTime)
 	countdown := tts.FormatTravelTime(timeRemaining)
@@ -194,12 +215,14 @@ func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Cont
 		Dur("travel_duration", travelDuration).
 		Str("departure", departureStr).
 		Str("arrival", arrivalTime.UTC().Format("2006-01-02 15:04:05")).
+		Str("business_arrival", businessArrival).
 		Str("countdown", countdown).
 		Msg("Recalculated travel times from existing departure")
 
 	return &TravelTimeData{
-		Departure: departureStr, // Keep original departure time
-		Arrival:   arrivalTime.UTC().Format("2006-01-02 15:04:05"),
-		Countdown: countdown,
+		Departure:       departureStr, // Keep original departure time
+		Arrival:         arrivalTime.UTC().Format("2006-01-02 15:04:05"),
+		BusinessArrival: businessArrival,
+		Countdown:       countdown,
 	}
 }

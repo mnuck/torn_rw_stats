@@ -85,7 +85,8 @@ func (m *StatusV2Manager) GenerateStatusV2Headers() [][]interface{} {
 			"Countdown",
 			"Departure",
 			"Arrival",
-			"Until", // StatusUntil timestamp
+			"BusinessArrival", // Alternative arrival time for business class detection
+			"Until",           // StatusUntil timestamp
 		},
 	}
 }
@@ -108,20 +109,20 @@ func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, she
 	rows := m.ConvertStatusV2RecordsToRows(records)
 
 	// Clear existing content (except headers) and write new data
-	rangeSpec := fmt.Sprintf("%s!A2:I", sheetName)
+	rangeSpec := fmt.Sprintf("%s!A2:J", sheetName)
 	if err := m.api.ClearRange(ctx, spreadsheetID, rangeSpec); err != nil {
 		return fmt.Errorf("failed to clear Status v2 data: %w", err)
 	}
 
 	// Ensure sheet has enough capacity
 	requiredRows := len(rows) + 1 // +1 for header
-	requiredCols := 9
+	requiredCols := 10            // Updated for BusinessArrival column
 	if err := m.api.EnsureSheetCapacity(ctx, spreadsheetID, sheetName, requiredRows, requiredCols); err != nil {
 		return fmt.Errorf("failed to ensure sheet capacity: %w", err)
 	}
 
 	// Write the data starting from row 2 using UpdateRange to avoid blank row accumulation
-	dataRangeSpec := fmt.Sprintf("%s!A2:I%d", sheetName, len(rows)+1)
+	dataRangeSpec := fmt.Sprintf("%s!A2:J%d", sheetName, len(rows)+1)
 	if err := m.api.UpdateRange(ctx, spreadsheetID, dataRangeSpec, rows); err != nil {
 		return fmt.Errorf("failed to update Status v2 records: %w", err)
 	}
@@ -155,15 +156,16 @@ func (m *StatusV2Manager) ConvertStatusV2RecordsToRows(records []app.StatusV2Rec
 		}
 
 		rows[i] = []interface{}{
-			record.Name,      // Player Name
-			record.Level,     // Level
-			record.State,     // State (LastActionStatus)
-			record.Status,    // Status (Status Description)
-			record.Location,  // Location
-			record.Countdown, // Countdown (calculated from StatusUntil)
-			record.Departure, // Departure time (manual adjustment preserved)
-			record.Arrival,   // Arrival time (manual adjustment preserved)
-			untilStr,         // Until timestamp
+			record.Name,            // Player Name
+			record.Level,           // Level
+			record.State,           // State (LastActionStatus)
+			record.Status,          // Status (Status Description)
+			record.Location,        // Location
+			record.Countdown,       // Countdown (calculated from StatusUntil)
+			record.Departure,       // Departure time (manual adjustment preserved)
+			record.Arrival,         // Arrival time (manual adjustment preserved)
+			record.BusinessArrival, // Business class arrival time
+			untilStr,               // Until timestamp
 		}
 	}
 
