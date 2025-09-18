@@ -277,6 +277,48 @@
             text-align: right;
         }
 
+        .sort-controls {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+
+        .sort-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .sort-option {
+            background: #ffffff;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+            font-size: 0.8em;
+        }
+
+        .sort-option:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            color: #1976d2;
+        }
+
+        .sort-option.active {
+            background: #1976d2;
+            border-color: #1976d2;
+            color: white;
+        }
+
+        .sort-divider {
+            color: #ccc;
+        }
+
 
         .expand-icon {
             font-size: 0.8em;
@@ -557,10 +599,18 @@
                         <span class="count">${locatedCount}</span>
                     </div>
                 </div>
-                <div class="tab-content ${travelingActive}" id="${travelingId}">
+                <div class="sort-controls">
+                    <span class="sort-label">Sort:</span>
+                    <div class="sort-option active" onclick="applySorting('${locationId}', 'level', 'desc')">Level ↓</div>
+                    <div class="sort-option" onclick="applySorting('${locationId}', 'level', 'asc')">Level ↑</div>
+                    <span class="sort-divider">|</span>
+                    <div class="sort-option" onclick="applySorting('${locationId}', 'countdown', 'desc')">Countdown ↓</div>
+                    <div class="sort-option" onclick="applySorting('${locationId}', 'countdown', 'asc')">Countdown ↑</div>
+                </div>
+                <div class="tab-content ${travelingActive}" id="${travelingId}" data-members='${JSON.stringify(travelingMembers).replace(/'/g, "&apos;")}'>
                     ${travelingMembersHtml}
                 </div>
-                <div class="tab-content ${locatedActive}" id="${locatedId}">
+                <div class="tab-content ${locatedActive}" id="${locatedId}" data-members='${JSON.stringify(locatedMembers).replace(/'/g, "&apos;")}'>
                     ${locatedMembersHtml}
                 </div>
             `;
@@ -613,6 +663,58 @@
             const activeTabIndex = tabType === 'traveling' ? 0 : 1;
             tabHeaders[activeTabIndex].classList.add('active');
             tabContents[activeTabIndex].classList.add('active');
+
+            // Apply current sorting to the newly active tab
+            const activeSortButton = locationElement.parentElement.querySelector('.sort-option.active');
+            if (activeSortButton) {
+                const sortText = activeSortButton.textContent;
+                let sortBy, sortOrder;
+
+                if (sortText.includes('Level')) {
+                    sortBy = 'level';
+                    sortOrder = sortText.includes('↓') ? 'desc' : 'asc';
+                } else {
+                    sortBy = 'countdown';
+                    sortOrder = sortText.includes('↓') ? 'desc' : 'asc';
+                }
+
+                // Apply sorting without updating button states (they're already correct)
+                applySortingToTab(locationId, sortBy, sortOrder, false);
+            }
+        }
+
+        function applySortingToTab(locationId, sortBy, sortOrder, updateButtons = true) {
+            if (updateButtons) {
+                updateSortButtonStates(locationId, sortBy, sortOrder);
+            }
+
+            // Get the currently active tab
+            const locationElement = document.getElementById(locationId);
+            const activeTabContent = locationElement.querySelector('.tab-content.active');
+
+            if (!activeTabContent) return;
+
+            // Get members data from the data attribute
+            const membersDataStr = activeTabContent.getAttribute('data-members');
+            if (!membersDataStr) return;
+
+            let members;
+            try {
+                members = JSON.parse(membersDataStr);
+            } catch (e) {
+                console.error('Error parsing members data:', e);
+                return;
+            }
+
+            // Sort the members array
+            const sortedMembers = sortMembers(members, sortBy, sortOrder);
+
+            // Re-render the member rows with sorted data
+            const sortedMembersHtml = sortedMembers.map(member => createMemberRow(member, locationId)).join('') || '<div class="empty-section">No members</div>';
+            activeTabContent.innerHTML = sortedMembersHtml;
+
+            // Restart countdown timers for the new content
+            startRealtimeCountdowns();
         }
 
         function formatDateTime(isoString) {
@@ -681,6 +783,74 @@
             currentIntervalId = setInterval(loadData, refreshInterval);
 
             console.log(`Auto-refresh started with ${intervalSeconds} second interval`);
+        }
+
+        // Sorting functionality
+        function applySorting(locationId, sortBy, sortOrder) {
+            applySortingToTab(locationId, sortBy, sortOrder, true);
+        }
+
+        function updateSortButtonStates(locationId, activeSortBy, activeSortOrder) {
+            const locationElement = document.getElementById(locationId).parentElement;
+            const sortButtons = locationElement.querySelectorAll('.sort-option');
+
+            // Remove active class from all buttons
+            sortButtons.forEach(button => button.classList.remove('active'));
+
+            // Add active class to the clicked button
+            const activeButtonText = activeSortBy === 'level'
+                ? (activeSortOrder === 'desc' ? 'Level ↓' : 'Level ↑')
+                : (activeSortOrder === 'desc' ? 'Countdown ↓' : 'Countdown ↑');
+
+            sortButtons.forEach(button => {
+                if (button.textContent === activeButtonText) {
+                    button.classList.add('active');
+                }
+            });
+        }
+
+        function sortMembers(members, sortBy, sortOrder) {
+            return members.slice().sort((a, b) => {
+                let valueA, valueB;
+
+                if (sortBy === 'level') {
+                    valueA = a.Level || 0;
+                    valueB = b.Level || 0;
+                } else if (sortBy === 'countdown') {
+                    // Parse countdown values for sorting (convert to seconds)
+                    valueA = parseCountdownToSeconds(a.Arrival || a.Until || a.Countdown || '');
+                    valueB = parseCountdownToSeconds(b.Arrival || b.Until || b.Countdown || '');
+                }
+
+                if (sortOrder === 'asc') {
+                    return valueA - valueB;
+                } else {
+                    return valueB - valueA;
+                }
+            });
+        }
+
+        function parseCountdownToSeconds(timeStr) {
+            if (!timeStr) return 0;
+
+            // Handle different time formats
+            if (timeStr.includes('T')) {
+                // ISO format - calculate difference from now
+                const targetTime = new Date(timeStr).getTime();
+                const currentTime = Date.now();
+                return Math.max(0, (targetTime - currentTime) / 1000);
+            }
+
+            // Handle H:MM:SS format
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                const hours = parseInt(parts[0], 10) || 0;
+                const minutes = parseInt(parts[1], 10) || 0;
+                const seconds = parseInt(parts[2], 10) || 0;
+                return hours * 3600 + minutes * 60 + seconds;
+            }
+
+            return 0;
         }
 
         // Enhanced loadData function that handles dynamic intervals
