@@ -97,100 +97,136 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 
 // convertSingleStateRecord converts a single StateRecord to StatusV2Record
 func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existingData map[string]app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) app.StatusV2Record {
+	existing := s.getExistingRecord(stateRecord, existingData)
+	level := s.resolveLevel(stateRecord, factionMembers, existing)
+	location := s.calculateLocation(stateRecord)
+	countdown := s.calculateCountdown(stateRecord.StatusUntil, currentTime)
+
+	travelInfo := s.calculateTravelInfo(ctx, stateRecord, existing, departureMap, currentTime, location)
+
+	return s.buildStatusV2Record(stateRecord, level, location, countdown, travelInfo)
+}
+
+// getExistingRecord finds existing data for a member using both ID and name keys
+func (s *StatusV2Service) getExistingRecord(stateRecord app.StateRecord, existingData map[string]app.StatusV2Record) *app.StatusV2Record {
 	memberKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberID)
 	nameKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberName)
 
-	// Get existing data to preserve manual adjustments (try both keys)
-	existing, hasExisting := existingData[memberKey]
-	if !hasExisting {
-		existing, hasExisting = existingData[nameKey]
+	if existing, hasExisting := existingData[memberKey]; hasExisting {
+		return &existing
 	}
+	if existing, hasExisting := existingData[nameKey]; hasExisting {
+		return &existing
+	}
+	return nil
+}
 
-	// Get member level from faction data
-	level := 0
+// resolveLevel determines the member's level from faction data or existing records
+func (s *StatusV2Service) resolveLevel(stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existing *app.StatusV2Record) int {
 	if member, exists := factionMembers[stateRecord.MemberID]; exists {
-		level = member.Level
-	} else if hasExisting {
-		level = existing.Level
+		return member.Level
+	}
+	if existing != nil {
+		return existing.Level
+	}
+	return 0
+}
+
+// TravelInfo holds travel-related data for a member
+type TravelInfo struct {
+	Departure       string
+	Arrival         string
+	BusinessArrival string
+	Countdown       string
+}
+
+// calculateTravelInfo handles all travel-related calculations and preserves manual adjustments
+func (s *StatusV2Service) calculateTravelInfo(ctx context.Context, stateRecord app.StateRecord, existing *app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time, location string) TravelInfo {
+	if stateRecord.StatusState != "Traveling" {
+		return TravelInfo{} // Clear travel data for non-traveling members
 	}
 
-	// Calculate location based on state
-	location := s.calculateLocation(stateRecord)
+	memberKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberID)
+	departure := s.calculateDeparture(memberKey, existing, departureMap, currentTime)
 
-	// Calculate countdown from StatusUntil
-	countdown := s.calculateCountdown(stateRecord.StatusUntil, currentTime)
+	// Calculate arrival times using TravelTimeService
+	arrival, businessArrival, countdown := s.calculateArrivalTimes(ctx, stateRecord, existing, departure, location, currentTime)
 
-	// Handle departure and arrival times
-	departure := ""
-	arrival := ""
-	businessArrival := ""
+	// Preserve manual adjustments
+	return s.applyManualAdjustments(existing, TravelInfo{
+		Departure:       departure,
+		Arrival:         arrival,
+		BusinessArrival: businessArrival,
+		Countdown:       countdown,
+	})
+}
 
-	if stateRecord.StatusState == "Traveling" {
-		// Use tracked departure time if available, otherwise use existing or current time
-		if departureTime, hasDeparture := departureMap[memberKey]; hasDeparture {
-			departure = departureTime.Format("2006-01-02 15:04:05")
-		} else if hasExisting && existing.Departure != "" {
-			// Preserve existing departure
-			departure = existing.Departure
-		} else {
-			// Default to current time for new traveling status
-			departure = currentTime.Format("2006-01-02 15:04:05")
-		}
+// calculateDeparture determines the departure time for a traveling member
+func (s *StatusV2Service) calculateDeparture(memberKey string, existing *app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) string {
+	if departureTime, hasDeparture := departureMap[memberKey]; hasDeparture {
+		return departureTime.Format("2006-01-02 15:04:05")
+	}
+	if existing != nil && existing.Departure != "" {
+		return existing.Departure
+	}
+	return currentTime.Format("2006-01-02 15:04:05")
+}
 
-		// Calculate arrival time and countdown using TravelTimeService
-		if departure != "" {
-			existingArrival := ""
-			if hasExisting {
-				existingArrival = existing.Arrival
-			}
-
-			// Get member ID for travel calculation (convert from string)
-			memberID := 0
-			if id, err := strconv.Atoi(stateRecord.MemberID); err == nil {
-				memberID = id
-			}
-
-			// Use TravelTimeService to calculate proper travel times
-			travelData := s.travelTimeService.CalculateTravelTimesFromDeparture(
-				ctx,
-				memberID,
-				location,
-				departure,
-				existingArrival,
-				stateRecord.StatusTravelType,
-				currentTime,
-				s.locationService,
-				stateRecord.StatusDescription,
-			)
-
-			if travelData != nil {
-				arrival = travelData.Arrival
-				businessArrival = travelData.BusinessArrival
-				countdown = travelData.Countdown
-			}
-		}
-
-		// Preserve manual adjustments if they exist (override calculated values)
-		if hasExisting && existing.Departure != "" {
-			departure = existing.Departure
-		}
-		if hasExisting && existing.Arrival != "" {
-			arrival = existing.Arrival
-		}
-		if hasExisting && existing.BusinessArrival != "" {
-			businessArrival = existing.BusinessArrival
-		}
-	} else {
-		// For non-traveling members, clear any existing travel-related data
-		// but preserve manual adjustments if member becomes traveling again
-		if hasExisting && stateRecord.StatusState != "Traveling" {
-			// Clear travel fields for non-traveling status
-			departure = ""
-			arrival = ""
-			businessArrival = ""
-		}
+// calculateArrivalTimes uses TravelTimeService to calculate arrival times and countdown
+func (s *StatusV2Service) calculateArrivalTimes(ctx context.Context, stateRecord app.StateRecord, existing *app.StatusV2Record, departure, location string, currentTime time.Time) (string, string, string) {
+	if departure == "" {
+		return "", "", ""
 	}
 
+	memberID := 0
+	if id, err := strconv.Atoi(stateRecord.MemberID); err == nil {
+		memberID = id
+	}
+
+	existingArrival := ""
+	if existing != nil {
+		existingArrival = existing.Arrival
+	}
+
+	travelData := s.travelTimeService.CalculateTravelTimesFromDeparture(
+		ctx,
+		memberID,
+		location,
+		departure,
+		existingArrival,
+		stateRecord.StatusTravelType,
+		currentTime,
+		s.locationService,
+		stateRecord.StatusDescription,
+	)
+
+	if travelData != nil {
+		return travelData.Arrival, travelData.BusinessArrival, travelData.Countdown
+	}
+	return "", "", ""
+}
+
+// applyManualAdjustments preserves any manual adjustments from existing data
+func (s *StatusV2Service) applyManualAdjustments(existing *app.StatusV2Record, calculated TravelInfo) TravelInfo {
+	if existing == nil {
+		return calculated
+	}
+
+	result := calculated
+	if existing.Departure != "" {
+		result.Departure = existing.Departure
+	}
+	if existing.Arrival != "" {
+		result.Arrival = existing.Arrival
+	}
+	if existing.BusinessArrival != "" {
+		result.BusinessArrival = existing.BusinessArrival
+	}
+	return result
+}
+
+// buildStatusV2Record constructs the final StatusV2Record
+func (s *StatusV2Service) buildStatusV2Record(stateRecord app.StateRecord, level int, location, countdown string, travelInfo TravelInfo) app.StatusV2Record {
 	return app.StatusV2Record{
 		Name:            stateRecord.MemberName,
 		MemberID:        stateRecord.MemberID,
@@ -198,10 +234,10 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 		State:           stateRecord.LastActionStatus,
 		Status:          stateRecord.StatusState,
 		Location:        location,
-		Countdown:       countdown,
-		Departure:       departure,
-		Arrival:         arrival,
-		BusinessArrival: businessArrival,
+		Countdown:       travelInfo.Countdown,
+		Departure:       travelInfo.Departure,
+		Arrival:         travelInfo.Arrival,
+		BusinessArrival: travelInfo.BusinessArrival,
 		Until:           stateRecord.StatusUntil,
 	}
 }
@@ -263,49 +299,69 @@ func (s *StatusV2Service) buildDepartureMap(ctx context.Context, spreadsheetID s
 
 // findMostRecentTravelingTransition finds when a member most recently started traveling to their current destination
 func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.StateRecord, memberID, currentDestination string) time.Time {
-	// Sort records by timestamp to analyze in chronological order
-	memberRecords := make([]app.StateRecord, 0)
+	memberRecords := s.getMemberRecordsChronologically(allRecords, memberID)
+	return s.findLastDepartureToDestination(memberRecords, currentDestination)
+}
+
+// getMemberRecordsChronologically filters and sorts records for a specific member
+func (s *StatusV2Service) getMemberRecordsChronologically(allRecords []app.StateRecord, memberID string) []app.StateRecord {
+	var records []app.StateRecord
 	for _, record := range allRecords {
 		if record.MemberID == memberID {
-			memberRecords = append(memberRecords, record)
+			records = append(records, record)
 		}
 	}
 
-	// Sort by timestamp (oldest first)
-	sort.Slice(memberRecords, func(i, j int) bool {
-		return memberRecords[i].Timestamp.Before(memberRecords[j].Timestamp)
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].Timestamp.Before(records[j].Timestamp)
 	})
 
-	var mostRecentDeparture time.Time
-	var previousStatus string
-	var previousDestination string
+	return records
+}
 
-	for _, record := range memberRecords {
-		// Check if this is a travel transition
-		if record.StatusState == "Traveling" {
-			// Parse the destination location for proper comparison
-			recordParsedLocation := s.locationService.ParseLocation(record.StatusDescription)
+// findLastDepartureToDestination finds the most recent departure time to a specific destination
+func (s *StatusV2Service) findLastDepartureToDestination(records []app.StateRecord, destination string) time.Time {
+	var lastDeparture time.Time
 
-			// This is a new departure if:
-			// 1. Previous status was not traveling, OR
-			// 2. Previous destination was different from current destination
-			if previousStatus != "Traveling" || previousDestination != recordParsedLocation {
-				// This is a new journey - check if it's to our current destination
-				if recordParsedLocation == currentDestination {
-					mostRecentDeparture = record.Timestamp
-				}
-			}
+	for i := 0; i < len(records); i++ {
+		current := records[i]
+		if current.StatusState != "Traveling" {
+			continue
 		}
 
-		// Update previous state
-		previousStatus = record.StatusState
-		if record.StatusState == "Traveling" {
-			// Store parsed location for comparison
-			previousDestination = s.locationService.ParseLocation(record.StatusDescription)
+		currentDestination := s.locationService.ParseLocation(current.StatusDescription)
+		if currentDestination != destination {
+			continue
+		}
+
+		// Check if this is a new journey (different from previous travel)
+		if s.isNewJourneyToDestination(records, i, destination) {
+			lastDeparture = current.Timestamp
 		}
 	}
 
-	return mostRecentDeparture
+	return lastDeparture
+}
+
+// isNewJourneyToDestination checks if this record represents a new journey to the destination
+func (s *StatusV2Service) isNewJourneyToDestination(records []app.StateRecord, currentIndex int, destination string) bool {
+	if currentIndex == 0 {
+		return true // First record is always a new journey
+	}
+
+	current := records[currentIndex]
+	previous := records[currentIndex-1]
+
+	// New journey if previous status was not traveling
+	if previous.StatusState != "Traveling" {
+		return true
+	}
+
+	// New journey if previous destination was different
+	previousDestination := s.locationService.ParseLocation(previous.StatusDescription)
+	currentDestination := s.locationService.ParseLocation(current.StatusDescription)
+
+	return previousDestination != currentDestination
 }
 
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
@@ -474,82 +530,107 @@ func getString(row []interface{}, index int) string {
 
 // ConvertToJSON converts StatusV2Records to the JSON export format
 func (s *StatusV2Service) ConvertToJSON(records []app.StatusV2Record, factionName string, currentTime time.Time, updateInterval time.Duration) app.StatusV2JSON {
+	locations := s.groupRecordsByLocation(records)
+
+	return app.StatusV2JSON{
+		Faction:   factionName,
+		Updated:   currentTime.Format(time.RFC3339),
+		Interval:  int(updateInterval.Seconds()),
+		Locations: locations,
+	}
+}
+
+// groupRecordsByLocation organizes records by location and filters empty locations
+func (s *StatusV2Service) groupRecordsByLocation(records []app.StatusV2Record) map[string]app.LocationData {
 	locations := make(map[string]app.LocationData)
 
 	for _, record := range records {
-		location := record.Location
-		if location == "" {
+		if record.Location == "" {
 			continue
 		}
 
-		// Ensure location exists in map
-		if _, exists := locations[location]; !exists {
-			locations[location] = app.LocationData{
-				Traveling: []app.JSONMember{},
-				LocatedIn: []app.JSONMember{},
-			}
+		member := s.createJSONMember(record)
+		s.addMemberToLocation(locations, record.Location, member, s.isTraveling(record))
+	}
+
+	// Filter out empty locations
+	return s.filterEmptyLocations(locations)
+}
+
+// createJSONMember creates a JSONMember from a StatusV2Record
+func (s *StatusV2Service) createJSONMember(record app.StatusV2Record) app.JSONMember {
+	member := app.JSONMember{
+		Name:     record.Name,
+		MemberID: record.MemberID,
+		State:    record.State,
+	}
+
+	if !record.Until.IsZero() {
+		member.Until = record.Until.Format(time.RFC3339)
+	}
+
+	if s.isTraveling(record) {
+		s.addTravelingFields(&member, record)
+	} else {
+		s.addLocatedFields(&member, record)
+	}
+
+	return member
+}
+
+// isTraveling determines if a member is currently traveling
+func (s *StatusV2Service) isTraveling(record app.StatusV2Record) bool {
+	return strings.Contains(strings.ToLower(record.Status), "traveling")
+}
+
+// addTravelingFields adds travel-specific fields to a JSON member
+func (s *StatusV2Service) addTravelingFields(member *app.JSONMember, record app.StatusV2Record) {
+	if record.Countdown != "" && record.Countdown != "00:00:00" {
+		member.Countdown = strings.TrimPrefix(record.Countdown, "'")
+	}
+	if record.Arrival != "" {
+		member.Arrival = record.Arrival
+	}
+	if record.BusinessArrival != "" {
+		member.BusinessArrival = record.BusinessArrival
+	}
+}
+
+// addLocatedFields adds location-specific fields to a JSON member
+func (s *StatusV2Service) addLocatedFields(member *app.JSONMember, record app.StatusV2Record) {
+	if record.Status != "" && record.Status != "Okay" {
+		member.Status = record.Status
+		if record.Countdown != "" && record.Countdown != "00:00:00" {
+			member.Countdown = strings.TrimPrefix(record.Countdown, "'")
 		}
+	}
+}
 
-		// Create JSON member
-		member := app.JSONMember{
-			Name:     record.Name,
-			MemberID: record.MemberID,
-			State:    record.State,
-		}
-
-		// Add Until timestamp if available
-		if !record.Until.IsZero() {
-			member.Until = record.Until.Format(time.RFC3339)
-		}
-
-		// Add Status and Countdown based on the member's situation
-		isTraveling := strings.Contains(strings.ToLower(record.Status), "traveling")
-
-		if isTraveling {
-			// For traveling members, countdown shows time until arrival
-			if record.Countdown != "" && record.Countdown != "00:00:00" {
-				member.Countdown = strings.TrimPrefix(record.Countdown, "'")
-			}
-			// Add arrival time for traveling members
-			if record.Arrival != "" {
-				member.Arrival = record.Arrival
-			}
-			// Add business class arrival time for traveling members
-			if record.BusinessArrival != "" {
-				member.BusinessArrival = record.BusinessArrival
-			}
-			// Add to traveling array
-			locationData := locations[location]
-			locationData.Traveling = append(locationData.Traveling, member)
-			locations[location] = locationData
-		} else {
-			// For located members, show their status (Hospital, Jail, etc.)
-			if record.Status != "" && record.Status != "Okay" {
-				member.Status = record.Status
-				// Add countdown for timed statuses like Hospital, Jail
-				if record.Countdown != "" && record.Countdown != "00:00:00" {
-					member.Countdown = strings.TrimPrefix(record.Countdown, "'")
-				}
-			}
-			// Add to located array
-			locationData := locations[location]
-			locationData.LocatedIn = append(locationData.LocatedIn, member)
-			locations[location] = locationData
+// addMemberToLocation adds a member to the appropriate location array
+func (s *StatusV2Service) addMemberToLocation(locations map[string]app.LocationData, location string, member app.JSONMember, isTraveling bool) {
+	if _, exists := locations[location]; !exists {
+		locations[location] = app.LocationData{
+			Traveling: []app.JSONMember{},
+			LocatedIn: []app.JSONMember{},
 		}
 	}
 
-	// Remove locations with no members (both arrays empty)
+	locationData := locations[location]
+	if isTraveling {
+		locationData.Traveling = append(locationData.Traveling, member)
+	} else {
+		locationData.LocatedIn = append(locationData.LocatedIn, member)
+	}
+	locations[location] = locationData
+}
+
+// filterEmptyLocations removes locations with no members
+func (s *StatusV2Service) filterEmptyLocations(locations map[string]app.LocationData) map[string]app.LocationData {
 	filteredLocations := make(map[string]app.LocationData)
 	for location, data := range locations {
 		if len(data.Traveling) > 0 || len(data.LocatedIn) > 0 {
 			filteredLocations[location] = data
 		}
 	}
-
-	return app.StatusV2JSON{
-		Faction:   factionName,
-		Updated:   currentTime.Format(time.RFC3339),
-		Interval:  int(updateInterval.Seconds()),
-		Locations: filteredLocations,
-	}
+	return filteredLocations
 }

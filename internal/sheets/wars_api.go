@@ -21,12 +21,8 @@ func (c *Client) UpdateWarSummary(ctx context.Context, spreadsheetID string, con
 	return manager.UpdateWarSummary(ctx, spreadsheetID, config, summary)
 }
 
-// ExistingRecordsInfo contains information about existing attack records in the sheet
-// Deprecated: Use RecordsInfo from AttackRecordsProcessor instead
-type ExistingRecordsInfo = RecordsInfo
-
 // ReadExistingRecords analyzes existing attack records in the sheet
-func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*ExistingRecordsInfo, error) {
+func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
 	processor := NewAttackRecordsProcessor(c)
 	return processor.ReadExistingRecords(ctx, spreadsheetID, sheetName)
 }

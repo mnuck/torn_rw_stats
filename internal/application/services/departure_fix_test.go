@@ -25,38 +25,38 @@ func TestDepartureTimeDetectionWithParsedLocations(t *testing.T) {
 		// Initial departure to Switzerland at 0:13:08
 		{
 			Timestamp:         baseTime,
-			MemberID:         memberID,
-			StatusState:      "Traveling",
+			MemberID:          memberID,
+			StatusState:       "Traveling",
 			StatusDescription: "Traveling to Switzerland",
 		},
 		// Multiple intermediate records (status changes while traveling)
 		{
 			Timestamp:         baseTime.Add(1 * time.Minute),
-			MemberID:         memberID,
-			StatusState:      "Traveling",
+			MemberID:          memberID,
+			StatusState:       "Traveling",
 			StatusDescription: "Traveling to Switzerland",
 		},
 		// Direction change at 2:17:06 - starts returning
 		{
 			Timestamp:         baseTime.Add(2*time.Hour + 4*time.Minute + 6*time.Second),
-			MemberID:         memberID,
-			StatusState:      "Traveling",
+			MemberID:          memberID,
+			StatusState:       "Traveling",
 			StatusDescription: "Returning to Torn from Switzerland",
 		},
 		// Continuing return journey
 		{
 			Timestamp:         baseTime.Add(2*time.Hour + 10*time.Minute),
-			MemberID:         memberID,
-			StatusState:      "Traveling",
+			MemberID:          memberID,
+			StatusState:       "Traveling",
 			StatusDescription: "Returning to Torn from Switzerland",
 		},
 	}
 
 	tests := []struct {
-		name                string
-		currentDestination  string
-		expectedDeparture   time.Time
-		description         string
+		name               string
+		currentDestination string
+		expectedDeparture  time.Time
+		description        string
 	}{
 		{
 			name:               "Find departure for Switzerland trip",

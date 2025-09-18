@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Initialize optimized war processor with state-based optimization
-	warProcessor := services.NewOptimizedWarProcessorWithConcreteDependencies(tornClient, sheetsClient, config)
+	warProcessor := services.NewOptimizedProcessor(tornClient, sheetsClient, config)
 
 	// Define the main processing function that returns next check time
 	processWars := func() time.Duration {

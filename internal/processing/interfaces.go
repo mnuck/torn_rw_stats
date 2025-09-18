@@ -14,15 +14,17 @@ import (
 type TornClientInterface interface {
 	GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error)
 	GetFactionWars(ctx context.Context) (*app.WarResponse, error)
-	GetAllAttacksForWar(ctx context.Context, war *app.War) ([]app.Attack, error)
-	GetAttacksForTimeRange(ctx context.Context, war *app.War, fromTime int64, latestExistingTimestamp *int64) ([]app.Attack, error)
+	GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error)
 	GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error)
+	GetAPICallCount() int64
+	IncrementAPICall()
+	ResetAPICallCount()
 }
 
 // SheetsClientInterface defines the sheets API client methods used by WarProcessor
 type SheetsClientInterface interface {
 	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error)
-	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.ExistingRecordsInfo, error)
+	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)

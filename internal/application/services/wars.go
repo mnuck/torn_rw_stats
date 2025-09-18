@@ -48,9 +48,9 @@ func NewWarProcessor(
 	}
 }
 
-// NewOptimizedWarProcessorWithConcreteDependencies creates an OptimizedWarProcessor with concrete implementations
+// NewOptimizedProcessor creates an OptimizedWarProcessor with concrete implementations
 // This is the recommended constructor for production use with state-based optimization
-func NewOptimizedWarProcessorWithConcreteDependencies(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
+func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
 	// Create the attack processing service
 	attackService := attack.NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
@@ -182,7 +182,8 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	if existingInfo.RecordCount == 0 {
 		// Full population mode
 		log.Debug().Int("war_id", war.ID).Msg("Using full population mode - no existing records")
-		attacks, err = wp.tornClient.GetAllAttacksForWar(ctx, war)
+		processor := torn.NewAttackProcessor(wp.tornClient)
+		attacks, err = processor.GetAllAttacksForWar(ctx, war)
 	} else {
 		// Incremental update mode
 		log.Debug().
@@ -190,7 +191,8 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 			Int("existing_records", existingInfo.RecordCount).
 			Int64("latest_timestamp", existingInfo.LatestTimestamp).
 			Msg("Using incremental update mode - existing records found")
-		attacks, err = wp.tornClient.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
+		processor := torn.NewAttackProcessor(wp.tornClient)
+		attacks, err = processor.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
 	}
 
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 // SheetsClient interface defines the methods used by WarProcessor from sheets.Client
 type SheetsClient interface {
 	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error)
-	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.ExistingRecordsInfo, error)
+	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
@@ -32,7 +32,7 @@ type SheetsClient interface {
 type MockSheetsClient struct {
 	// Responses to return
 	EnsureWarSheetsResponse     *app.SheetConfig
-	ReadExistingRecordsResponse *sheets.ExistingRecordsInfo
+	ReadExistingRecordsResponse *sheets.RecordsInfo
 	ReadSheetResponse           [][]interface{}
 	SheetExistsResponse         bool
 	EnsureStatusV2SheetResponse string
@@ -96,7 +96,7 @@ func (m *MockSheetsClient) EnsureWarSheets(ctx context.Context, spreadsheetID st
 	return m.EnsureWarSheetsResponse, m.EnsureWarSheetsError
 }
 
-func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.ExistingRecordsInfo, error) {
+func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error) {
 	m.ReadExistingRecordsCalled = true
 	m.ReadExistingRecordsCalledWith.SpreadsheetID = spreadsheetID
 	m.ReadExistingRecordsCalledWith.SheetName = sheetName

@@ -132,7 +132,7 @@ func TestFilterAndSortRecords(t *testing.T) {
 		{AttackID: 100004, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 15, 0, 0, time.UTC)}, // Duplicate code
 	}
 
-	existing := &ExistingRecordsInfo{
+	existing := &RecordsInfo{
 		AttackCodes: map[string]bool{
 			"code_1": true, // Already exists
 		},
