@@ -33,7 +33,7 @@ A Go application that monitors Torn faction wars and automatically updates Googl
 
 ### Prerequisites
 
-- Go 1.24.2 or later
+- Go 1.25.1 or later
 - Google Sheets API credentials
 - Torn API key
 
