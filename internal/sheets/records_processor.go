@@ -261,8 +261,8 @@ func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []app.AttackRecord
 		row := []interface{}{
 			record.AttackID,
 			record.Code,
-			record.Started.Format("2006-01-02 15:04:05"),
-			record.Ended.Format("2006-01-02 15:04:05"),
+			record.Started.UTC().Format("2006-01-02 15:04:05"),
+			record.Ended.UTC().Format("2006-01-02 15:04:05"),
 			record.Direction,
 			record.AttackerID,
 			record.AttackerName,
