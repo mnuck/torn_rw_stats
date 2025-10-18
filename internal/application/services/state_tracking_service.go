@@ -7,6 +7,7 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/sheets"
 
 	"github.com/rs/zerolog/log"
 )
@@ -229,48 +230,33 @@ func (s *StateTrackingService) convertStateRecordToRow(record app.StateRecord) [
 	}
 }
 
-// convertRowToStateRecord converts a spreadsheet row into a StateRecord
+// convertRowToStateRecord converts a spreadsheet row into a StateRecord using type-safe Cell
 func (s *StateTrackingService) convertRowToStateRecord(row []interface{}) (app.StateRecord, error) {
 	var record app.StateRecord
 
-	// Parse timestamp (now a string)
-	if timestampStr, ok := row[0].(string); ok {
-		if timestamp, err := time.Parse("2006-01-02 15:04:05", timestampStr); err == nil {
-			record.Timestamp = timestamp.UTC()
-		}
+	// Parse timestamp (now a string) using type-safe Cell
+	timestampStr := sheets.NewCell(row[0]).String()
+	if timestamp, err := time.Parse("2006-01-02 15:04:05", timestampStr); err == nil {
+		record.Timestamp = timestamp.UTC()
 	}
 
-	// Parse string fields with new column indices
-	if memberID, ok := row[1].(string); ok {
-		record.MemberID = memberID
-	}
-	if memberName, ok := row[2].(string); ok {
-		record.MemberName = memberName
-	}
-	if factionID, ok := row[3].(string); ok {
-		record.FactionID = factionID
-	}
-	if factionName, ok := row[4].(string); ok {
-		record.FactionName = factionName
-	}
-	if lastAction, ok := row[5].(string); ok {
-		record.LastActionStatus = lastAction
-	}
-	if statusDesc, ok := row[6].(string); ok {
-		record.StatusDescription = statusDesc
-	}
-	if statusState, ok := row[7].(string); ok {
-		record.StatusState = statusState
-	}
+	// Parse string fields with new column indices using type-safe Cell
+	record.MemberID = sheets.NewCell(row[1]).String()
+	record.MemberName = sheets.NewCell(row[2]).String()
+	record.FactionID = sheets.NewCell(row[3]).String()
+	record.FactionName = sheets.NewCell(row[4]).String()
+	record.LastActionStatus = sheets.NewCell(row[5]).String()
+	record.StatusDescription = sheets.NewCell(row[6]).String()
+	record.StatusState = sheets.NewCell(row[7]).String()
+
 	if len(row) > 9 {
-		if travelType, ok := row[9].(string); ok {
-			record.StatusTravelType = travelType
-		}
+		record.StatusTravelType = sheets.NewCell(row[9]).String()
 	}
 
 	// Parse StatusUntil - only if not empty
 	if len(row) > 8 {
-		if statusUntilStr, ok := row[8].(string); ok && statusUntilStr != "" {
+		statusUntilStr := sheets.NewCell(row[8]).String()
+		if statusUntilStr != "" {
 			if statusUntil, err := time.Parse("2006-01-02 15:04:05", statusUntilStr); err == nil {
 				record.StatusUntil = statusUntil.UTC()
 			}

@@ -22,8 +22,7 @@ type Faction struct {
 
 // WarResponse represents the response from /v2/faction/wars
 type WarResponse struct {
-	Pacts []interface{} `json:"pacts"`
-	Wars  struct {
+	Wars struct {
 		Ranked    *War  `json:"ranked"`
 		Raids     []War `json:"raids"`
 		Territory []War `json:"territory"`

@@ -417,9 +417,9 @@ func TestParseStringValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := parseStringValue(tc.input)
+		result := NewCell(tc.input).String()
 		if result != tc.expected {
-			t.Errorf("parseStringValue(%v): expected '%s', got '%s'", tc.input, tc.expected, result)
+			t.Errorf("NewCell(%v).String(): expected '%s', got '%s'", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -439,9 +439,9 @@ func TestParseIntValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := parseIntValue(tc.input)
+		result := NewCell(tc.input).Int()
 		if result != tc.expected {
-			t.Errorf("parseIntValue(%v): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("NewCell(%v).Int(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -460,25 +460,25 @@ func TestParseInt64Value(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := parseInt64Value(tc.input)
+		result := NewCell(tc.input).Int64()
 		if result != tc.expected {
-			t.Errorf("parseInt64Value(%v): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("NewCell(%v).Int64(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
 
 func TestParseInt64PointerValue(t *testing.T) {
-	result := parseInt64PointerValue(nil)
+	result := NewCell(nil).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for nil input")
 	}
 
-	result = parseInt64PointerValue("123")
+	result = NewCell("123").Int64Ptr()
 	if result == nil || *result != 123 {
 		t.Errorf("Expected *123, got %v", result)
 	}
 
-	result = parseInt64PointerValue(0)
+	result = NewCell(0).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for 0 input")
 	}

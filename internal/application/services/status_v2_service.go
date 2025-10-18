@@ -11,6 +11,7 @@ import (
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/sheets"
 
 	"github.com/rs/zerolog/log"
 )
@@ -382,20 +383,20 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			continue
 		}
 
-		// Extract member name and create key
-		name, ok := row[0].(string)
-		if !ok {
+		// Extract member name and create key using type-safe Cell
+		name := sheets.NewCell(row[0]).String()
+		if name == "" {
 			continue
 		}
 
 		// We'll use name as key since MemberID isn't in the sheet
 		memberKey := fmt.Sprintf("%s_%s", factionIDStr, name)
 
+		// Parse level using type-safe Cell
 		level := 0
-		if levelStr, ok := row[1].(string); ok {
-			if l, err := strconv.Atoi(levelStr); err == nil {
-				level = l
-			}
+		levelStr := getString(row, 1)
+		if l, err := strconv.Atoi(levelStr); err == nil {
+			level = l
 		}
 
 		// Parse Until timestamp from column 9 (column J)
@@ -517,15 +518,12 @@ func (s *StatusV2Service) parseStateRecordFromRow(row []interface{}) (app.StateR
 	return record, nil
 }
 
-// getString safely gets a string from a spreadsheet row
+// getString safely gets a string from a spreadsheet row using type-safe Cell wrapper
 func getString(row []interface{}, index int) string {
 	if index >= len(row) {
 		return ""
 	}
-	if str, ok := row[index].(string); ok {
-		return str
-	}
-	return ""
+	return sheets.NewCell(row[index]).String()
 }
 
 // ConvertToJSON converts StatusV2Records to the JSON export format

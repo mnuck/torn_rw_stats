@@ -59,18 +59,18 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 		}
 
 		// Parse Attack Code (column B) - always a string
-		if codeStr, ok := row[1].(string); ok && codeStr != "" {
+		codeStr := NewCell(row[1]).String()
+		if codeStr != "" {
 			info.AttackCodes[codeStr] = true
 			validRows++
 		}
 
 		// Parse Started timestamp (column C) to find latest
-		if startedStr, ok := row[2].(string); ok {
-			if startedTime, err := time.Parse("2006-01-02 15:04:05", startedStr); err == nil {
-				timestamp := startedTime.Unix()
-				if timestamp > info.LatestTimestamp {
-					info.LatestTimestamp = timestamp
-				}
+		startedStr := NewCell(row[2]).String()
+		if startedTime, err := time.Parse("2006-01-02 15:04:05", startedStr); err == nil {
+			timestamp := startedTime.Unix()
+			if timestamp > info.LatestTimestamp {
+				info.LatestTimestamp = timestamp
 			}
 		}
 	}
