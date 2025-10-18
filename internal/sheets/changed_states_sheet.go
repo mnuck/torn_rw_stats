@@ -11,7 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ChangedStatesSheetManager handles operations on the Changed States sheet
+// ChangedStatesSheetManager handles operations on the Changed States sheet, which
+// tracks member state changes over time (status, location, travel, etc.).
 type ChangedStatesSheetManager struct {
 	api SheetsAPI
 }

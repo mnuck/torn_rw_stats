@@ -8,7 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// APICallTracker monitors and optimizes API call usage
+// APICallTracker monitors and optimizes API call usage, tracking session statistics,
+// endpoint-specific call counts, and providing predictions for future API usage.
 type APICallTracker struct {
 	sessionStart    time.Time
 	sessionCalls    int64
@@ -84,7 +85,8 @@ func (t *APICallTracker) LogSessionSummary(ctx context.Context) {
 	logEvent.Msg("API call session summary")
 }
 
-// APICallStats represents API call statistics
+// APICallStats represents API call statistics for a session, including call counts,
+// duration, breakdown by endpoint, and calls per minute rate.
 type APICallStats struct {
 	SessionCalls    int64
 	TotalCalls      int64

@@ -8,17 +8,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WarState represents the different phases a faction can be in regarding wars
+// WarState represents the different phases a faction can be in regarding wars,
+// enabling intelligent API call optimization based on war lifecycle.
 type WarState int
 
 const (
-	// NoWars - No active, upcoming, or recent wars
+	// NoWars indicates no active, upcoming, or recent wars exist
 	NoWars WarState = iota
-	// PreWar - War is scheduled but hasn't started yet
+
+	// PreWar indicates a war is scheduled but hasn't started yet
 	PreWar
-	// ActiveWar - War is currently in progress
+
+	// ActiveWar indicates a war is currently in progress
 	ActiveWar
-	// PostWar - War recently ended
+
+	// PostWar indicates a war recently ended
 	PostWar
 )
 
@@ -38,28 +42,34 @@ func (ws WarState) String() string {
 	}
 }
 
-// WarStateConfig defines the behavior for each war state
+// WarStateConfig defines the behavior for each war state including update intervals,
+// descriptions, and next check strategies.
 type WarStateConfig struct {
 	UpdateInterval    time.Duration // How often to check for updates
 	Description       string        // Human-readable description
 	NextCheckStrategy CheckStrategy // Strategy for determining next check
 }
 
-// CheckStrategy defines how to determine the next check time
+// CheckStrategy defines how to determine the next check time, supporting fixed
+// intervals and smart waiting until specific events (Tuesday matchmaking, war start).
 type CheckStrategy int
 
 const (
-	// FixedInterval - Check at regular intervals
+	// FixedInterval indicates checking at regular time intervals
 	FixedInterval CheckStrategy = iota
-	// UntilTuesdayMatchmaking - Wait until next Tuesday matchmaking
+
+	// UntilTuesdayMatchmaking indicates waiting until next Tuesday 12:05 UTC matchmaking
 	UntilTuesdayMatchmaking
-	// UntilWarStart - Wait until war is scheduled to start
+
+	// UntilWarStart indicates waiting until the scheduled war start time
 	UntilWarStart
-	// UntilNextWeekMatchmaking - Wait until next week's matchmaking
+
+	// UntilNextWeekMatchmaking indicates waiting until next week's Tuesday matchmaking
 	UntilNextWeekMatchmaking
 )
 
-// WarStateManager manages war states and determines optimal check intervals
+// WarStateManager manages war states and determines optimal check intervals based on
+// war lifecycle, Tuesday matchmaking schedules, and state transition logic.
 type WarStateManager struct {
 	currentState    WarState
 	lastStateChange time.Time
@@ -411,7 +421,8 @@ func (wsm *WarStateManager) GetStateInfo() WarStateInfo {
 	}
 }
 
-// WarStateInfo provides comprehensive state information
+// WarStateInfo provides comprehensive state information including current state,
+// time in state, next check time, and current war details.
 type WarStateInfo struct {
 	State          WarState
 	Description    string

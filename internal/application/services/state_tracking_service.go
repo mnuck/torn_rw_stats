@@ -12,7 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// StateTrackingService handles the complete state tracking workflow
+// StateTrackingService handles the complete state tracking workflow, detecting
+// and recording member state changes (status, location, travel) to Google Sheets.
 type StateTrackingService struct {
 	tornClient   processing.TornClientInterface
 	sheetsClient processing.SheetsClientInterface

@@ -16,8 +16,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// StatusV2Service handles conversion of StateRecords to StatusV2Records
-// and tracks departure times for traveling players
+// StatusV2Service handles conversion of StateRecords to StatusV2Records,
+// tracking departure times for traveling players and calculating arrival predictions.
 type StatusV2Service struct {
 	sheetsClient      processing.SheetsClientInterface
 	locationService   *travel.LocationService
@@ -133,7 +133,8 @@ func (s *StatusV2Service) resolveLevel(stateRecord app.StateRecord, factionMembe
 	return 0
 }
 
-// TravelInfo holds travel-related data for a member
+// TravelInfo holds travel-related data for a member including departure time,
+// arrival times (standard and business class), and countdown to arrival.
 type TravelInfo struct {
 	Departure       string
 	Arrival         string
