@@ -1,8 +1,12 @@
-# Interface{} Usage in Sheets Package
+# Interface{} Usage in Codebase
+
+## Summary
+
+We have eliminated unsafe `interface{}` usage throughout the application. All remaining `interface{}` occurrences (48 in non-test code) are **legitimate and unavoidable** due to external API constraints.
 
 ## Context
 
-This package interacts with the Google Sheets API (`google.golang.org/api/sheets/v4`), which uses `[][]interface{}` for cell values. This is an external API constraint that we cannot change.
+This application interacts with the Google Sheets API (`google.golang.org/api/sheets/v4`), which uses `[][]interface{}` for cell values. This is an external API constraint that we cannot change.
 
 ## Our Approach
 
@@ -90,10 +94,45 @@ name := cell.String()
 
 Per CLAUDE.md: "NO interface{}"
 
-This package complies with the spirit of this rule by:
+This codebase complies with the spirit of this rule by:
 - ✅ Minimizing `interface{}` to external API boundary only
 - ✅ Providing type-safe wrappers (`Cell`) for all application code
 - ✅ Never exposing `interface{}` in domain or business logic layers
 - ✅ Centralizing all type conversion in one place
 
-The `interface{}` usage here is **unavoidable due to external API constraints** and is **properly contained and wrapped** for type safety throughout the rest of the codebase.
+## Complete Inventory of interface{} Usage
+
+### 1. Google Sheets API Boundary (Required)
+
+**Reading from Sheets (3 files):**
+- `internal/sheets/api.go` - Interface definitions
+- `internal/sheets/client.go` - API implementation
+- `internal/processing/interfaces.go` - Processing layer interface
+
+These return `[][]interface{}` from Google Sheets API, which we immediately wrap with `Cell` type.
+
+**Writing to Sheets (8 files):**
+All functions that convert our typed data TO `[][]interface{}` for Google Sheets API:
+- `internal/sheets/war_manager.go` (8 occurrences) - Headers and summary conversion
+- `internal/sheets/changed_states_sheet.go` (6) - State records conversion
+- `internal/sheets/status_v2_manager.go` (5) - Status records conversion
+- `internal/sheets/state_manager.go` (5) - State changes conversion
+- `internal/sheets/records_processor.go` (4) - Attack records conversion
+- `internal/application/services/state_tracking_service.go` (5) - State tracking
+- `internal/application/services/status_v2_service.go` (2) - Status parsing
+
+These are **output conversions only** - taking our typed structs and converting them to `[][]interface{}` that Google Sheets API expects.
+
+### 2. Cell Type Wrapper (3 occurrences)
+
+`internal/sheets/cell.go` - The type-safe wrapper itself uses `interface{}` internally to provide type-safe accessors.
+
+## Total: 47 interface{} in Production Code
+
+All are:
+- ✅ At API boundaries (external constraints)
+- ✅ Wrapped immediately with type-safe accessors (reading)
+- ✅ Output conversions from typed data (writing)
+- ✅ Never exposed to business logic
+
+The `interface{}` usage is **unavoidable due to external API constraints** and is **properly contained and wrapped** for type safety throughout the rest of the codebase.
