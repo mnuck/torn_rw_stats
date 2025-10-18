@@ -221,10 +221,10 @@ type StateChangeRecord struct {
 	StatusUntil          string    `json:"status_until"`
 	StatusTravelType     string    `json:"status_travel_type"`
 	StatusPlaneImageType string    `json:"status_plane_image_type"`
-	OldState             string    `json:"old_state"`
-	NewState             string    `json:"new_state"`
-	OldLastAction        string    `json:"old_last_action"`
-	NewLastAction        string    `json:"new_last_action"`
+	PreviousState        string    `json:"old_state"`
+	CurrentState         string    `json:"new_state"`
+	PreviousLastAction   string    `json:"old_last_action"`
+	CurrentLastAction    string    `json:"new_last_action"`
 }
 
 // StateRecord represents a point-in-time snapshot of a member's state
