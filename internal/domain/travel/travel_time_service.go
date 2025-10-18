@@ -8,7 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// TravelTimeService handles travel time calculations and formatting
+// TravelTimeService handles travel time calculations and formatting, supporting
+// regular, airstrip, and business class travel times for all Torn destinations.
 type TravelTimeService struct {
 	regularTimes  map[string]int
 	airstripTimes map[string]int
@@ -62,7 +63,8 @@ func NewTravelTimeService() *TravelTimeService {
 	}
 }
 
-// TravelTimeData holds calculated travel timing information
+// TravelTimeData holds calculated travel timing information including departure,
+// arrival times for both standard and business class, and countdown to arrival.
 type TravelTimeData struct {
 	Departure       string
 	Arrival         string

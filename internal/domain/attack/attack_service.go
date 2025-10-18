@@ -8,7 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// AttackProcessingService handles attack data processing and analysis
+// AttackProcessingService handles attack data processing and analysis, converting
+// raw attack data into detailed records and determining attack direction.
 type AttackProcessingService struct {
 }
 

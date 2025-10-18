@@ -11,7 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ChangedStatesSheetManager handles operations on the Changed States sheet
+// ChangedStatesSheetManager handles operations on the Changed States sheet, which
+// tracks member state changes over time (status, location, travel, etc.).
 type ChangedStatesSheetManager struct {
 	api SheetsAPI
 }
@@ -186,40 +187,24 @@ func (m *ChangedStatesSheetManager) ConvertRowToStateRecord(row []interface{}) (
 	var record app.StateRecord
 
 	// Parse timestamp
-	if timestampStr, ok := row[0].(string); ok {
-		if timestamp, err := strconv.ParseInt(timestampStr, 10, 64); err == nil {
-			record.Timestamp = time.Unix(timestamp, 0).UTC()
-		}
+	timestampStr := NewCell(row[0]).String()
+	if timestamp, err := strconv.ParseInt(timestampStr, 10, 64); err == nil {
+		record.Timestamp = time.Unix(timestamp, 0).UTC()
 	}
 
-	// Parse string fields
-	if memberID, ok := row[3].(string); ok {
-		record.MemberID = memberID
-	}
-	if memberName, ok := row[4].(string); ok {
-		record.MemberName = memberName
-	}
-	if factionID, ok := row[5].(string); ok {
-		record.FactionID = factionID
-	}
-	if factionName, ok := row[6].(string); ok {
-		record.FactionName = factionName
-	}
-	if lastAction, ok := row[7].(string); ok {
-		record.LastActionStatus = lastAction
-	}
-	if statusDesc, ok := row[8].(string); ok {
-		record.StatusDescription = statusDesc
-	}
-	if statusState, ok := row[9].(string); ok {
-		record.StatusState = statusState
-	}
-	if travelType, ok := row[11].(string); ok {
-		record.StatusTravelType = travelType
-	}
+	// Parse string fields using type-safe Cell accessors
+	record.MemberID = NewCell(row[3]).String()
+	record.MemberName = NewCell(row[4]).String()
+	record.FactionID = NewCell(row[5]).String()
+	record.FactionName = NewCell(row[6]).String()
+	record.LastActionStatus = NewCell(row[7]).String()
+	record.StatusDescription = NewCell(row[8]).String()
+	record.StatusState = NewCell(row[9]).String()
+	record.StatusTravelType = NewCell(row[11]).String()
 
 	// Parse StatusUntil
-	if statusUntilStr, ok := row[10].(string); ok && statusUntilStr != "" {
+	statusUntilStr := NewCell(row[10]).String()
+	if statusUntilStr != "" {
 		if statusUntil, err := time.Parse("2006-01-02 15:04:05", statusUntilStr); err == nil {
 			record.StatusUntil = statusUntil.UTC()
 		}

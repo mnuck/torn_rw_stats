@@ -4,7 +4,8 @@ import (
 	"strings"
 )
 
-// LocationService handles location parsing and standardization
+// LocationService handles location parsing and standardization, mapping hospital
+// descriptions and travel status to canonical location names.
 type LocationService struct {
 	hospitalMappings map[string]string
 	locations        []string

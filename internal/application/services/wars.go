@@ -14,7 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WarProcessor handles war detection and processing
+// WarProcessor handles war detection and processing, coordinating attack collection,
+// travel tracking, and sheet management for faction wars.
 type WarProcessor struct {
 	tornClient        processing.TornClientInterface
 	sheetsClient      processing.SheetsClientInterface

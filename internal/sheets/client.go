@@ -9,11 +9,16 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-// Client implements the SheetsAPI interface using Google Sheets API
+// Client implements the SheetsAPI interface using Google Sheets API.
+//
+// Note: This client uses [][]interface{} as required by the Google Sheets API.
+// This is the only layer where interface{} should appear. All other code should
+// use the Cell type wrapper for type-safe access to cell values.
 type Client struct {
 	service *sheets.Service
 }
 
+// NewClient creates a new Google Sheets client with the provided credentials
 func NewClient(ctx context.Context, credentialsFile string) (*Client, error) {
 	service, err := sheets.NewService(ctx, option.WithCredentialsFile(credentialsFile))
 	if err != nil {
@@ -25,6 +30,9 @@ func NewClient(ctx context.Context, credentialsFile string) (*Client, error) {
 	}, nil
 }
 
+// ReadSheet reads values from the specified sheet range.
+// Returns [][]interface{} as mandated by Google Sheets API.
+// Wrap returned values with NewCell() for type-safe access.
 func (c *Client) ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error) {
 	resp, err := c.service.Spreadsheets.Values.Get(spreadsheetID, range_).Context(ctx).Do()
 	if err != nil {
@@ -34,6 +42,8 @@ func (c *Client) ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([
 	return resp.Values, nil
 }
 
+// UpdateRange updates the specified sheet range with the provided values.
+// Accepts [][]interface{} as mandated by Google Sheets API.
 func (c *Client) UpdateRange(ctx context.Context, spreadsheetID, range_ string, values [][]interface{}) error {
 	valueRange := &sheets.ValueRange{
 		Values: values,
@@ -50,6 +60,7 @@ func (c *Client) UpdateRange(ctx context.Context, spreadsheetID, range_ string, 
 	return nil
 }
 
+// ClearRange clears all values in the specified sheet range
 func (c *Client) ClearRange(ctx context.Context, spreadsheetID, range_ string) error {
 	_, err := c.service.Spreadsheets.Values.Clear(spreadsheetID, range_, &sheets.ClearValuesRequest{}).
 		Context(ctx).
@@ -61,6 +72,8 @@ func (c *Client) ClearRange(ctx context.Context, spreadsheetID, range_ string) e
 	return nil
 }
 
+// AppendRows appends rows to the specified sheet range.
+// Accepts [][]interface{} as mandated by Google Sheets API.
 func (c *Client) AppendRows(ctx context.Context, spreadsheetID, range_ string, rows [][]interface{}) error {
 	valueRange := &sheets.ValueRange{
 		Values: rows,
@@ -78,6 +91,7 @@ func (c *Client) AppendRows(ctx context.Context, spreadsheetID, range_ string, r
 	return nil
 }
 
+// CreateSheet creates a new sheet with the specified name
 func (c *Client) CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error {
 	req := &sheets.Request{
 		AddSheet: &sheets.AddSheetRequest{
@@ -101,6 +115,7 @@ func (c *Client) CreateSheet(ctx context.Context, spreadsheetID, sheetName strin
 	return nil
 }
 
+// SheetExists checks if a sheet with the given name exists in the spreadsheet
 func (c *Client) SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error) {
 	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()
 	if err != nil {
@@ -116,6 +131,8 @@ func (c *Client) SheetExists(ctx context.Context, spreadsheetID, sheetName strin
 	return false, nil
 }
 
+// EnsureSheetCapacity ensures the sheet has at least the required number of rows and columns.
+// Automatically adds a buffer for future growth.
 func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error {
 	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()
 	if err != nil {

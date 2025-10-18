@@ -7,7 +7,8 @@ import (
 	"torn_rw_stats/internal/app"
 )
 
-// StateRecordConverter handles conversion between API responses and StateRecords
+// StateRecordConverter handles conversion between Torn API responses (faction data)
+// and internal StateRecord structures for tracking member states over time.
 type StateRecordConverter struct{}
 
 // NewStateRecordConverter creates a new StateRecord converter
