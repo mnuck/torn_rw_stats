@@ -28,5 +28,8 @@ COPY --from=builder /app/torn_rw_stats /app/torn_rw_stats
 
 WORKDIR /app
 
+# Use built-in nonroot user (UID 65532)
+USER 65532:65532
+
 # Set default command
 CMD ["./torn_rw_stats"]
