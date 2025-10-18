@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: torn-rw-stats-config
+  namespace: default
+  labels:
+    app: torn-rw-stats
+data:
+  # Application configuration
+  ENV: "production"
+  LOGLEVEL: "info"
