@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -35,7 +38,17 @@ func main() {
 	// Set the update interval from command line flag
 	config.UpdateInterval = *interval
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Info().Msg("Shutdown signal received, stopping gracefully")
+		cancel()
+	}()
 
 	// Initialize clients
 	tornClient := torn.NewClient(config.TornAPIKey)
@@ -97,8 +110,17 @@ func main() {
 		Dur("initial_next_check", nextInterval).
 		Msg("Starting scheduled war processing with intelligent timing")
 
+	ticker := time.NewTicker(nextInterval)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(nextInterval)
-		nextInterval = processWars()
+		select {
+		case <-ticker.C:
+			nextInterval = processWars()
+			ticker.Reset(nextInterval)
+		case <-ctx.Done():
+			log.Info().Msg("Shutting down war processor")
+			return
+		}
 	}
 }
