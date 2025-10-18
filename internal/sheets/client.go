@@ -9,6 +9,12 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
+const (
+	// Sheet growth buffer sizes
+	SheetRowGrowthBuffer    = 100 // Buffer rows to add when expanding sheets
+	SheetColumnGrowthBuffer = 10  // Buffer columns to add when expanding sheets
+)
+
 // Client implements the SheetsAPI interface using Google Sheets API.
 //
 // Note: This client uses [][]interface{} as required by the Google Sheets API.
@@ -159,12 +165,12 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 	newCols := currentCols
 
 	if requiredRows > currentRows {
-		newRows = requiredRows + 100 // Add buffer for future growth
+		newRows = requiredRows + SheetRowGrowthBuffer
 		needsResize = true
 	}
 
 	if requiredCols > currentCols {
-		newCols = requiredCols + 10 // Add buffer for future columns
+		newCols = requiredCols + SheetColumnGrowthBuffer
 		needsResize = true
 	}
 

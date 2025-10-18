@@ -11,6 +11,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// TornAPIPageSize is the typical page size returned by the Torn API for attacks
+	TornAPIPageSize = 100
+)
+
 // AttackProcessor handles business logic for processing attacks
 // Separated from infrastructure concerns for better testability
 type AttackProcessor struct {
@@ -292,7 +297,7 @@ func (p *AttackProcessor) shouldStopPagination(pageResult *PageResult, fromTime 
 	}
 
 	// Got less than full page (typical page size is 100)
-	if pageResult.TotalAttacksCount < 100 {
+	if pageResult.TotalAttacksCount < TornAPIPageSize {
 		log.Debug().
 			Int("attacks_received", pageResult.TotalAttacksCount).
 			Msg("Received less than full page, stopping pagination")

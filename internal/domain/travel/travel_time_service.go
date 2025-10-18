@@ -8,6 +8,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// DefaultTravelTimeFallback is the fallback travel time when no data is available
+	DefaultTravelTimeFallback = 30 * time.Minute
+)
+
 // TravelTimeService handles travel time calculations and formatting, supporting
 // regular, airstrip, and business class travel times for all Torn destinations.
 type TravelTimeService struct {
@@ -91,7 +96,7 @@ func (tts *TravelTimeService) GetTravelTime(destination string, travelType strin
 			Str("destination", destination).
 			Str("travel_type", travelType).
 			Msg("Unknown travel destination, using default time")
-		return 30 * time.Minute // Default fallback
+		return DefaultTravelTimeFallback
 	}
 
 	return time.Duration(minutes) * time.Minute

@@ -16,11 +16,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// Default timing constants
+	DefaultUpdateInterval = 5 * time.Minute // Default interval between war updates
+	MinCheckDuration      = time.Minute     // Minimum time between checks
+)
+
 func main() {
 	app.SetupEnvironment()
 
 	// Parse command line flags
-	interval := flag.Duration("interval", 5*time.Minute, "Interval between war updates (e.g., 5m, 10m)")
+	interval := flag.Duration("interval", DefaultUpdateInterval, "Interval between war updates (e.g., 5m, 10m)")
 	runOnce := flag.Bool("once", false, "Run once and exit (don't start scheduler)")
 	flag.Parse()
 
@@ -79,8 +85,8 @@ func main() {
 		nextCheckDuration := time.Until(nextCheckTime)
 
 		// Use CLI interval as minimum/fallback
-		if nextCheckDuration < time.Minute {
-			nextCheckDuration = time.Minute
+		if nextCheckDuration < MinCheckDuration {
+			nextCheckDuration = MinCheckDuration
 		}
 		if nextCheckDuration > *interval && *interval > 0 {
 			nextCheckDuration = *interval

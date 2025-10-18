@@ -8,6 +8,29 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Configuration constants for war state management
+const (
+	// State update intervals
+	NoWarsPlaceholderInterval  = 24 * time.Hour // Placeholder for NoWars (uses Tuesday matchmaking)
+	PreWarUpdateInterval       = 5 * time.Minute
+	ActiveWarUpdateInterval    = 1 * time.Minute
+	PostWarPlaceholderInterval = 24 * time.Hour // Placeholder for PostWar (uses next week matchmaking)
+
+	// State transition timing
+	MinStateTransitionDuration = 30 * time.Second  // Minimum time in state before transition
+	PreWarStartCheckOffset     = -2 * time.Minute  // Time before war start to check
+	CheckTimeTolerance         = -30 * time.Second // Tolerance for check time comparison
+
+	// War classification
+	RecentlyEndedWarThreshold = 1 * time.Hour      // Wars ended within this time are "recent"
+	PreWarSchedulingWindow    = 7 * 24 * time.Hour // Wars starting within 7 days are "upcoming"
+
+	// Tuesday matchmaking configuration
+	MatchmakingHour   = 12 // Matchmaking occurs at 12:05 UTC
+	MatchmakingMinute = 5
+	DaysInWeek        = 7
+)
+
 // WarState represents the different phases a faction can be in regarding wars,
 // enabling intelligent API call optimization based on war lifecycle.
 type WarState int
@@ -84,22 +107,22 @@ func NewWarStateManager() *WarStateManager {
 		lastStateChange: time.Now(),
 		stateConfigs: map[WarState]WarStateConfig{
 			NoWars: {
-				UpdateInterval:    24 * time.Hour, // Placeholder - will use UntilTuesdayMatchmaking
+				UpdateInterval:    NoWarsPlaceholderInterval,
 				Description:       "No active wars - waiting for matchmaking",
 				NextCheckStrategy: UntilTuesdayMatchmaking,
 			},
 			PreWar: {
-				UpdateInterval:    5 * time.Minute,
+				UpdateInterval:    PreWarUpdateInterval,
 				Description:       "War scheduled - reconnaissance phase",
 				NextCheckStrategy: FixedInterval,
 			},
 			ActiveWar: {
-				UpdateInterval:    1 * time.Minute,
+				UpdateInterval:    ActiveWarUpdateInterval,
 				Description:       "War in progress - real-time monitoring",
 				NextCheckStrategy: FixedInterval,
 			},
 			PostWar: {
-				UpdateInterval:    24 * time.Hour, // Placeholder - will use UntilNextWeekMatchmaking
+				UpdateInterval:    PostWarPlaceholderInterval,
 				Description:       "War completed - waiting for next matchmaking",
 				NextCheckStrategy: UntilNextWeekMatchmaking,
 			},
@@ -143,7 +166,7 @@ func (wsm *WarStateManager) isValidStateTransition(from, to WarState) bool {
 
 	// Prevent rapid oscillation - require minimum time in state
 	timeSinceLastChange := time.Since(wsm.lastStateChange)
-	minTimeInState := 30 * time.Second
+	minTimeInState := MinStateTransitionDuration
 
 	switch from {
 	case NoWars:
@@ -213,7 +236,7 @@ func (wsm *WarStateManager) selectMostRelevantWar(wars []app.War, now time.Time)
 				if now.Before(warEnd) {
 					// Active war (started but not ended)
 					activeWars = append(activeWars, war)
-				} else if now.Sub(warEnd) <= 1*time.Hour {
+				} else if now.Sub(warEnd) <= RecentlyEndedWarThreshold {
 					// Recently ended war
 					recentlyEndedWars = append(recentlyEndedWars, war)
 				}
@@ -221,7 +244,7 @@ func (wsm *WarStateManager) selectMostRelevantWar(wars []app.War, now time.Time)
 				// War started with no end time (still active)
 				activeWars = append(activeWars, war)
 			}
-		} else if warStart.Sub(now) <= 7*24*time.Hour {
+		} else if warStart.Sub(now) <= PreWarSchedulingWindow {
 			// War scheduled within next 7 days
 			preWars = append(preWars, war)
 		}
@@ -323,7 +346,7 @@ func (wsm *WarStateManager) GetNextCheckTime() time.Time {
 		if wsm.currentWar != nil {
 			warStart := time.Unix(wsm.currentWar.Start, 0)
 			// Check a few minutes before war starts
-			return warStart.Add(-2 * time.Minute)
+			return warStart.Add(PreWarStartCheckOffset)
 		}
 		// Fallback to fixed interval if no war info
 		return now.Add(config.UpdateInterval)
@@ -342,13 +365,13 @@ func (wsm *WarStateManager) getNextTuesdayMatchmaking(now time.Time) time.Time {
 	nowUTC := now.UTC()
 
 	// Find next Tuesday
-	daysUntilTuesday := (int(time.Tuesday) - int(nowUTC.Weekday()) + 7) % 7
+	daysUntilTuesday := (int(time.Tuesday) - int(nowUTC.Weekday()) + DaysInWeek) % DaysInWeek
 	if daysUntilTuesday == 0 {
 		// It's Tuesday - check if we're past matchmaking time
-		matchmakingTime := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 12, 5, 0, 0, time.UTC)
+		matchmakingTime := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), MatchmakingHour, MatchmakingMinute, 0, 0, time.UTC)
 		if nowUTC.After(matchmakingTime) {
 			// Past today's matchmaking, wait for next week
-			daysUntilTuesday = 7
+			daysUntilTuesday = DaysInWeek
 		}
 	}
 
@@ -359,7 +382,7 @@ func (wsm *WarStateManager) getNextTuesdayMatchmaking(now time.Time) time.Time {
 		nextTuesday.Year(),
 		nextTuesday.Month(),
 		nextTuesday.Day(),
-		12, 5, 0, 0,
+		MatchmakingHour, MatchmakingMinute, 0, 0,
 		time.UTC,
 	)
 
@@ -382,11 +405,11 @@ func (wsm *WarStateManager) ShouldProcessNow() bool {
 	case NoWars:
 		// Only process if it's time for matchmaking check
 		nextCheck := wsm.GetNextCheckTime()
-		return time.Now().After(nextCheck.Add(-30 * time.Second)) // 30 second tolerance
+		return time.Now().After(nextCheck.Add(CheckTimeTolerance))
 	default:
 		// Default to time-based check
 		nextCheck := wsm.GetNextCheckTime()
-		return time.Now().After(nextCheck.Add(-30 * time.Second))
+		return time.Now().After(nextCheck.Add(CheckTimeTolerance))
 	}
 }
 
