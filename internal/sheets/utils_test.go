@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-// TestParseStringValueComprehensive tests parseStringValue with various inputs
-func TestParseStringValueComprehensive(t *testing.T) {
+// TestCellString tests Cell.String() with various inputs
+func TestCellString(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    interface{}
@@ -24,7 +24,7 @@ func TestParseStringValueComprehensive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseStringValue(tc.input)
+			result := NewCell(tc.input).String()
 			if result != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, result)
 			}
@@ -32,8 +32,8 @@ func TestParseStringValueComprehensive(t *testing.T) {
 	}
 }
 
-// TestParseIntValueComprehensive tests parseIntValue with various inputs
-func TestParseIntValueComprehensive(t *testing.T) {
+// TestCellInt tests Cell.Int() with various inputs
+func TestCellInt(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    interface{}
@@ -54,7 +54,7 @@ func TestParseIntValueComprehensive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseIntValue(tc.input)
+			result := NewCell(tc.input).Int()
 			if result != tc.expected {
 				t.Errorf("Expected %d, got %d", tc.expected, result)
 			}
@@ -62,8 +62,8 @@ func TestParseIntValueComprehensive(t *testing.T) {
 	}
 }
 
-// TestParseInt64ValueComprehensive tests parseInt64Value with various inputs
-func TestParseInt64ValueComprehensive(t *testing.T) {
+// TestCellInt64 tests Cell.Int64() with various inputs
+func TestCellInt64(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    interface{}
@@ -84,7 +84,7 @@ func TestParseInt64ValueComprehensive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseInt64Value(tc.input)
+			result := NewCell(tc.input).Int64()
 			if result != tc.expected {
 				t.Errorf("Expected %d, got %d", tc.expected, result)
 			}
@@ -92,8 +92,8 @@ func TestParseInt64ValueComprehensive(t *testing.T) {
 	}
 }
 
-// TestParseInt64PointerValueComprehensive tests parseInt64PointerValue with various inputs
-func TestParseInt64PointerValueComprehensive(t *testing.T) {
+// TestCellInt64Ptr tests Cell.Int64Ptr() with various inputs
+func TestCellInt64Ptr(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    interface{}
@@ -113,7 +113,7 @@ func TestParseInt64PointerValueComprehensive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseInt64PointerValue(tc.input)
+			result := NewCell(tc.input).Int64Ptr()
 
 			if tc.expected == nil {
 				if result != nil {
@@ -137,42 +137,42 @@ func int64Ptr(i int64) *int64 {
 
 // TestUtilsEdgeCases tests edge cases and boundary conditions
 func TestUtilsEdgeCases(t *testing.T) {
-	t.Run("parseStringValue with complex types", func(t *testing.T) {
+	t.Run("Cell.String with complex types", func(t *testing.T) {
 		// Test with more complex types
 		testMap := map[string]int{"key": 42}
-		result := parseStringValue(testMap)
+		result := NewCell(testMap).String()
 		expected := "map[key:42]"
 		if result != expected {
 			t.Errorf("Expected %q, got %q", expected, result)
 		}
 	})
 
-	t.Run("parseIntValue with edge values", func(t *testing.T) {
+	t.Run("Cell.Int with edge values", func(t *testing.T) {
 		// Test with very large float that might overflow
-		result := parseIntValue(float64(999999999999999999999))
+		result := NewCell(float64(999999999999999999999)).Int()
 		// Should handle overflow gracefully
 		if result == 0 {
 			t.Error("Expected non-zero result for large float, but got 0")
 		}
 	})
 
-	t.Run("parseInt64Value with boundary values", func(t *testing.T) {
+	t.Run("Cell.Int64 with boundary values", func(t *testing.T) {
 		// Test with string that's too large for int64
-		result := parseInt64Value("99999999999999999999999999999")
+		result := NewCell("99999999999999999999999999999").Int64()
 		if result != 0 {
 			t.Errorf("Expected 0 for overflow string, got %d", result)
 		}
 	})
 
-	t.Run("parseInt64PointerValue with edge cases", func(t *testing.T) {
+	t.Run("Cell.Int64Ptr with edge cases", func(t *testing.T) {
 		// Test with float64 zero
-		result := parseInt64PointerValue(float64(0))
+		result := NewCell(float64(0)).Int64Ptr()
 		if result != nil {
 			t.Error("Expected nil for float64 zero")
 		}
 
 		// Test with string that converts to zero
-		result = parseInt64PointerValue("0.0")
+		result = NewCell("0.0").Int64Ptr()
 		if result != nil {
 			t.Error("Expected nil for string that converts to zero")
 		}
@@ -211,7 +211,7 @@ func TestTypeAssertions(t *testing.T) {
 	})
 }
 
-// TestStringConversion tests string conversion patterns used in parseIntValue and parseInt64Value
+// TestStringConversion tests string conversion patterns used in Cell.Int and Cell.Int64
 func TestStringConversion(t *testing.T) {
 	t.Run("valid number strings", func(t *testing.T) {
 		testCases := []struct {
@@ -225,7 +225,7 @@ func TestStringConversion(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			result := parseIntValue(tc.input)
+			result := NewCell(tc.input).Int()
 			if result != tc.expected {
 				t.Errorf("For input %q, expected %d, got %d", tc.input, tc.expected, result)
 			}
@@ -235,7 +235,7 @@ func TestStringConversion(t *testing.T) {
 	t.Run("invalid number strings", func(t *testing.T) {
 		invalidStrings := []string{
 			"abc",
-			"12.34", // parseIntValue uses Atoi, not ParseFloat
+			"12.34", // Cell.Int uses Atoi, not ParseFloat
 			"",
 			" 123", // Spaces
 			"123 ",
@@ -243,7 +243,7 @@ func TestStringConversion(t *testing.T) {
 		}
 
 		for _, input := range invalidStrings {
-			result := parseIntValue(input)
+			result := NewCell(input).Int()
 			if result != 0 {
 				t.Errorf("For invalid input %q, expected 0, got %d", input, result)
 			}
