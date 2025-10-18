@@ -152,7 +152,7 @@ func (m *StatusV2Manager) ConvertStatusV2RecordsToRows(records []app.StatusV2Rec
 		// Format Until timestamp
 		untilStr := ""
 		if !record.Until.IsZero() {
-			untilStr = record.Until.Format("2006-01-02 15:04:05")
+			untilStr = record.Until.UTC().Format("2006-01-02 15:04:05")
 		}
 
 		rows[i] = []interface{}{

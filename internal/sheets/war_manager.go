@@ -228,7 +228,7 @@ func (m *WarSheetsManager) UpdateWarSummary(ctx context.Context, spreadsheetID s
 func (m *WarSheetsManager) ConvertSummaryToRows(summary *app.WarSummary) []interface{} {
 	endTimeStr := "Ongoing"
 	if summary.EndTime != nil {
-		endTimeStr = summary.EndTime.Format("2006-01-02 15:04:05")
+		endTimeStr = summary.EndTime.UTC().Format("2006-01-02 15:04:05")
 	}
 
 	winRate := 0.0
@@ -239,7 +239,7 @@ func (m *WarSheetsManager) ConvertSummaryToRows(summary *app.WarSummary) []inter
 	return []interface{}{
 		summary.WarID,  // War ID
 		summary.Status, // Status
-		summary.StartTime.Format("2006-01-02 15:04:05"), // Start Time
+		summary.StartTime.UTC().Format("2006-01-02 15:04:05"), // Start Time
 		endTimeStr,                     // End Time
 		"",                             // Empty row
 		summary.OurFaction.Name,        // Our Faction Name
