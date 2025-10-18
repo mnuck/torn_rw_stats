@@ -103,8 +103,8 @@ func (m *StateChangeManager) AddStateChangeRecord(ctx context.Context, spreadshe
 	log.Debug().
 		Str("sheet_name", sheetName).
 		Int("member_id", record.MemberID).
-		Str("old_state", record.OldState).
-		Str("new_state", record.NewState).
+		Str("old_state", record.PreviousState).
+		Str("new_state", record.CurrentState).
 		Msg("Added state change record")
 
 	return nil
@@ -124,8 +124,8 @@ func (m *StateChangeManager) ConvertStateChangeToRow(record app.StateChangeRecor
 		record.MemberID,          // Player ID
 		record.MemberName,        // Player Name
 		"State Change",           // Change Type
-		record.OldState,          // Old Status
-		record.NewState,          // New Status
+		record.PreviousState,     // Old Status
+		record.CurrentState,      // New Status
 		record.StatusDescription, // Description
 	}
 }
