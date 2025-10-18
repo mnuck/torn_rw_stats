@@ -14,7 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// StatusV2Processor handles Status v2 sheet processing
+// StatusV2Processor handles Status v2 sheet processing, converting faction member
+// states to status sheets and JSON exports for external consumption.
 type StatusV2Processor struct {
 	tornClient   processing.TornClientInterface
 	sheetsClient processing.SheetsClientInterface

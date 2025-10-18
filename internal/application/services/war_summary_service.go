@@ -10,7 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WarSummaryService handles war summary generation and statistics calculation
+// WarSummaryService handles war summary generation and statistics calculation,
+// aggregating attack data into comprehensive war statistics.
 type WarSummaryService struct {
 	attackService *attack.AttackProcessingService
 }
@@ -70,7 +71,8 @@ func (wss *WarSummaryService) GenerateWarSummary(war *app.War, attacks []app.Att
 	return summary
 }
 
-// AttackStatistics holds calculated attack statistics
+// AttackStatistics holds calculated attack statistics including total attacks,
+// win/loss counts, and respect gained/lost for a faction.
 type AttackStatistics struct {
 	TotalAttacks  int
 	AttacksWon    int

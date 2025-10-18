@@ -13,7 +13,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// SSHDeployer handles deployment via SSH/SCP
+// SSHDeployer handles deployment via SSH/SCP, managing secure file transfers
+// and remote command execution for deploying JSON files to web servers.
 type SSHDeployer struct {
 	keyPath   string
 	deployURL string

@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Client is an HTTP client for the Torn API that handles authentication,
+// request formatting, and API call tracking.
 type Client struct {
 	apiKey       string
 	client       *http.Client
@@ -21,6 +23,8 @@ type Client struct {
 	apiCallMutex sync.Mutex
 }
 
+// NewClient creates a new Torn API client with the provided API key.
+// The client is configured with a 30-second timeout for all requests.
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey: apiKey,

@@ -24,22 +24,29 @@ func NewAttackProcessor(api TornAPI) *AttackProcessor {
 	}
 }
 
-// TimeRange holds the calculated time range and update mode
+// TimeRange holds the calculated time range and update mode for fetching attacks.
+// FromTime and ToTime are Unix timestamps. UpdateMode indicates whether this is a
+// "full" fetch or an "incremental" update.
 type TimeRange struct {
 	FromTime   int64
 	ToTime     int64
 	UpdateMode string
 }
 
-// FetchStrategy represents the strategy for fetching attacks
+// FetchStrategy represents the strategy for fetching attacks from the Torn API.
+// StrategySimple uses a single API call, while StrategyPaginated uses backwards
+// pagination for large time ranges.
 type FetchStrategy int
 
 const (
+	// StrategySimple uses a single API call for fetching attacks
 	StrategySimple FetchStrategy = iota
+	// StrategyPaginated uses backwards pagination for large time ranges
 	StrategyPaginated
 )
 
-// PageResult holds the results from fetching a single page of attacks
+// PageResult holds the results from fetching a single page of attacks during
+// backwards pagination through the Torn API.
 type PageResult struct {
 	RelevantAttacks   []app.Attack
 	OldestAttackTime  int64

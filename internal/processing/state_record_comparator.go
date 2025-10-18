@@ -7,7 +7,8 @@ import (
 	"torn_rw_stats/internal/app"
 )
 
-// StateRecordComparator handles comparison logic for StateRecords
+// StateRecordComparator handles comparison logic for StateRecords, detecting changes
+// in member status and normalizing equivalent states (e.g., hospital variations).
 type StateRecordComparator struct {
 	hospitalRegex *regexp.Regexp
 	jailRegex     *regexp.Regexp

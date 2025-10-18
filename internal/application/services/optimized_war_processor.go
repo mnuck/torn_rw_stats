@@ -12,7 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// OptimizedWarProcessor wraps WarProcessor with war state management
+// OptimizedWarProcessor wraps WarProcessor with intelligent war state management,
+// adapting API call frequency based on war phases and Tuesday matchmaking schedules.
 type OptimizedWarProcessor struct {
 	processor         *WarProcessor
 	tornClient        processing.TornClientInterface
@@ -302,7 +303,8 @@ func (owp *OptimizedWarProcessor) removeDuplicateFactionIDs(factionIDs []int) []
 	return result
 }
 
-// ProcessingSummary provides a summary of processing session
+// ProcessingSummary provides a summary of processing session including API call
+// statistics, duration, and call rate metrics.
 type ProcessingSummary struct {
 	SessionAPICalls int64
 	TotalAPICalls   int64
