@@ -14,6 +14,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// HTTP client configuration
+	HTTPClientTimeout = 30 * time.Second
+)
+
 // Client is an HTTP client for the Torn API that handles authentication,
 // request formatting, and API call tracking.
 type Client struct {
@@ -29,7 +34,7 @@ func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey: apiKey,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: HTTPClientTimeout,
 		},
 	}
 }

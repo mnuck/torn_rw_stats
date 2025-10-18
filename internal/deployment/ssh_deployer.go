@@ -13,6 +13,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	// SSHConnectionTimeout is the timeout for establishing SSH connections
+	SSHConnectionTimeout = 30 * time.Second
+)
+
 // SSHDeployer handles deployment via SSH/SCP, managing secure file transfers
 // and remote command execution for deploying JSON files to web servers.
 type SSHDeployer struct {
@@ -87,7 +92,7 @@ func (d *SSHDeployer) Connect() error {
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // In production, use proper host key verification
-		Timeout:         30 * time.Second,
+		Timeout:         SSHConnectionTimeout,
 	}
 
 	// Connect to SSH server
