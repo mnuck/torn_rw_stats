@@ -1,6 +1,10 @@
 # Build stage - Use latest 1.25.1 Alpine image
 FROM golang:1.25.1-alpine AS builder
 
+# Docker automatically provides these build args for multi-platform builds
+ARG TARGETOS
+ARG TARGETARCH
+
 WORKDIR /app
 
 # Copy go mod files
@@ -13,7 +17,8 @@ RUN go mod download && go mod verify
 COPY . .
 
 # Build the application with build info and security flags
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Use TARGETOS and TARGETARCH instead of hardcoded values
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -a \
     -installsuffix cgo \
     -ldflags='-w -s -extldflags "-static"' \
