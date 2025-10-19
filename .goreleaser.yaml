@@ -103,9 +103,6 @@ release:
   # Draft releases for review before publishing
   draft: false
 
-  # Replace existing release if it exists (for latest)
-  replace: false
-
   # Release header
   header: |
     ## Torn RW Stats {{ .Tag }}
