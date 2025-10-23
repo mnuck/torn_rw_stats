@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/state"
 	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
 
@@ -74,21 +75,26 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 	// Step 5: Compare states and find changes
 	updatedStateRecords := s.comparator.FindChangedStates(currentStateRecords, s.mapToSlice(previousStateRecords))
 
-	log.Info().
-		Int("changed_states", len(updatedStateRecords)).
-		Msg("Found state changes")
+	// Step 6: Use domain function to determine action
+	decision := state.DetermineStateChangeAction(currentStateRecords, s.mapToSlice(previousStateRecords), updatedStateRecords)
 
-	// Step 6: Add updated records to sheet (if any)
-	if len(updatedStateRecords) > 0 {
-		if err := s.addStateRecords(ctx, spreadsheetID, updatedStateRecords); err != nil {
+	log.Info().
+		Int("changed_states", decision.ChangeCount).
+		Bool("should_write", decision.ShouldWriteChanges).
+		Str("reason", decision.Reason).
+		Msg("Determined state change action")
+
+	// Step 7: Execute decision - add updated records to sheet (if decided)
+	if decision.ShouldWriteChanges {
+		if err := s.addStateRecords(ctx, spreadsheetID, decision.RecordsToWrite); err != nil {
 			return fmt.Errorf("failed to add state records to sheet: %w", err)
 		}
 
 		log.Info().
-			Int("records_added", len(updatedStateRecords)).
+			Int("records_added", len(decision.RecordsToWrite)).
 			Msg("Successfully added state changes to Changed States sheet")
 	} else {
-		log.Info().Msg("No state changes detected - no records added")
+		log.Info().Msg(decision.Reason)
 	}
 
 	return nil
