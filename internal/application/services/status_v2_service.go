@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/status"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/processing"
 
@@ -94,43 +94,18 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 
 // convertSingleStateRecord converts a single StateRecord to StatusV2Record
 func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existingData map[string]app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) app.StatusV2Record {
-	existing := s.getExistingRecord(stateRecord, existingData)
-	level := s.resolveLevel(stateRecord, factionMembers, existing)
+	// Use domain functions for pure calculations
+	existing := status.GetExistingRecord(stateRecord.FactionID, stateRecord.MemberID, stateRecord.MemberName, existingData)
+	level := status.ResolveLevel(stateRecord.MemberID, factionMembers, existing)
 	location := s.calculateLocation(stateRecord)
-	countdown := s.calculateCountdown(stateRecord.StatusUntil, currentTime)
 
 	travelInfo := s.calculateTravelInfo(ctx, stateRecord, existing, departureMap, currentTime, location)
 
-	return s.buildStatusV2Record(stateRecord, level, location, countdown, travelInfo)
-}
-
-// getExistingRecord finds existing data for a member using both ID and name keys
-func (s *StatusV2Service) getExistingRecord(stateRecord app.StateRecord, existingData map[string]app.StatusV2Record) *app.StatusV2Record {
-	memberKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberID)
-	nameKey := fmt.Sprintf("%s_%s", stateRecord.FactionID, stateRecord.MemberName)
-
-	if existing, hasExisting := existingData[memberKey]; hasExisting {
-		return &existing
-	}
-	if existing, hasExisting := existingData[nameKey]; hasExisting {
-		return &existing
-	}
-	return nil
-}
-
-// resolveLevel determines the member's level from faction data or existing records
-func (s *StatusV2Service) resolveLevel(stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existing *app.StatusV2Record) int {
-	if member, exists := factionMembers[stateRecord.MemberID]; exists {
-		return member.Level
-	}
-	if existing != nil {
-		return existing.Level
-	}
-	return 0
+	return s.buildStatusV2Record(stateRecord, level, location, travelInfo)
 }
 
 // buildStatusV2Record constructs the final StatusV2Record
-func (s *StatusV2Service) buildStatusV2Record(stateRecord app.StateRecord, level int, location, countdown string, travelInfo TravelInfo) app.StatusV2Record {
+func (s *StatusV2Service) buildStatusV2Record(stateRecord app.StateRecord, level int, location string, travelInfo TravelInfo) app.StatusV2Record {
 	return app.StatusV2Record{
 		Name:            stateRecord.MemberName,
 		MemberID:        stateRecord.MemberID,
@@ -151,23 +126,4 @@ func (s *StatusV2Service) calculateLocation(stateRecord app.StateRecord) string 
 	// Use the LocationService to parse location from status description
 	// This handles all patterns: hospitals, travel, locations, etc.
 	return s.locationService.ParseLocation(stateRecord.StatusDescription)
-}
-
-// calculateCountdown calculates countdown string from StatusUntil timestamp
-func (s *StatusV2Service) calculateCountdown(statusUntil time.Time, currentTime time.Time) string {
-	if statusUntil.IsZero() {
-		return ""
-	}
-
-	duration := statusUntil.Sub(currentTime)
-	if duration <= 0 {
-		return "0:00:00"
-	}
-
-	// Format as H:MM:SS
-	hours := int(duration.Hours())
-	minutes := int(duration.Minutes()) % 60
-	seconds := int(duration.Seconds()) % 60
-
-	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
 }

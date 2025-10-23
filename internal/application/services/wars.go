@@ -7,6 +7,7 @@ import (
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/attack"
 	"torn_rw_stats/internal/domain/travel"
+	wardomain "torn_rw_stats/internal/domain/war"
 	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
@@ -178,22 +179,22 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		return fmt.Errorf("failed to read existing records: %w", err)
 	}
 
-	// Fetch attacks based on existing data
+	// Use domain function to determine fetch mode
+	fetchDecision := wardomain.DetermineAttackFetchMode(existingInfo.RecordCount, existingInfo.LatestTimestamp)
+	log.Debug().
+		Int("war_id", war.ID).
+		Bool("use_full_mode", fetchDecision.UseFullMode).
+		Bool("use_incremental", fetchDecision.UseIncremental).
+		Str("reason", fetchDecision.Reason).
+		Msg("Determined attack fetch mode")
+
+	// Fetch attacks based on decision
 	var attacks []app.Attack
-	if existingInfo.RecordCount == 0 {
-		// Full population mode
-		log.Debug().Int("war_id", war.ID).Msg("Using full population mode - no existing records")
-		processor := torn.NewAttackProcessor(wp.tornClient)
+	processor := torn.NewAttackProcessor(wp.tornClient)
+	if fetchDecision.UseFullMode {
 		attacks, err = processor.GetAllAttacksForWar(ctx, war)
 	} else {
-		// Incremental update mode
-		log.Debug().
-			Int("war_id", war.ID).
-			Int("existing_records", existingInfo.RecordCount).
-			Int64("latest_timestamp", existingInfo.LatestTimestamp).
-			Msg("Using incremental update mode - existing records found")
-		processor := torn.NewAttackProcessor(wp.tornClient)
-		attacks, err = processor.GetAttacksForTimeRange(ctx, war, war.Start, &existingInfo.LatestTimestamp)
+		attacks, err = processor.GetAttacksForTimeRange(ctx, war, war.Start, &fetchDecision.LatestTimestamp)
 	}
 
 	if err != nil {
