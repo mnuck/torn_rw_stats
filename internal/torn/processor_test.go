@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/attack"
 )
 
 // MockTornAPI implements TornAPI for testing
@@ -136,46 +137,35 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 }
 
 func TestProcessorShouldUseSimpleApproach(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	testCases := []struct {
 		name           string
-		timeRange      TimeRange
+		startTime      time.Time
+		endTime        time.Time
 		expectedSimple bool
 	}{
 		{
-			name: "FullUpdateMode",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "full",
-			},
-			expectedSimple: false, // Full mode always uses pagination
+			name:           "SmallTimeRange6Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(6*60*60), 0), // 6 hours
+			expectedSimple: true,                         // Small ranges use simple approach
 		},
 		{
-			name: "IncrementalSmallTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: true, // Small incremental updates use simple approach
+			name:           "TimeRangeUnder24Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(23*60*60), 0), // 23 hours
+			expectedSimple: true,                          // Under 24 hours uses simple approach
 		},
 		{
-			name: "IncrementalLargeTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (25 * 60 * 60), // 25 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: false, // Large time ranges use pagination
+			name:           "TimeRangeOver24Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(25*60*60), 0), // 25 hours
+			expectedSimple: false,                         // Over 24 hours uses pagination
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := processor.ShouldUseSimpleApproach(tc.timeRange)
+			result := attack.ShouldUseSimpleApproach(tc.startTime, tc.endTime)
 			if result != tc.expectedSimple {
 				t.Errorf("Expected %v, got %v", tc.expectedSimple, result)
 			}

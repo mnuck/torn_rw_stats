@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/attack"
 
 	"github.com/rs/zerolog/log"
 )
@@ -72,22 +73,26 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *app.W
 	// Calculate time range and update mode
 	timeRange := p.CalculateTimeRange(war, latestExistingTimestamp)
 
+	// Functional core: Determine fetch strategy
+	startTime := time.Unix(timeRange.FromTime, 0)
+	endTime := time.Unix(timeRange.ToTime, 0)
+	strategy := attack.DetermineFetchStrategy(startTime, endTime)
+
+	// Log strategy and estimated API calls for observability
+	estimatedCalls := attack.EstimateAPICallsRequired(strategy)
 	log.Info().
 		Int("war_id", war.ID).
 		Str("update_mode", timeRange.UpdateMode).
+		Str("fetch_strategy", string(strategy.Method)).
+		Int("estimated_api_calls", estimatedCalls).
 		Int64("fetch_from", timeRange.FromTime).
 		Int64("fetch_to", timeRange.ToTime).
-		Str("fetch_from_str", time.Unix(timeRange.FromTime, 0).Format("2006-01-02 15:04:05")).
-		Str("fetch_to_str", time.Unix(timeRange.ToTime, 0).Format("2006-01-02 15:04:05")).
+		Str("fetch_from_str", startTime.Format("2006-01-02 15:04:05")).
+		Str("fetch_to_str", endTime.Format("2006-01-02 15:04:05")).
 		Msg("Fetching attacks for war")
 
-	// Use simple approach for small incremental updates
-	if p.ShouldUseSimpleApproach(timeRange) {
-		return p.fetchAttacksSimple(ctx, war, timeRange)
-	}
-
-	// Use paginated approach for large ranges
-	return p.fetchAttacksPaginated(ctx, war, timeRange)
+	// Imperative shell: Execute the strategy
+	return p.executeFetchStrategy(ctx, war, timeRange, strategy)
 }
 
 // CalculateTimeRange determines the time range and update mode for fetching attacks
@@ -124,17 +129,6 @@ func (p *AttackProcessor) CalculateTimeRange(war *app.War, latestExistingTimesta
 		ToTime:     toTime,
 		UpdateMode: updateMode,
 	}
-}
-
-// ShouldUseSimpleApproach determines if we can use a single API call instead of pagination
-func (p *AttackProcessor) ShouldUseSimpleApproach(timeRange TimeRange) bool {
-	if timeRange.UpdateMode != "incremental" {
-		return false
-	}
-
-	const maxSimpleRange = 24 * 60 * 60 // 24 hours
-	duration := timeRange.ToTime - timeRange.FromTime
-	return duration <= maxSimpleRange
 }
 
 // FilterRelevantAttacks filters attacks to only those relevant to the war
@@ -285,6 +279,23 @@ func (p *AttackProcessor) processAttacksPage(attacks []app.Attack, war *app.War,
 		RelevantAttacks:   relevantAttacks,
 		OldestAttackTime:  oldestAttackTime,
 		TotalAttacksCount: len(attacks),
+	}
+}
+
+// executeFetchStrategy executes the determined fetch strategy (imperative shell)
+func (p *AttackProcessor) executeFetchStrategy(
+	ctx context.Context,
+	war *app.War,
+	timeRange TimeRange,
+	strategy attack.FetchStrategy,
+) ([]app.Attack, error) {
+	switch strategy.Method {
+	case attack.FetchMethodSimple:
+		return p.fetchAttacksSimple(ctx, war, timeRange)
+	case attack.FetchMethodPaginated:
+		return p.fetchAttacksPaginated(ctx, war, timeRange)
+	default:
+		return nil, fmt.Errorf("unknown fetch method: %s", strategy.Method)
 	}
 }
 
