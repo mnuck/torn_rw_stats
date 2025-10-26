@@ -3,10 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/state"
+	"torn_rw_stats/internal/domain/travel"
 )
 
 // buildDepartureMap builds a map of member departure times from state changes
@@ -40,67 +41,9 @@ func (s *StatusV2Service) buildDepartureMap(ctx context.Context, spreadsheetID s
 
 // findMostRecentTravelingTransition finds when a member most recently started traveling to their current destination
 func (s *StatusV2Service) findMostRecentTravelingTransition(allRecords []app.StateRecord, memberID, currentDestination string) time.Time {
-	memberRecords := s.getMemberRecordsChronologically(allRecords, memberID)
-	return s.findLastDepartureToDestination(memberRecords, currentDestination)
-}
+	// Use domain function to filter and sort records
+	memberRecords := state.GetMemberRecordsChronologically(allRecords, memberID)
 
-// getMemberRecordsChronologically filters and sorts records for a specific member
-func (s *StatusV2Service) getMemberRecordsChronologically(allRecords []app.StateRecord, memberID string) []app.StateRecord {
-	var records []app.StateRecord
-	for _, record := range allRecords {
-		if record.MemberID == memberID {
-			records = append(records, record)
-		}
-	}
-
-	sort.Slice(records, func(i, j int) bool {
-		return records[i].Timestamp.Before(records[j].Timestamp)
-	})
-
-	return records
-}
-
-// findLastDepartureToDestination finds the most recent departure time to a specific destination
-func (s *StatusV2Service) findLastDepartureToDestination(records []app.StateRecord, destination string) time.Time {
-	var lastDeparture time.Time
-
-	for i := 0; i < len(records); i++ {
-		current := records[i]
-		if current.StatusState != "Traveling" {
-			continue
-		}
-
-		currentDestination := s.locationService.ParseLocation(current.StatusDescription)
-		if currentDestination != destination {
-			continue
-		}
-
-		// Check if this is a new journey (different from previous travel)
-		if s.isNewJourneyToDestination(records, i, destination) {
-			lastDeparture = current.Timestamp
-		}
-	}
-
-	return lastDeparture
-}
-
-// isNewJourneyToDestination checks if this record represents a new journey to the destination
-func (s *StatusV2Service) isNewJourneyToDestination(records []app.StateRecord, currentIndex int, destination string) bool {
-	if currentIndex == 0 {
-		return true // First record is always a new journey
-	}
-
-	current := records[currentIndex]
-	previous := records[currentIndex-1]
-
-	// New journey if previous status was not traveling
-	if previous.StatusState != "Traveling" {
-		return true
-	}
-
-	// New journey if previous destination was different
-	previousDestination := s.locationService.ParseLocation(previous.StatusDescription)
-	currentDestination := s.locationService.ParseLocation(current.StatusDescription)
-
-	return previousDestination != currentDestination
+	// Use domain function to find departure, passing location parser as dependency
+	return travel.FindLastDepartureToDestination(memberRecords, currentDestination, s.locationService.ParseLocation)
 }
