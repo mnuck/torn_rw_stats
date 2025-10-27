@@ -221,14 +221,7 @@ func (p *AttackProcessor) fetchAttacksPage(ctx context.Context, war *app.War, fr
 func (p *AttackProcessor) processAttacksPage(attacks []app.Attack, war *app.War, currentTo int64) *PageResult {
 	warFactionIDs := attack.BuildFactionIDMap(war)
 	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
-	oldestAttackTime := currentTo
-
-	for _, attack := range attacks {
-		// Track the oldest attack timestamp for next pagination
-		if attack.Started < oldestAttackTime {
-			oldestAttackTime = attack.Started
-		}
-	}
+	oldestAttackTime := attack.FindOldestAttackTime(attacks, currentTo)
 
 	log.Debug().
 		Int("relevant_attacks_in_page", len(relevantAttacks)).
@@ -262,28 +255,28 @@ func (p *AttackProcessor) executeFetchStrategy(
 
 // shouldStopPagination determines if we should stop the pagination loop
 func (p *AttackProcessor) shouldStopPagination(pageResult *PageResult, fromTime int64) bool {
-	// No more attacks returned
-	if pageResult.TotalAttacksCount == 0 {
-		log.Debug().Msg("No more attacks returned, stopping pagination")
-		return true
+	decision := attack.ShouldStopPagination(
+		pageResult.TotalAttacksCount,
+		pageResult.OldestAttackTime,
+		fromTime,
+		TornAPIPageSize,
+	)
+
+	if decision.ShouldStop {
+		switch decision.Reason {
+		case "no_more_attacks":
+			log.Debug().Msg("No more attacks returned, stopping pagination")
+		case "partial_page":
+			log.Debug().
+				Int("attacks_received", decision.AttacksProcessed).
+				Msg("Received less than full page, stopping pagination")
+		case "reached_start_time":
+			log.Debug().
+				Int64("oldest_attack", decision.OldestTimestamp).
+				Int64("fetch_start", fromTime).
+				Msg("Reached fetch start time, stopping pagination")
+		}
 	}
 
-	// Got less than full page (typical page size is 100)
-	if pageResult.TotalAttacksCount < TornAPIPageSize {
-		log.Debug().
-			Int("attacks_received", pageResult.TotalAttacksCount).
-			Msg("Received less than full page, stopping pagination")
-		return true
-	}
-
-	// Reached the fetch start time
-	if pageResult.OldestAttackTime <= fromTime {
-		log.Debug().
-			Int64("oldest_attack", pageResult.OldestAttackTime).
-			Int64("fetch_start", fromTime).
-			Msg("Reached fetch start time, stopping pagination")
-		return true
-	}
-
-	return false
+	return decision.ShouldStop
 }
