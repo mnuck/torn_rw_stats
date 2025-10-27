@@ -3,7 +3,6 @@ package torn
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -131,44 +130,6 @@ func (p *AttackProcessor) CalculateTimeRange(war *app.War, latestExistingTimesta
 	}
 }
 
-// FilterRelevantAttacks filters attacks to only those relevant to the war
-func (p *AttackProcessor) FilterRelevantAttacks(attacks []app.Attack, war *app.War) []app.Attack {
-	var relevantAttacks []app.Attack
-
-	// Get faction IDs from the war
-	warFactionIDs := make(map[int]bool)
-	for _, faction := range war.Factions {
-		warFactionIDs[faction.ID] = true
-	}
-
-	for _, attack := range attacks {
-		if p.isAttackRelevantToWar(attack, warFactionIDs) {
-			relevantAttacks = append(relevantAttacks, attack)
-		}
-	}
-
-	return relevantAttacks
-}
-
-// SortAttacksChronologically sorts attacks by timestamp (oldest first)
-func (p *AttackProcessor) SortAttacksChronologically(attacks []app.Attack) {
-	sort.Slice(attacks, func(i, j int) bool {
-		return attacks[i].Started < attacks[j].Started
-	})
-}
-
-// isAttackRelevantToWar checks if an attack involves factions from the specified war
-func (p *AttackProcessor) isAttackRelevantToWar(attack app.Attack, warFactionIDs map[int]bool) bool {
-	// Check if attacker or defender faction is involved in the war
-	if attack.Attacker.Faction != nil && warFactionIDs[attack.Attacker.Faction.ID] {
-		return true
-	}
-	if attack.Defender.Faction != nil && warFactionIDs[attack.Defender.Faction.ID] {
-		return true
-	}
-
-	return false
-}
 
 // fetchAttacksSimple fetches attacks using a single API call (for small time ranges)
 func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *app.War, timeRange TimeRange) ([]app.Attack, error) {
@@ -180,10 +141,9 @@ func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *app.War, 
 	}
 
 	// Filter and collect relevant attacks
-	allAttacks := p.FilterRelevantAttacks(attackResp.Attacks, war)
-
-	// Sort chronologically for consistent output
-	p.SortAttacksChronologically(allAttacks)
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	filtered := attack.FilterRelevantAttacks(attackResp.Attacks, warFactionIDs)
+	allAttacks := attack.SortAttacksChronologically(filtered)
 
 	log.Info().
 		Int("total_relevant_attacks", len(allAttacks)).
@@ -225,7 +185,7 @@ func (p *AttackProcessor) fetchAttacksPaginated(ctx context.Context, war *app.Wa
 	}
 
 	// Sort all attacks chronologically (oldest first) for consistent sheet ordering
-	p.SortAttacksChronologically(allAttacks)
+	allAttacks = attack.SortAttacksChronologically(allAttacks)
 
 	log.Info().
 		Int("total_relevant_attacks", len(allAttacks)).
@@ -259,7 +219,8 @@ func (p *AttackProcessor) fetchAttacksPage(ctx context.Context, war *app.War, fr
 
 // processAttacksPage filters attacks and tracks the oldest timestamp
 func (p *AttackProcessor) processAttacksPage(attacks []app.Attack, war *app.War, currentTo int64) *PageResult {
-	relevantAttacks := p.FilterRelevantAttacks(attacks, war)
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
 	oldestAttackTime := currentTo
 
 	for _, attack := range attacks {
