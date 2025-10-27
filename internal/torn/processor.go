@@ -69,8 +69,13 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *app.W
 		return nil, fmt.Errorf("war cannot be nil")
 	}
 
-	// Calculate time range and update mode
-	timeRange := p.CalculateTimeRange(war, latestExistingTimestamp)
+	// Functional core: Calculate time range and update mode
+	timeRangeResult := attack.CalculateTimeRange(war, latestExistingTimestamp, time.Now().Unix())
+	timeRange := TimeRange{
+		FromTime:   timeRangeResult.FromTime,
+		ToTime:     timeRangeResult.ToTime,
+		UpdateMode: timeRangeResult.UpdateMode,
+	}
 
 	// Functional core: Determine fetch strategy
 	startTime := time.Unix(timeRange.FromTime, 0)
@@ -94,41 +99,6 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *app.W
 	return p.executeFetchStrategy(ctx, war, timeRange, strategy)
 }
 
-// CalculateTimeRange determines the time range and update mode for fetching attacks
-func (p *AttackProcessor) CalculateTimeRange(war *app.War, latestExistingTimestamp *int64) TimeRange {
-	var fromTime, toTime int64
-	updateMode := "full"
-
-	if latestExistingTimestamp != nil && *latestExistingTimestamp > 0 {
-		// Incremental update mode - only fetch new attacks
-		updateMode = "incremental"
-
-		// Add 1-hour buffer to handle timing discrepancies
-		bufferTime := int64(3600) // 1 hour in seconds
-		fromTime = *latestExistingTimestamp - bufferTime
-
-		// Ensure we don't go before war start
-		if fromTime < war.Start {
-			fromTime = war.Start
-		}
-	} else {
-		// Full population mode - fetch entire war
-		fromTime = war.Start
-	}
-
-	// Set end time
-	if war.End != nil {
-		toTime = *war.End
-	} else {
-		toTime = time.Now().Unix()
-	}
-
-	return TimeRange{
-		FromTime:   fromTime,
-		ToTime:     toTime,
-		UpdateMode: updateMode,
-	}
-}
 
 
 // fetchAttacksSimple fetches attacks using a single API call (for small time ranges)

@@ -72,18 +72,18 @@ func (e *mockError) Error() string {
 }
 
 func TestProcessorCalculateTimeRange(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
+	const currentTime = 10000
+	const warStart = 5000
+	const warEnd = 8000
 
-	endTime := time.Now().Unix() + 3600
 	war := &app.War{
 		ID:    123,
-		Start: time.Now().Unix() - 3600, // 1 hour ago
-		End:   &endTime,                 // 1 hour from now
+		Start: warStart,
+		End:   &[]int64{warEnd}[0],
 	}
 
 	t.Run("NoExistingTimestamp", func(t *testing.T) {
-		timeRange := processor.CalculateTimeRange(war, nil)
+		timeRange := attack.CalculateTimeRange(war, nil, currentTime)
 
 		if timeRange.FromTime != war.Start {
 			t.Errorf("Expected FromTime to be war start time %d, got %d", war.Start, timeRange.FromTime)
@@ -93,14 +93,14 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
 		}
 
-		if timeRange.UpdateMode != "full" {
+		if timeRange.UpdateMode != attack.UpdateModeFull {
 			t.Errorf("Expected UpdateMode to be 'full', got '%s'", timeRange.UpdateMode)
 		}
 	})
 
 	t.Run("WithExistingTimestamp", func(t *testing.T) {
 		existing := war.Start + 1800 // 30 minutes after war start
-		timeRange := processor.CalculateTimeRange(war, &existing)
+		timeRange := attack.CalculateTimeRange(war, &existing, currentTime)
 
 		// Should use existing timestamp minus 1 hour buffer, but not before war start
 		expectedFromTime := existing - 3600 // 1 hour buffer
@@ -116,7 +116,7 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
 		}
 
-		if timeRange.UpdateMode != "incremental" {
+		if timeRange.UpdateMode != attack.UpdateModeIncremental {
 			t.Errorf("Expected UpdateMode to be 'incremental', got '%s'", timeRange.UpdateMode)
 		}
 	})
@@ -124,14 +124,14 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 	t.Run("OngoingWar", func(t *testing.T) {
 		ongoingWar := &app.War{
 			ID:    456,
-			Start: time.Now().Unix() - 3600,
+			Start: warStart,
 			End:   nil, // Ongoing war
 		}
 
-		timeRange := processor.CalculateTimeRange(ongoingWar, nil)
+		timeRange := attack.CalculateTimeRange(ongoingWar, nil, currentTime)
 
-		if timeRange.ToTime <= time.Now().Unix()-10 {
-			t.Error("Expected ToTime to be close to current time for ongoing war")
+		if timeRange.ToTime != currentTime {
+			t.Errorf("Expected ToTime to be current time %d for ongoing war, got %d", currentTime, timeRange.ToTime)
 		}
 	})
 }
