@@ -174,9 +174,6 @@ func TestProcessorShouldUseSimpleApproach(t *testing.T) {
 }
 
 func TestFilterRelevantAttacks(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	war := &app.War{
 		Factions: []app.Faction{
 			{ID: 1001, Name: "Faction A"},
@@ -211,7 +208,8 @@ func TestFilterRelevantAttacks(t *testing.T) {
 		},
 	}
 
-	relevantAttacks := processor.FilterRelevantAttacks(attacks, war)
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
 
 	// Should have 3 relevant attacks (1, 3, 4) but not attack 2
 	expectedCount := 3
@@ -238,9 +236,6 @@ func TestFilterRelevantAttacks(t *testing.T) {
 }
 
 func TestProcessorSortAttacksChronologically(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	attacks := []app.Attack{
 		{ID: 1, Started: 1000},
 		{ID: 2, Started: 500},
@@ -248,14 +243,19 @@ func TestProcessorSortAttacksChronologically(t *testing.T) {
 		{ID: 4, Started: 750},
 	}
 
-	processor.SortAttacksChronologically(attacks)
+	sorted := attack.SortAttacksChronologically(attacks)
 
 	// Should be sorted in ascending order
 	expected := []int64{500, 750, 1000, 1500}
-	for i, attack := range attacks {
-		if attack.Started != expected[i] {
-			t.Errorf("Position %d: expected timestamp %d, got %d", i, expected[i], attack.Started)
+	for i, att := range sorted {
+		if att.Started != expected[i] {
+			t.Errorf("Position %d: expected timestamp %d, got %d", i, expected[i], att.Started)
 		}
+	}
+
+	// Verify original slice unchanged
+	if attacks[0].Started != 1000 {
+		t.Error("Original slice was modified")
 	}
 }
 
