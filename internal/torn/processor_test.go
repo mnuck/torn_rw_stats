@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/attack"
 )
 
 // MockTornAPI implements TornAPI for testing
@@ -71,18 +72,18 @@ func (e *mockError) Error() string {
 }
 
 func TestProcessorCalculateTimeRange(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
+	const currentTime = 10000
+	const warStart = 5000
+	const warEnd = 8000
 
-	endTime := time.Now().Unix() + 3600
 	war := &app.War{
 		ID:    123,
-		Start: time.Now().Unix() - 3600, // 1 hour ago
-		End:   &endTime,                 // 1 hour from now
+		Start: warStart,
+		End:   &[]int64{warEnd}[0],
 	}
 
 	t.Run("NoExistingTimestamp", func(t *testing.T) {
-		timeRange := processor.CalculateTimeRange(war, nil)
+		timeRange := attack.CalculateTimeRange(war, nil, currentTime)
 
 		if timeRange.FromTime != war.Start {
 			t.Errorf("Expected FromTime to be war start time %d, got %d", war.Start, timeRange.FromTime)
@@ -92,14 +93,14 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
 		}
 
-		if timeRange.UpdateMode != "full" {
+		if timeRange.UpdateMode != attack.UpdateModeFull {
 			t.Errorf("Expected UpdateMode to be 'full', got '%s'", timeRange.UpdateMode)
 		}
 	})
 
 	t.Run("WithExistingTimestamp", func(t *testing.T) {
 		existing := war.Start + 1800 // 30 minutes after war start
-		timeRange := processor.CalculateTimeRange(war, &existing)
+		timeRange := attack.CalculateTimeRange(war, &existing, currentTime)
 
 		// Should use existing timestamp minus 1 hour buffer, but not before war start
 		expectedFromTime := existing - 3600 // 1 hour buffer
@@ -115,7 +116,7 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 			t.Errorf("Expected ToTime to be war end time %d, got %d", *war.End, timeRange.ToTime)
 		}
 
-		if timeRange.UpdateMode != "incremental" {
+		if timeRange.UpdateMode != attack.UpdateModeIncremental {
 			t.Errorf("Expected UpdateMode to be 'incremental', got '%s'", timeRange.UpdateMode)
 		}
 	})
@@ -123,59 +124,48 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 	t.Run("OngoingWar", func(t *testing.T) {
 		ongoingWar := &app.War{
 			ID:    456,
-			Start: time.Now().Unix() - 3600,
+			Start: warStart,
 			End:   nil, // Ongoing war
 		}
 
-		timeRange := processor.CalculateTimeRange(ongoingWar, nil)
+		timeRange := attack.CalculateTimeRange(ongoingWar, nil, currentTime)
 
-		if timeRange.ToTime <= time.Now().Unix()-10 {
-			t.Error("Expected ToTime to be close to current time for ongoing war")
+		if timeRange.ToTime != currentTime {
+			t.Errorf("Expected ToTime to be current time %d for ongoing war, got %d", currentTime, timeRange.ToTime)
 		}
 	})
 }
 
 func TestProcessorShouldUseSimpleApproach(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	testCases := []struct {
 		name           string
-		timeRange      TimeRange
+		startTime      time.Time
+		endTime        time.Time
 		expectedSimple bool
 	}{
 		{
-			name: "FullUpdateMode",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "full",
-			},
-			expectedSimple: false, // Full mode always uses pagination
+			name:           "SmallTimeRange6Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(6*60*60), 0), // 6 hours
+			expectedSimple: true,                         // Small ranges use simple approach
 		},
 		{
-			name: "IncrementalSmallTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (6 * 60 * 60), // 6 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: true, // Small incremental updates use simple approach
+			name:           "TimeRangeUnder24Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(23*60*60), 0), // 23 hours
+			expectedSimple: true,                          // Under 24 hours uses simple approach
 		},
 		{
-			name: "IncrementalLargeTimeRange",
-			timeRange: TimeRange{
-				FromTime:   1000,
-				ToTime:     1000 + (25 * 60 * 60), // 25 hours
-				UpdateMode: "incremental",
-			},
-			expectedSimple: false, // Large time ranges use pagination
+			name:           "TimeRangeOver24Hours",
+			startTime:      time.Unix(1000, 0),
+			endTime:        time.Unix(1000+(25*60*60), 0), // 25 hours
+			expectedSimple: false,                         // Over 24 hours uses pagination
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := processor.ShouldUseSimpleApproach(tc.timeRange)
+			result := attack.ShouldUseSimpleApproach(tc.startTime, tc.endTime)
 			if result != tc.expectedSimple {
 				t.Errorf("Expected %v, got %v", tc.expectedSimple, result)
 			}
@@ -184,9 +174,6 @@ func TestProcessorShouldUseSimpleApproach(t *testing.T) {
 }
 
 func TestFilterRelevantAttacks(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	war := &app.War{
 		Factions: []app.Faction{
 			{ID: 1001, Name: "Faction A"},
@@ -221,7 +208,8 @@ func TestFilterRelevantAttacks(t *testing.T) {
 		},
 	}
 
-	relevantAttacks := processor.FilterRelevantAttacks(attacks, war)
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
 
 	// Should have 3 relevant attacks (1, 3, 4) but not attack 2
 	expectedCount := 3
@@ -248,9 +236,6 @@ func TestFilterRelevantAttacks(t *testing.T) {
 }
 
 func TestProcessorSortAttacksChronologically(t *testing.T) {
-	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
-
 	attacks := []app.Attack{
 		{ID: 1, Started: 1000},
 		{ID: 2, Started: 500},
@@ -258,14 +243,19 @@ func TestProcessorSortAttacksChronologically(t *testing.T) {
 		{ID: 4, Started: 750},
 	}
 
-	processor.SortAttacksChronologically(attacks)
+	sorted := attack.SortAttacksChronologically(attacks)
 
 	// Should be sorted in ascending order
 	expected := []int64{500, 750, 1000, 1500}
-	for i, attack := range attacks {
-		if attack.Started != expected[i] {
-			t.Errorf("Position %d: expected timestamp %d, got %d", i, expected[i], attack.Started)
+	for i, att := range sorted {
+		if att.Started != expected[i] {
+			t.Errorf("Position %d: expected timestamp %d, got %d", i, expected[i], att.Started)
 		}
+	}
+
+	// Verify original slice unchanged
+	if attacks[0].Started != 1000 {
+		t.Error("Original slice was modified")
 	}
 }
 

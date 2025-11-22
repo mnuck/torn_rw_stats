@@ -3,10 +3,10 @@ package torn
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain/attack"
 
 	"github.com/rs/zerolog/log"
 )
@@ -69,112 +69,37 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *app.W
 		return nil, fmt.Errorf("war cannot be nil")
 	}
 
-	// Calculate time range and update mode
-	timeRange := p.CalculateTimeRange(war, latestExistingTimestamp)
+	// Functional core: Calculate time range and update mode
+	timeRangeResult := attack.CalculateTimeRange(war, latestExistingTimestamp, time.Now().Unix())
+	timeRange := TimeRange{
+		FromTime:   timeRangeResult.FromTime,
+		ToTime:     timeRangeResult.ToTime,
+		UpdateMode: timeRangeResult.UpdateMode,
+	}
 
+	// Functional core: Determine fetch strategy
+	startTime := time.Unix(timeRange.FromTime, 0)
+	endTime := time.Unix(timeRange.ToTime, 0)
+	strategy := attack.DetermineFetchStrategy(startTime, endTime)
+
+	// Log strategy and estimated API calls for observability
+	estimatedCalls := attack.EstimateAPICallsRequired(strategy)
 	log.Info().
 		Int("war_id", war.ID).
 		Str("update_mode", timeRange.UpdateMode).
+		Str("fetch_strategy", string(strategy.Method)).
+		Int("estimated_api_calls", estimatedCalls).
 		Int64("fetch_from", timeRange.FromTime).
 		Int64("fetch_to", timeRange.ToTime).
-		Str("fetch_from_str", time.Unix(timeRange.FromTime, 0).Format("2006-01-02 15:04:05")).
-		Str("fetch_to_str", time.Unix(timeRange.ToTime, 0).Format("2006-01-02 15:04:05")).
+		Str("fetch_from_str", startTime.Format("2006-01-02 15:04:05")).
+		Str("fetch_to_str", endTime.Format("2006-01-02 15:04:05")).
 		Msg("Fetching attacks for war")
 
-	// Use simple approach for small incremental updates
-	if p.ShouldUseSimpleApproach(timeRange) {
-		return p.fetchAttacksSimple(ctx, war, timeRange)
-	}
-
-	// Use paginated approach for large ranges
-	return p.fetchAttacksPaginated(ctx, war, timeRange)
+	// Imperative shell: Execute the strategy
+	return p.executeFetchStrategy(ctx, war, timeRange, strategy)
 }
 
-// CalculateTimeRange determines the time range and update mode for fetching attacks
-func (p *AttackProcessor) CalculateTimeRange(war *app.War, latestExistingTimestamp *int64) TimeRange {
-	var fromTime, toTime int64
-	updateMode := "full"
 
-	if latestExistingTimestamp != nil && *latestExistingTimestamp > 0 {
-		// Incremental update mode - only fetch new attacks
-		updateMode = "incremental"
-
-		// Add 1-hour buffer to handle timing discrepancies
-		bufferTime := int64(3600) // 1 hour in seconds
-		fromTime = *latestExistingTimestamp - bufferTime
-
-		// Ensure we don't go before war start
-		if fromTime < war.Start {
-			fromTime = war.Start
-		}
-	} else {
-		// Full population mode - fetch entire war
-		fromTime = war.Start
-	}
-
-	// Set end time
-	if war.End != nil {
-		toTime = *war.End
-	} else {
-		toTime = time.Now().Unix()
-	}
-
-	return TimeRange{
-		FromTime:   fromTime,
-		ToTime:     toTime,
-		UpdateMode: updateMode,
-	}
-}
-
-// ShouldUseSimpleApproach determines if we can use a single API call instead of pagination
-func (p *AttackProcessor) ShouldUseSimpleApproach(timeRange TimeRange) bool {
-	if timeRange.UpdateMode != "incremental" {
-		return false
-	}
-
-	const maxSimpleRange = 24 * 60 * 60 // 24 hours
-	duration := timeRange.ToTime - timeRange.FromTime
-	return duration <= maxSimpleRange
-}
-
-// FilterRelevantAttacks filters attacks to only those relevant to the war
-func (p *AttackProcessor) FilterRelevantAttacks(attacks []app.Attack, war *app.War) []app.Attack {
-	var relevantAttacks []app.Attack
-
-	// Get faction IDs from the war
-	warFactionIDs := make(map[int]bool)
-	for _, faction := range war.Factions {
-		warFactionIDs[faction.ID] = true
-	}
-
-	for _, attack := range attacks {
-		if p.isAttackRelevantToWar(attack, warFactionIDs) {
-			relevantAttacks = append(relevantAttacks, attack)
-		}
-	}
-
-	return relevantAttacks
-}
-
-// SortAttacksChronologically sorts attacks by timestamp (oldest first)
-func (p *AttackProcessor) SortAttacksChronologically(attacks []app.Attack) {
-	sort.Slice(attacks, func(i, j int) bool {
-		return attacks[i].Started < attacks[j].Started
-	})
-}
-
-// isAttackRelevantToWar checks if an attack involves factions from the specified war
-func (p *AttackProcessor) isAttackRelevantToWar(attack app.Attack, warFactionIDs map[int]bool) bool {
-	// Check if attacker or defender faction is involved in the war
-	if attack.Attacker.Faction != nil && warFactionIDs[attack.Attacker.Faction.ID] {
-		return true
-	}
-	if attack.Defender.Faction != nil && warFactionIDs[attack.Defender.Faction.ID] {
-		return true
-	}
-
-	return false
-}
 
 // fetchAttacksSimple fetches attacks using a single API call (for small time ranges)
 func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *app.War, timeRange TimeRange) ([]app.Attack, error) {
@@ -186,10 +111,9 @@ func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *app.War, 
 	}
 
 	// Filter and collect relevant attacks
-	allAttacks := p.FilterRelevantAttacks(attackResp.Attacks, war)
-
-	// Sort chronologically for consistent output
-	p.SortAttacksChronologically(allAttacks)
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	filtered := attack.FilterRelevantAttacks(attackResp.Attacks, warFactionIDs)
+	allAttacks := attack.SortAttacksChronologically(filtered)
 
 	log.Info().
 		Int("total_relevant_attacks", len(allAttacks)).
@@ -231,7 +155,7 @@ func (p *AttackProcessor) fetchAttacksPaginated(ctx context.Context, war *app.Wa
 	}
 
 	// Sort all attacks chronologically (oldest first) for consistent sheet ordering
-	p.SortAttacksChronologically(allAttacks)
+	allAttacks = attack.SortAttacksChronologically(allAttacks)
 
 	log.Info().
 		Int("total_relevant_attacks", len(allAttacks)).
@@ -265,15 +189,9 @@ func (p *AttackProcessor) fetchAttacksPage(ctx context.Context, war *app.War, fr
 
 // processAttacksPage filters attacks and tracks the oldest timestamp
 func (p *AttackProcessor) processAttacksPage(attacks []app.Attack, war *app.War, currentTo int64) *PageResult {
-	relevantAttacks := p.FilterRelevantAttacks(attacks, war)
-	oldestAttackTime := currentTo
-
-	for _, attack := range attacks {
-		// Track the oldest attack timestamp for next pagination
-		if attack.Started < oldestAttackTime {
-			oldestAttackTime = attack.Started
-		}
-	}
+	warFactionIDs := attack.BuildFactionIDMap(war)
+	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
+	oldestAttackTime := attack.FindOldestAttackTime(attacks, currentTo)
 
 	log.Debug().
 		Int("relevant_attacks_in_page", len(relevantAttacks)).
@@ -288,30 +206,47 @@ func (p *AttackProcessor) processAttacksPage(attacks []app.Attack, war *app.War,
 	}
 }
 
+// executeFetchStrategy executes the determined fetch strategy (imperative shell)
+func (p *AttackProcessor) executeFetchStrategy(
+	ctx context.Context,
+	war *app.War,
+	timeRange TimeRange,
+	strategy attack.FetchStrategy,
+) ([]app.Attack, error) {
+	switch strategy.Method {
+	case attack.FetchMethodSimple:
+		return p.fetchAttacksSimple(ctx, war, timeRange)
+	case attack.FetchMethodPaginated:
+		return p.fetchAttacksPaginated(ctx, war, timeRange)
+	default:
+		return nil, fmt.Errorf("unknown fetch method: %s", strategy.Method)
+	}
+}
+
 // shouldStopPagination determines if we should stop the pagination loop
 func (p *AttackProcessor) shouldStopPagination(pageResult *PageResult, fromTime int64) bool {
-	// No more attacks returned
-	if pageResult.TotalAttacksCount == 0 {
-		log.Debug().Msg("No more attacks returned, stopping pagination")
-		return true
+	decision := attack.ShouldStopPagination(
+		pageResult.TotalAttacksCount,
+		pageResult.OldestAttackTime,
+		fromTime,
+		TornAPIPageSize,
+	)
+
+	if decision.ShouldStop {
+		switch decision.Reason {
+		case "no_more_attacks":
+			log.Debug().Msg("No more attacks returned, stopping pagination")
+		case "partial_page":
+			log.Debug().
+				Int("attacks_received", decision.AttacksProcessed).
+				Msg("Received less than full page, stopping pagination")
+		case "reached_start_time":
+			log.Debug().
+				Int64("oldest_attack", decision.OldestTimestamp).
+				Int64("fetch_start", fromTime).
+				Msg("Reached fetch start time, stopping pagination")
+		}
 	}
 
-	// Got less than full page (typical page size is 100)
-	if pageResult.TotalAttacksCount < TornAPIPageSize {
-		log.Debug().
-			Int("attacks_received", pageResult.TotalAttacksCount).
-			Msg("Received less than full page, stopping pagination")
-		return true
-	}
-
-	// Reached the fetch start time
-	if pageResult.OldestAttackTime <= fromTime {
-		log.Debug().
-			Int64("oldest_attack", pageResult.OldestAttackTime).
-			Int64("fetch_start", fromTime).
-			Msg("Reached fetch start time, stopping pagination")
-		return true
-	}
-
-	return false
+	return decision.ShouldStop
 }
