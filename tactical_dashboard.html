@@ -444,8 +444,10 @@
             arrivalElements.forEach(element => {
                 const arrivalTimeStr = element.getAttribute('data-arrival-time');
                 if (arrivalTimeStr) {
-                    // Parse arrival time (format: "2025-09-17 14:23:45")
-                    const arrivalTime = new Date(arrivalTimeStr.replace(' ', 'T') + 'Z').getTime();
+                    // Parse arrival time (format: "2025-09-17 14:23:45" or "2025-09-17 1:23:45")
+                    // Normalize by padding single-digit hours
+                    const normalized = arrivalTimeStr.replace(/(\d{4}-\d{2}-\d{2}) (\d):/, '$1 0$2:');
+                    const arrivalTime = new Date(normalized.replace(' ', 'T') + 'Z').getTime();
                     if (!isNaN(arrivalTime)) {
                         countdownTimers.set(element.id, arrivalTime);
                     }

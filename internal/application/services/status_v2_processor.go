@@ -1,10 +1,10 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"torn_rw_stats/internal/app"
@@ -250,7 +250,7 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 	return currentRecords
 }
 
-// exportAndDeployJSON converts StatusV2Records to JSON format, writes to file, and deploys it
+// exportAndDeployJSON converts StatusV2Records to JSON format and deploys it
 func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
 	currentTime := time.Now()
 
@@ -263,33 +263,26 @@ func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, fa
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	// Create filename
-	filename := fmt.Sprintf("status_v2_%d.json", factionID)
-
-	// Write to local file
-	if err := os.WriteFile(filename, jsonBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write JSON file: %w", err)
-	}
-
 	log.Info().
 		Int("faction_id", factionID).
-		Str("filename", filename).
 		Int("locations_count", len(jsonData.Locations)).
-		Msg("Successfully exported Status v2 JSON")
+		Int("json_size_bytes", len(jsonBytes)).
+		Msg("Successfully generated Status v2 JSON")
 
 	// Deploy to remote server if deployer is configured
 	if p.deployer != nil {
 		// Use a fixed filename for the remote deployment
-		remoteFilename := "status.json"
+		remoteFilename := "travel_data.json"
 
-		if err := p.deployer.DeployFile(filename, remoteFilename); err != nil {
-			return fmt.Errorf("failed to deploy JSON file: %w", err)
+		// Deploy directly from memory without writing to disk
+		if err := p.deployer.DeployData(bytes.NewReader(jsonBytes), int64(len(jsonBytes)), remoteFilename); err != nil {
+			return fmt.Errorf("failed to deploy JSON data: %w", err)
 		}
 
 		log.Info().
 			Int("faction_id", factionID).
-			Str("local_file", filename).
 			Str("remote_file", remoteFilename).
+			Int("size_bytes", len(jsonBytes)).
 			Msg("Successfully deployed Status v2 JSON")
 	} else {
 		log.Debug().

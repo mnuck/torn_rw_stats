@@ -121,8 +121,8 @@ func (d *SSHDeployer) Disconnect() error {
 	return nil
 }
 
-// DeployFile uploads a file via SCP
-func (d *SSHDeployer) DeployFile(localPath, filename string) error {
+// DeployData uploads data from an io.Reader via SCP
+func (d *SSHDeployer) DeployData(data io.Reader, size int64, filename string) error {
 	if !d.connected {
 		if err := d.Connect(); err != nil {
 			return fmt.Errorf("failed to connect: %w", err)
@@ -132,19 +132,6 @@ func (d *SSHDeployer) DeployFile(localPath, filename string) error {
 	_, _, remotePath, err := d.parseDeployURL()
 	if err != nil {
 		return fmt.Errorf("failed to parse deploy URL: %w", err)
-	}
-
-	// Read local file
-	localFile, err := os.Open(localPath)
-	if err != nil {
-		return fmt.Errorf("failed to open local file %s: %w", localPath, err)
-	}
-	defer localFile.Close()
-
-	// Get file info
-	fileInfo, err := localFile.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to stat local file: %w", err)
 	}
 
 	// Create SCP session
@@ -173,16 +160,16 @@ func (d *SSHDeployer) DeployFile(localPath, filename string) error {
 	}
 
 	// Send file header
-	header := fmt.Sprintf("C0644 %d %s\n", fileInfo.Size(), filename)
+	header := fmt.Sprintf("C0644 %d %s\n", size, filename)
 	_, err = stdin.Write([]byte(header))
 	if err != nil {
 		return fmt.Errorf("failed to write SCP header: %w", err)
 	}
 
-	// Copy file content
-	_, err = io.Copy(stdin, localFile)
+	// Copy data content
+	_, err = io.Copy(stdin, data)
 	if err != nil {
-		return fmt.Errorf("failed to copy file content: %w", err)
+		return fmt.Errorf("failed to copy data content: %w", err)
 	}
 
 	// Send end marker
@@ -199,10 +186,9 @@ func (d *SSHDeployer) DeployFile(localPath, filename string) error {
 	}
 
 	log.Info().
-		Str("local_path", localPath).
 		Str("remote_path", remoteFilePath).
-		Int64("size", fileInfo.Size()).
-		Msg("Successfully deployed file via SCP")
+		Int64("size", size).
+		Msg("Successfully deployed data via SCP")
 
 	return nil
 }
