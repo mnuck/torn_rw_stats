@@ -62,10 +62,11 @@ func (d *SSHDeployer) parseDeployURL() (user, host, remotePath string, err error
 	return user, host, remotePath, nil
 }
 
-// Connect establishes SSH connection
+// Connect establishes SSH connection.
+// If already connected, disconnects first to ensure a fresh connection.
 func (d *SSHDeployer) Connect() error {
 	if d.connected {
-		return nil
+		d.Disconnect()
 	}
 
 	user, host, _, err := d.parseDeployURL()
@@ -121,13 +122,16 @@ func (d *SSHDeployer) Disconnect() error {
 	return nil
 }
 
-// DeployData uploads data from an io.Reader via SCP
+// DeployData uploads data from an io.Reader via SCP.
+// Each call establishes a fresh SSH connection to avoid stale connection issues
+// that occur when TCP idle timeouts close the underlying socket between deployments.
 func (d *SSHDeployer) DeployData(data io.Reader, size int64, filename string) error {
-	if !d.connected {
-		if err := d.Connect(); err != nil {
-			return fmt.Errorf("failed to connect: %w", err)
-		}
+	// Always connect fresh to avoid stale connection errors ("connection reset by peer")
+	// that occur when the remote server or intermediate devices close idle TCP connections.
+	if err := d.Connect(); err != nil {
+		return fmt.Errorf("failed to connect: %w", err)
 	}
+	defer d.Disconnect()
 
 	_, _, remotePath, err := d.parseDeployURL()
 	if err != nil {

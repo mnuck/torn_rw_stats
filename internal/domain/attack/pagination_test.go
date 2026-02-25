@@ -10,12 +10,12 @@ func TestShouldStopPagination(t *testing.T) {
 	const fetchStartTime = 1000
 
 	tests := []struct {
-		name                string
-		totalAttacksInPage  int
-		oldestAttackTime    int64
-		fetchStartTime      int64
-		expectedStop        bool
-		expectedReason      string
+		name               string
+		totalAttacksInPage int
+		oldestAttackTime   int64
+		fetchStartTime     int64
+		expectedStop       bool
+		expectedReason     string
 	}{
 		{
 			name:               "NoAttacksReturned",
