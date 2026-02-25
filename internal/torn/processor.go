@@ -99,8 +99,6 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *app.W
 	return p.executeFetchStrategy(ctx, war, timeRange, strategy)
 }
 
-
-
 // fetchAttacksSimple fetches attacks using a single API call (for small time ranges)
 func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *app.War, timeRange TimeRange) ([]app.Attack, error) {
 	log.Debug().Msg("Using simple API call for incremental update")
