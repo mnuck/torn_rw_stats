@@ -23,16 +23,16 @@ spec:
     spec:
       containers:
         - name: torn-rw-stats
-          image: ghcr.io/mnuck/torn-rw-stats:latest
-          imagePullPolicy: Always
+          image: ghcr.io/mnuck/torn_rw_stats:sha-851cb5e
+          imagePullPolicy: IfNotPresent
 
           # Resource limits based on Go application profile
           resources:
             requests:
-              memory: "64Mi"
+              memory: "128Mi"
               cpu: "100m"
             limits:
-              memory: "128Mi"
+              memory: "256Mi"
               cpu: "200m"
 
           # Environment variables from ConfigMap
