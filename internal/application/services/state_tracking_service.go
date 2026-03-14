@@ -243,9 +243,11 @@ func (s *StateTrackingService) convertRowToStateRecord(row []interface{}) (app.S
 
 	// Parse timestamp (now a string) using type-safe Cell
 	timestampStr := sheets.NewCell(row[0]).String()
-	if timestamp, err := time.Parse("2006-01-02 15:04:05", timestampStr); err == nil {
-		record.Timestamp = timestamp.UTC()
+	timestamp, err := time.Parse("2006-01-02 15:04:05", timestampStr)
+	if err != nil {
+		return record, fmt.Errorf("invalid timestamp %q: %w", timestampStr, err)
 	}
+	record.Timestamp = timestamp.UTC()
 
 	// Parse string fields with new column indices using type-safe Cell
 	record.MemberID = sheets.NewCell(row[1]).String()
