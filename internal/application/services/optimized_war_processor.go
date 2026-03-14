@@ -255,7 +255,7 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		return
 	}
 
-	// Process state changes
+	// Process state changes for all factions (ranked, raids, territory)
 	log.Debug().
 		Ints("faction_ids", factionIDs).
 		Msg("Processing state changes for factions")
@@ -271,19 +271,37 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 			Msg("Successfully processed state changes")
 	}
 
-	// Process Status v2 sheets for all factions
-	log.Debug().
-		Ints("faction_ids", factionIDs).
-		Msg("Processing Status v2 for factions")
+	// Build faction list scoped to ranked war only for the tactical dashboard.
+	// When a ranked war is active alongside raids/territory wars, we only want
+	// the ranked war opponent in the Status v2 sheets and travel_data.json.
+	var dashboardFactionIDs []int
+	if owp.processor.ourFactionID != 0 {
+		dashboardFactionIDs = append(dashboardFactionIDs, owp.processor.ourFactionID)
+	}
+	if warResponse.Wars.Ranked != nil {
+		for _, faction := range warResponse.Wars.Ranked.Factions {
+			dashboardFactionIDs = append(dashboardFactionIDs, faction.ID)
+		}
+	}
+	// Fall back to all factions if there is no ranked war
+	if len(dashboardFactionIDs) <= 1 {
+		dashboardFactionIDs = factionIDs
+	}
+	dashboardFactionIDs = owp.removeDuplicateFactionIDs(dashboardFactionIDs)
 
-	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, factionIDs, owp.config.UpdateInterval); err != nil {
+	// Process Status v2 sheets for ranked war factions only (tactical dashboard)
+	log.Debug().
+		Ints("faction_ids", dashboardFactionIDs).
+		Msg("Processing Status v2 for ranked war factions")
+
+	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, dashboardFactionIDs, owp.config.UpdateInterval); err != nil {
 		log.Error().
 			Err(err).
-			Ints("faction_ids", factionIDs).
+			Ints("faction_ids", dashboardFactionIDs).
 			Msg("Failed to process Status v2 - continuing with main processing")
 	} else {
 		log.Debug().
-			Ints("faction_ids", factionIDs).
+			Ints("faction_ids", dashboardFactionIDs).
 			Msg("Successfully processed Status v2")
 	}
 }
