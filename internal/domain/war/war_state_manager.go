@@ -24,6 +24,7 @@ const (
 	// War classification
 	RecentlyEndedWarThreshold = 1 * time.Hour      // Wars ended within this time are "recent"
 	PreWarSchedulingWindow    = 7 * 24 * time.Hour // Wars starting within 7 days are "upcoming"
+	PreWarRealTimeThreshold = 12 * time.Hour // Switch to real-time polling this far before ranked war start
 
 	// Tuesday matchmaking configuration
 	MatchmakingHour   = 12 // Matchmaking occurs at 12:05 UTC
@@ -96,8 +97,9 @@ const (
 type WarStateManager struct {
 	currentState    WarState
 	lastStateChange time.Time
-	currentWar      *app.War
-	stateConfigs    map[WarState]WarStateConfig
+	currentWar          *app.War
+	currentWarIsRanked  bool
+	stateConfigs        map[WarState]WarStateConfig
 }
 
 // NewWarStateManager creates a new war state manager
@@ -213,11 +215,15 @@ func (wsm *WarStateManager) determineState(warResponse *app.WarResponse) WarStat
 
 	if selectedWar != nil {
 		wsm.currentWar = selectedWar
+		// Track whether the selected war is the ranked war (by start time)
+		wsm.currentWarIsRanked = warResponse.Wars.Ranked != nil &&
+			selectedWar.Start == warResponse.Wars.Ranked.Start
 		return state
 	}
 
 	// No relevant wars found
 	wsm.currentWar = nil
+	wsm.currentWarIsRanked = false
 	return NoWars
 }
 
@@ -337,6 +343,17 @@ func (wsm *WarStateManager) GetNextCheckTime() time.Time {
 
 	switch config.NextCheckStrategy {
 	case FixedInterval:
+		// Within 12h of a ranked war start, switch to real-time polling even during PreWar
+		if wsm.currentState == PreWar && wsm.currentWarIsRanked && wsm.currentWar != nil {
+			warStart := time.Unix(wsm.currentWar.Start, 0)
+			if time.Until(warStart) <= PreWarRealTimeThreshold {
+				log.Debug().
+					Time("war_start", warStart).
+					Dur("time_until_start", time.Until(warStart)).
+					Msg("Within 12h of ranked war start - accelerating to real-time polling")
+				return now.Add(ActiveWarUpdateInterval)
+			}
+		}
 		return now.Add(config.UpdateInterval)
 
 	case UntilTuesdayMatchmaking:
