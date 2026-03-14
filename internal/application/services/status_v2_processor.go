@@ -252,7 +252,7 @@ func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.S
 
 // exportAndDeployJSON converts StatusV2Records to JSON format and deploys it
 func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 
 	// Convert to JSON format using the service
 	jsonData := p.service.ConvertToJSON(records, factionName, currentTime, updateInterval)

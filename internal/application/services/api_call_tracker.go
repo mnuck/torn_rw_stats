@@ -48,12 +48,17 @@ func (t *APICallTracker) GetSessionStats() APICallStats {
 		endpointCopy[k] = v
 	}
 
+	callsPerMinute := 0.0
+	if duration > 0 {
+		callsPerMinute = float64(t.sessionCalls) / duration.Minutes()
+	}
+
 	return APICallStats{
 		SessionCalls:    t.sessionCalls,
 		TotalCalls:      t.totalCalls,
 		SessionDuration: duration,
 		CallsByEndpoint: endpointCopy,
-		CallsPerMinute:  float64(t.sessionCalls) / duration.Minutes(),
+		CallsPerMinute:  callsPerMinute,
 	}
 }
 
