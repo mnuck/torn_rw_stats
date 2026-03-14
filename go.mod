@@ -1,6 +1,8 @@
 module torn_rw_stats
 
-go 1.25.7
+go 1.24.0
+
+toolchain go1.24.4
 
 require (
 	github.com/joho/godotenv v1.5.1
