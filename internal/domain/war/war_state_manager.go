@@ -24,7 +24,7 @@ const (
 	// War classification
 	RecentlyEndedWarThreshold = 1 * time.Hour      // Wars ended within this time are "recent"
 	PreWarSchedulingWindow    = 7 * 24 * time.Hour // Wars starting within 7 days are "upcoming"
-	PreWarRealTimeThreshold = 12 * time.Hour // Switch to real-time polling this far before ranked war start
+	PreWarRealTimeThreshold   = 12 * time.Hour     // Switch to real-time polling this far before ranked war start
 
 	// Tuesday matchmaking configuration
 	MatchmakingHour   = 12 // Matchmaking occurs at 12:05 UTC
@@ -95,11 +95,11 @@ const (
 // WarStateManager manages war states and determines optimal check intervals based on
 // war lifecycle, Tuesday matchmaking schedules, and state transition logic.
 type WarStateManager struct {
-	currentState    WarState
-	lastStateChange time.Time
-	currentWar          *app.War
-	currentWarIsRanked  bool
-	stateConfigs        map[WarState]WarStateConfig
+	currentState       WarState
+	lastStateChange    time.Time
+	currentWar         *app.War
+	currentWarIsRanked bool
+	stateConfigs       map[WarState]WarStateConfig
 }
 
 // NewWarStateManager creates a new war state manager
