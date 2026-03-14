@@ -153,7 +153,6 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	// Process wars for PreWar and ActiveWar states (NoWars and PostWar are handled above)
 	if currentState == war.PreWar || currentState == war.ActiveWar {
 		// Process wars using existing logic but with optimized client
-		owp.processor.ourFactionID = 0 // Reset to ensure faction ID is fetched if needed
 		err = owp.processor.ProcessActiveWars(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to process wars: %w", err)

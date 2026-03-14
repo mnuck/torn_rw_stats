@@ -66,7 +66,9 @@ func (d *SSHDeployer) parseDeployURL() (user, host, remotePath string, err error
 // If already connected, disconnects first to ensure a fresh connection.
 func (d *SSHDeployer) Connect() error {
 	if d.connected {
-		d.Disconnect()
+		if err := d.Disconnect(); err != nil {
+			log.Warn().Err(err).Msg("Failed to disconnect before reconnecting")
+		}
 	}
 
 	user, host, _, err := d.parseDeployURL()
@@ -131,7 +133,11 @@ func (d *SSHDeployer) DeployData(data io.Reader, size int64, filename string) er
 	if err := d.Connect(); err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer d.Disconnect()
+	defer func() {
+		if err := d.Disconnect(); err != nil {
+			log.Warn().Err(err).Msg("Failed to disconnect SSH after deployment")
+		}
+	}()
 
 	_, _, remotePath, err := d.parseDeployURL()
 	if err != nil {
