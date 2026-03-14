@@ -4,6 +4,8 @@ kind: Deployment
 metadata:
   name: torn-rw-stats
   namespace: default
+  annotations:
+    app.kubernetes.io/source-code: "git@github.com:mnuck/torn_rw_stats.git"
   labels:
     app: torn-rw-stats
 spec:
