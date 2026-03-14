@@ -293,7 +293,7 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		Ints("faction_ids", dashboardFactionIDs).
 		Msg("Processing Status v2 for ranked war factions")
 
-	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, dashboardFactionIDs, owp.config.UpdateInterval); err != nil {
+	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, dashboardFactionIDs, stateInfo.UpdateInterval); err != nil {
 		log.Error().
 			Err(err).
 			Ints("faction_ids", dashboardFactionIDs).
