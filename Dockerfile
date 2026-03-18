@@ -1,5 +1,5 @@
-# Build stage - Use latest 1.25.4 Alpine image
-FROM golang:1.25.7-alpine AS builder
+# Build stage - Use latest 1.25.8 Alpine image
+FROM golang:1.25.8-alpine AS builder
 
 # Docker automatically provides these build args for multi-platform builds
 ARG TARGETOS
