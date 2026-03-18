@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"torn_rw_stats/internal/bigquery"
 	"torn_rw_stats/internal/domain/attack"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/sheets"
@@ -16,5 +17,6 @@ var (
 	_ LocationServiceInterface         = (*travel.LocationService)(nil)
 	_ TravelTimeServiceInterface       = (*travel.TravelTimeService)(nil)
 	_ AttackProcessingServiceInterface = (*attack.AttackProcessingService)(nil)
+	_ BigQueryClientInterface          = (*bigquery.Client)(nil)
 	// WarSummaryServiceInterface compliance check moved to application/services package
 )

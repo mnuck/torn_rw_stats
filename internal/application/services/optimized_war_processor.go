@@ -34,14 +34,15 @@ func NewOptimizedWarProcessor(
 	attackService processing.AttackProcessingServiceInterface,
 	warSummaryService processing.WarSummaryServiceInterface,
 	config *app.Config,
+	bqClient processing.BigQueryClientInterface,
 ) *OptimizedWarProcessor {
 
 	// Create war state management
 	tracker := NewAPICallTracker()
 	stateManager := war.NewWarStateManager()
 
-	// Create state tracking service with raw client
-	stateTracker := NewStateTrackingService(tornClient, sheetsClient)
+	// Create state tracking service with optional BigQuery sink
+	stateTracker := NewStateTrackingServiceWithBigQuery(tornClient, sheetsClient, bqClient)
 
 	// Create Status v2 processor
 	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, config.DeployURL)

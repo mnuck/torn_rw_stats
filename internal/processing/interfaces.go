@@ -71,3 +71,8 @@ type WarStateManagerInterface interface {
 	GetCurrentState() war.WarState
 	GetCurrentWar() *app.War
 }
+
+// BigQueryClientInterface defines the BigQuery client methods used for state record insertion
+type BigQueryClientInterface interface {
+	InsertStateRecords(ctx context.Context, records []app.StateRecord) error
+}

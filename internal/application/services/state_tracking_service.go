@@ -14,21 +14,39 @@ import (
 )
 
 // StateTrackingService handles the complete state tracking workflow, detecting
-// and recording member state changes (status, location, travel) to Google Sheets.
+// and recording member state changes (status, location, travel) to Google Sheets
+// and optionally to BigQuery.
 type StateTrackingService struct {
-	tornClient   processing.TornClientInterface
-	sheetsClient processing.SheetsClientInterface
-	converter    *processing.StateRecordConverter
-	comparator   *processing.StateRecordComparator
+	tornClient     processing.TornClientInterface
+	sheetsClient   processing.SheetsClientInterface
+	bigqueryClient processing.BigQueryClientInterface // nil = disabled
+	converter      *processing.StateRecordConverter
+	comparator     *processing.StateRecordComparator
 }
 
-// NewStateTrackingService creates a new state tracking service
+// NewStateTrackingService creates a new state tracking service without BigQuery.
 func NewStateTrackingService(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface) *StateTrackingService {
 	return &StateTrackingService{
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
 		converter:    processing.NewStateRecordConverter(),
 		comparator:   processing.NewStateRecordComparator(),
+	}
+}
+
+// NewStateTrackingServiceWithBigQuery creates a state tracking service that also
+// streams state changes to BigQuery. bqClient may be nil to disable BigQuery.
+func NewStateTrackingServiceWithBigQuery(
+	tornClient processing.TornClientInterface,
+	sheetsClient processing.SheetsClientInterface,
+	bqClient processing.BigQueryClientInterface,
+) *StateTrackingService {
+	return &StateTrackingService{
+		tornClient:     tornClient,
+		sheetsClient:   sheetsClient,
+		bigqueryClient: bqClient,
+		converter:      processing.NewStateRecordConverter(),
+		comparator:     processing.NewStateRecordComparator(),
 	}
 }
 
@@ -201,7 +219,9 @@ func (s *StateTrackingService) readChangedStatesSheet(ctx context.Context, sprea
 	return records, nil
 }
 
-// addStateRecords adds multiple state records to the Changed States sheet
+// addStateRecords adds multiple state records to the Changed States sheet and,
+// if a BigQuery client is configured, streams them to BigQuery as well.
+// A BigQuery failure is non-fatal: the Sheets write is the primary sink.
 func (s *StateTrackingService) addStateRecords(ctx context.Context, spreadsheetID string, records []app.StateRecord) error {
 	if len(records) == 0 {
 		return nil
@@ -216,7 +236,20 @@ func (s *StateTrackingService) addStateRecords(ctx context.Context, spreadsheetI
 	}
 
 	rangeSpec := fmt.Sprintf("%s!A:J", sheetName)
-	return s.sheetsClient.AppendRows(ctx, spreadsheetID, rangeSpec, rows)
+	if err := s.sheetsClient.AppendRows(ctx, spreadsheetID, rangeSpec, rows); err != nil {
+		return err
+	}
+
+	if s.bigqueryClient != nil {
+		if err := s.bigqueryClient.InsertStateRecords(ctx, records); err != nil {
+			log.Error().
+				Err(err).
+				Int("record_count", len(records)).
+				Msg("Failed to insert state records into BigQuery — Sheets write succeeded, continuing")
+		}
+	}
+
+	return nil
 }
 
 // convertStateRecordToRow converts a StateRecord into spreadsheet row format
