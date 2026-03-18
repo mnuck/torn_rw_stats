@@ -26,7 +26,7 @@ type Client struct {
 
 // NewClient creates a new Google Sheets client with the provided credentials
 func NewClient(ctx context.Context, credentialsFile string) (*Client, error) {
-	service, err := sheets.NewService(ctx, option.WithCredentialsFile(credentialsFile))
+	service, err := sheets.NewService(ctx, option.WithCredentialsFile(credentialsFile)) //nolint:staticcheck
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sheets service: %w", err)
 	}

@@ -10,6 +10,8 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/application/services"
+	bqclient "torn_rw_stats/internal/bigquery"
+	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
 
@@ -63,8 +65,26 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create sheets client")
 	}
 
+	// Optionally initialize BigQuery client (disabled if BIGQUERY_PROJECT_ID is unset)
+	var bqClient processing.BigQueryClientInterface
+	if config.BigQueryProjectID != "" {
+		var bqErr error
+		bqClient, bqErr = bqclient.NewClient(ctx, config.CredentialsFile,
+			config.BigQueryProjectID, config.BigQueryDatasetID, config.BigQueryTableID)
+		if bqErr != nil {
+			log.Error().Err(bqErr).Msg("Failed to create BigQuery client — BigQuery integration disabled")
+			bqClient = nil
+		} else {
+			log.Info().
+				Str("project", config.BigQueryProjectID).
+				Str("dataset", config.BigQueryDatasetID).
+				Str("table", config.BigQueryTableID).
+				Msg("BigQuery client initialized")
+		}
+	}
+
 	// Initialize optimized war processor with state-based optimization
-	warProcessor := services.NewOptimizedProcessor(tornClient, sheetsClient, config)
+	warProcessor := services.NewOptimizedProcessor(tornClient, sheetsClient, config, bqClient)
 
 	// Define the main processing function that returns next check time
 	processWars := func() time.Duration {

@@ -18,6 +18,11 @@ type Config struct {
 	CredentialsFile string
 	UpdateInterval  time.Duration
 	DeployURL       string
+
+	// BigQuery integration (all optional; empty ProjectID disables BigQuery)
+	BigQueryProjectID string
+	BigQueryDatasetID string
+	BigQueryTableID   string
 }
 
 // SetupEnvironment loads .env file and configures zerolog output and log level.
@@ -88,11 +93,21 @@ func LoadConfig() (*Config, error) {
 
 	deployURL := os.Getenv("DEPLOY_URL")
 
+	bigQueryProjectID := os.Getenv("BIGQUERY_PROJECT_ID")
+	bigQueryDatasetID := os.Getenv("BIGQUERY_DATASET_ID")
+	bigQueryTableID := os.Getenv("BIGQUERY_TABLE_ID")
+	if bigQueryTableID == "" {
+		bigQueryTableID = "state_changes"
+	}
+
 	return &Config{
-		TornAPIKey:      apiKey,
-		SpreadsheetID:   spreadsheetID,
-		CredentialsFile: credentialsFile,
-		DeployURL:       deployURL,
+		TornAPIKey:        apiKey,
+		SpreadsheetID:     spreadsheetID,
+		CredentialsFile:   credentialsFile,
+		DeployURL:         deployURL,
+		BigQueryProjectID: bigQueryProjectID,
+		BigQueryDatasetID: bigQueryDatasetID,
+		BigQueryTableID:   bigQueryTableID,
 	}, nil
 }
 

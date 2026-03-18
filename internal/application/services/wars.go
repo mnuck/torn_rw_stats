@@ -50,9 +50,10 @@ func NewWarProcessor(
 	}
 }
 
-// NewOptimizedProcessor creates an OptimizedWarProcessor with concrete implementations
-// This is the recommended constructor for production use with state-based optimization
-func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config) *OptimizedWarProcessor {
+// NewOptimizedProcessor creates an OptimizedWarProcessor with concrete implementations.
+// This is the recommended constructor for production use with state-based optimization.
+// bqClient may be nil to disable BigQuery integration.
+func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config, bqClient processing.BigQueryClientInterface) *OptimizedWarProcessor {
 	// Create the attack processing service
 	attackService := attack.NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
@@ -65,6 +66,7 @@ func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client,
 		attackService,
 		summaryService,
 		config,
+		bqClient,
 	)
 }
 
