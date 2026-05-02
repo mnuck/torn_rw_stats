@@ -73,15 +73,31 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 		return fmt.Errorf("failed to ensure Changed States sheet: %w", err)
 	}
 
-	// Step 3: Read existing records from Changed States sheet
-	allPreviousStates, err := s.readChangedStatesSheet(ctx, spreadsheetID)
-	if err != nil {
-		return fmt.Errorf("failed to read Changed States sheet: %w", err)
+	// Step 3: Read previous states — prefer BigQuery (one row per member) over full sheet scan
+	var allPreviousStates []app.StateRecord
+	if s.bigqueryClient != nil {
+		memberIDs := make([]string, 0, len(currentStateRecords))
+		for _, r := range currentStateRecords {
+			memberIDs = append(memberIDs, r.MemberID)
+		}
+		allPreviousStates, err = s.bigqueryClient.QueryLatestStatePerMember(ctx, memberIDs)
+		if err != nil {
+			log.Warn().Err(err).Msg("BigQuery previous-state query failed, falling back to sheet read")
+			allPreviousStates, err = s.readChangedStatesSheet(ctx, spreadsheetID)
+			if err != nil {
+				return fmt.Errorf("failed to read Changed States sheet: %w", err)
+			}
+		}
+	} else {
+		allPreviousStates, err = s.readChangedStatesSheet(ctx, spreadsheetID)
+		if err != nil {
+			return fmt.Errorf("failed to read Changed States sheet: %w", err)
+		}
 	}
 
 	log.Debug().
 		Int("previous_records", len(allPreviousStates)).
-		Msg("Read previous state records from sheet")
+		Msg("Read previous state records")
 
 	// Step 4: Create previous state collection for comparison
 	previousStateRecords := s.comparator.CreatePreviousStateCollection(currentStateRecords, allPreviousStates)
