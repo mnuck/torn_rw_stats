@@ -96,12 +96,13 @@ func TestStateTrackingService_BigQueryNotCalledWhenNoChanges(t *testing.T) {
 
 	sheetsMock := mocks.NewMockSheetsClient()
 	sheetsMock.SheetExistsResponse = true
-	// Return a previous record for the same member with the same state → no change
-	sheetsMock.ReadSheetResponse = [][]interface{}{
-		{"2026-01-01 00:00:00", "42", "Player1", "100", "TestFaction", "Online", "Okay", "okay", "", ""},
-	}
 
 	bqMock := mocks.NewMockBigQueryClient()
+	// Return a previous record for the same member with the same state → no change
+	bqMock.QueryLatestStatePerMemberResponse = []app.StateRecord{
+		{MemberID: "42", MemberName: "Player1", FactionID: "100", FactionName: "TestFaction",
+			LastActionStatus: "Online", StatusDescription: "Okay", StatusState: "okay"},
+	}
 
 	svc := NewStateTrackingServiceWithBigQuery(tornMock, sheetsMock, bqMock)
 	if err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{100}); err != nil {

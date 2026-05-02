@@ -7,14 +7,17 @@ import (
 
 	bq "cloud.google.com/go/bigquery"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 
 	"torn_rw_stats/internal/app"
 )
 
-// Client wraps the BigQuery streaming insert API for state record insertion.
+// Client wraps the BigQuery streaming insert and query APIs for state records.
 type Client struct {
+	bqClient  *bq.Client
 	inserter  *bq.Inserter
+	projectID string
 	datasetID string
 	tableID   string
 }
@@ -29,7 +32,9 @@ func NewClient(ctx context.Context, credentialsFile, projectID, datasetID, table
 	inserter := bqClient.Dataset(datasetID).Table(tableID).Inserter()
 
 	return &Client{
+		bqClient:  bqClient,
 		inserter:  inserter,
+		projectID: projectID,
 		datasetID: datasetID,
 		tableID:   tableID,
 	}, nil
@@ -59,6 +64,85 @@ func (r *stateRecordRow) Save() (map[string]bq.Value, string, error) {
 	}
 	// Empty InsertID: BigQuery assigns its own dedup ID (at-least-once semantics).
 	return row, "", nil
+}
+
+// QueryLatestStatePerMember returns the most recent StateRecord for each of the
+// given member IDs. Members with no history are omitted from the result.
+func (c *Client) QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]app.StateRecord, error) {
+	if len(memberIDs) == 0 {
+		return nil, nil
+	}
+
+	sql := fmt.Sprintf(`
+SELECT member_id, member_name, faction_id, faction_name,
+       last_action_status, status_description, status_state,
+       status_until, status_travel_type, timestamp
+FROM (
+  SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY timestamp DESC) AS rn
+  FROM %s.%s.%s
+  WHERE member_id IN UNNEST(@member_ids)
+)
+WHERE rn = 1`,
+		c.projectID, c.datasetID, c.tableID)
+
+	q := c.bqClient.Query(sql)
+	q.Parameters = []bq.QueryParameter{
+		{Name: "member_ids", Value: memberIDs},
+	}
+
+	start := time.Now()
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("bigquery query failed: %w", err)
+	}
+
+	var records []app.StateRecord
+	for {
+		var row struct {
+			MemberID          string           `bigquery:"member_id"`
+			MemberName        string           `bigquery:"member_name"`
+			FactionID         string           `bigquery:"faction_id"`
+			FactionName       string           `bigquery:"faction_name"`
+			LastActionStatus  string           `bigquery:"last_action_status"`
+			StatusDescription string           `bigquery:"status_description"`
+			StatusState       string           `bigquery:"status_state"`
+			StatusUntil       bq.NullTimestamp `bigquery:"status_until"`
+			StatusTravelType  string           `bigquery:"status_travel_type"`
+			Timestamp         time.Time        `bigquery:"timestamp"`
+		}
+		err := it.Next(&row)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("bigquery row iteration failed: %w", err)
+		}
+
+		r := app.StateRecord{
+			Timestamp:         row.Timestamp.UTC(),
+			MemberID:          row.MemberID,
+			MemberName:        row.MemberName,
+			FactionID:         row.FactionID,
+			FactionName:       row.FactionName,
+			LastActionStatus:  row.LastActionStatus,
+			StatusDescription: row.StatusDescription,
+			StatusState:       row.StatusState,
+			StatusTravelType:  row.StatusTravelType,
+		}
+		if row.StatusUntil.Valid {
+			r.StatusUntil = row.StatusUntil.Timestamp.UTC()
+		}
+		records = append(records, r)
+	}
+
+	log.Debug().
+		Int("members_queried", len(memberIDs)).
+		Int("records_returned", len(records)).
+		Dur("duration", time.Since(start)).
+		Msg("BigQuery latest-state-per-member query complete")
+
+	return records, nil
 }
 
 // InsertStateRecords streams the provided records into BigQuery.
