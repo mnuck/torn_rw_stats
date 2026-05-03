@@ -253,4 +253,4 @@ When making changes and preparing for release, follow this standardized process:
 
 ## Known Issues / Future Work
 
-- **Evaluate memory usage after BigQuery migration** — The "Changed States" sheet had ~154k rows and was previously read entirely into memory on every run. PR #67 added BigQuery as a dual-write sink, and a follow-up change replaced the full sheet scan with a targeted BQ query (one row per member). Memory usage should be significantly lower now, but this has not been measured in production. Profile the running service to confirm the improvement.
+No open items.
