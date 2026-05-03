@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: torn-rw-stats
-          image: ghcr.io/mnuck/torn_rw_stats:sha-e7c3291
+          image: ghcr.io/mnuck/torn_rw_stats:sha-64ffa87
           imagePullPolicy: IfNotPresent
 
           # Resource limits based on Go application profile
