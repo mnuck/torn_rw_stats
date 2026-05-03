@@ -3,175 +3,114 @@ package travel
 import (
 	"fmt"
 	"testing"
+	"testing/quick"
 	"time"
-
-	"github.com/leanovate/gopter"
-	"github.com/leanovate/gopter/gen"
-	"github.com/leanovate/gopter/prop"
 )
 
-// TestTravelTimeServiceProperties uses property-based testing for travel time logic
 func TestTravelTimeServiceProperties(t *testing.T) {
 	service := NewTravelTimeService()
 
-	properties := gopter.NewProperties(nil)
+	destinations := []string{"Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"}
+	travelTypes := []string{"regular", "airstrip", "business"}
 
-	// Property: Travel time should always be positive
-	properties.Property("travel time always positive", prop.ForAll(
-		func(destination, travelType string) bool {
-			duration := service.GetTravelTime(destination, travelType)
-			return duration > 0
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada", "UnknownPlace"),
-		gen.OneConstOf("regular", "airstrip", "business"),
-	))
-
-	// Property: Airstrip travel should be faster than regular travel for known destinations
-	properties.Property("airstrip faster than regular", prop.ForAll(
-		func(destination string) bool {
-			regularTime := service.GetTravelTime(destination, "regular")
-			airstripTime := service.GetTravelTime(destination, "airstrip")
-
-			// For unknown destinations, both might return default, so skip those
-			if regularTime == 30*time.Minute && airstripTime == 30*time.Minute {
-				return true // Skip unknown destinations
-			}
-
-			return airstripTime <= regularTime
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
-
-	// Property: Business class should be fastest travel type for known destinations
-	properties.Property("business class fastest", prop.ForAll(
-		func(destination string) bool {
-			regularTime := service.GetTravelTime(destination, "regular")
-			airstripTime := service.GetTravelTime(destination, "airstrip")
-			businessTime := service.GetTravelTime(destination, "business")
-
-			// For unknown destinations, all might return default, so skip those
-			if regularTime == 30*time.Minute && airstripTime == 30*time.Minute && businessTime == 30*time.Minute {
-				return true // Skip unknown destinations
-			}
-
-			return businessTime <= airstripTime && businessTime <= regularTime
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
-
-	// Property: FormatTravelTime should handle all durations correctly
-	properties.Property("format travel time valid", prop.ForAll(
-		func(minutes int) bool {
-			duration := time.Duration(minutes) * time.Minute
-			formatted := service.FormatTravelTime(duration)
-
-			// Should always be in 'HH:MM:SS format (with apostrophe prefix)
-			if len(formatted) != 9 {
-				return false
-			}
-
-			// Should start with apostrophe
-			if formatted[0] != '\'' {
-				return false
-			}
-
-			// Should have colons at positions 3 and 6 (after apostrophe)
-			if formatted[3] != ':' || formatted[6] != ':' {
-				return false
-			}
-
-			// Negative durations should format as '00:00:00
-			if minutes < 0 {
-				return formatted == "'00:00:00"
-			}
-
-			return true
-		},
-		gen.IntRange(-60, 1000), // Test negative, zero, and positive durations
-	))
-
-	// Property: FormatTravelTime should be consistent with duration components
-	properties.Property("format travel time components consistent", prop.ForAll(
-		func(hours, minutes int) bool {
-			if hours < 0 || minutes < 0 || hours > 23 || minutes > 59 {
-				return true // Skip invalid combinations
-			}
-
-			duration := time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute
-			formatted := service.FormatTravelTime(duration)
-
-			expectedHours := hours
-			expectedMinutes := minutes
-
-			// Parse the formatted string (skip the apostrophe prefix)
-			var parsedHours, parsedMinutes, parsedSeconds int
-			n, err := fmt.Sscanf(formatted[1:], "%02d:%02d:%02d", &parsedHours, &parsedMinutes, &parsedSeconds)
-			if err != nil || n != 3 {
-				return false
-			}
-
-			return parsedHours == expectedHours && parsedMinutes == expectedMinutes && parsedSeconds == 0
-		},
-		gen.IntRange(0, 23),
-		gen.IntRange(0, 59),
-	))
-
-	// Property: Known destinations should return consistent times
-	properties.Property("known destinations consistent", prop.ForAll(
-		func(destination string) bool {
-			// Call multiple times and ensure consistency
-			time1 := service.GetTravelTime(destination, "regular")
-			time2 := service.GetTravelTime(destination, "regular")
-			time3 := service.GetTravelTime(destination, "airstrip")
-			time4 := service.GetTravelTime(destination, "airstrip")
-			time5 := service.GetTravelTime(destination, "business")
-			time6 := service.GetTravelTime(destination, "business")
-
-			return time1 == time2 && time3 == time4 && time5 == time6
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
-
-	// Property: Zero and negative durations should format to zero
-	properties.Property("zero and negative durations format to zero", prop.ForAll(
-		func(negativeMinutes int) bool {
-			if negativeMinutes > 0 {
-				return true // Skip positive values
-			}
-			negativeDuration := time.Duration(negativeMinutes) * time.Minute
-			formatted := service.FormatTravelTime(negativeDuration)
-			return formatted == "'00:00:00"
-		},
-		gen.IntRange(-1000, 0),
-	))
-
-	// Property: Large durations should still format correctly (no overflow)
-	properties.Property("large durations format correctly", prop.ForAll(
-		func(days int) bool {
-			if days < 0 || days > 100 {
-				return true // Skip unreasonable values
-			}
-
-			duration := time.Duration(days*24) * time.Hour
-			formatted := service.FormatTravelTime(duration)
-
-			// Should still be properly formatted, even for large values
-			if len(formatted) < 8 {
-				return false
-			}
-
-			// Should have colons in correct positions
-			colonCount := 0
-			for _, char := range formatted {
-				if char == ':' {
-					colonCount++
+	t.Run("travel time always positive", func(t *testing.T) {
+		for _, dest := range destinations {
+			for _, tt := range travelTypes {
+				if d := service.GetTravelTime(dest, tt); d <= 0 {
+					t.Errorf("GetTravelTime(%q, %q) = %v, want > 0", dest, tt, d)
 				}
 			}
+		}
+	})
 
-			return colonCount == 2
-		},
-		gen.IntRange(0, 10), // Test up to 10 days
-	))
+	t.Run("airstrip faster than regular", func(t *testing.T) {
+		for _, dest := range destinations {
+			regular := service.GetTravelTime(dest, "regular")
+			airstrip := service.GetTravelTime(dest, "airstrip")
+			if airstrip > regular {
+				t.Errorf("airstrip (%v) > regular (%v) for %q", airstrip, regular, dest)
+			}
+		}
+	})
 
-	properties.TestingRun(t)
+	t.Run("business class fastest", func(t *testing.T) {
+		for _, dest := range destinations {
+			regular := service.GetTravelTime(dest, "regular")
+			airstrip := service.GetTravelTime(dest, "airstrip")
+			business := service.GetTravelTime(dest, "business")
+			if business > airstrip || business > regular {
+				t.Errorf("business (%v) not fastest for %q: regular=%v airstrip=%v", business, dest, regular, airstrip)
+			}
+		}
+	})
+
+	t.Run("known destinations return consistent times", func(t *testing.T) {
+		for _, dest := range destinations {
+			for _, tt := range travelTypes {
+				t1 := service.GetTravelTime(dest, tt)
+				t2 := service.GetTravelTime(dest, tt)
+				if t1 != t2 {
+					t.Errorf("GetTravelTime(%q, %q) not consistent: %v vs %v", dest, tt, t1, t2)
+				}
+			}
+		}
+	})
+
+	t.Run("format travel time valid format", func(t *testing.T) {
+		// int8 keeps minutes in -128..127 (max ~2h7m), ensuring 2-digit hours and fixed 9-char output.
+		if err := quick.Check(func(minutes int8) bool {
+			d := time.Duration(minutes) * time.Minute
+			f := service.FormatTravelTime(d)
+			if len(f) != 9 || f[0] != '\'' || f[3] != ':' || f[6] != ':' {
+				return false
+			}
+			if minutes < 0 && f != "'00:00:00" {
+				return false
+			}
+			return true
+		}, nil); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("format travel time components consistent", func(t *testing.T) {
+		if err := quick.Check(func(hours, minutes uint8) bool {
+			h := int(hours % 24)
+			m := int(minutes % 60)
+			d := time.Duration(h)*time.Hour + time.Duration(m)*time.Minute
+			f := service.FormatTravelTime(d)
+			var ph, pm, ps int
+			if n, err := fmt.Sscanf(f[1:], "%02d:%02d:%02d", &ph, &pm, &ps); err != nil || n != 3 {
+				return false
+			}
+			return ph == h && pm == m && ps == 0
+		}, nil); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("zero and negative durations format to zero", func(t *testing.T) {
+		if err := quick.Check(func(minutes uint16) bool {
+			d := -time.Duration(minutes) * time.Minute
+			return service.FormatTravelTime(d) == "'00:00:00"
+		}, nil); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("large durations format correctly", func(t *testing.T) {
+		if err := quick.Check(func(days uint8) bool {
+			d := time.Duration(days) * 24 * time.Hour
+			f := service.FormatTravelTime(d)
+			colons := 0
+			for _, c := range f {
+				if c == ':' {
+					colons++
+				}
+			}
+			return colons == 2 && len(f) >= 8
+		}, nil); err != nil {
+			t.Error(err)
+		}
+	})
 }

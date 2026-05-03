@@ -3,195 +3,143 @@ package travel
 import (
 	"strings"
 	"testing"
-
-	"github.com/leanovate/gopter"
-	"github.com/leanovate/gopter/gen"
-	"github.com/leanovate/gopter/prop"
+	"testing/quick"
 )
 
-// TestLocationServiceProperties uses property-based testing for location parsing logic
 func TestLocationServiceProperties(t *testing.T) {
 	service := NewLocationService()
 
-	properties := gopter.NewProperties(nil)
+	destinations := []string{"Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"}
+	hospitalPairs := [][2]string{
+		{"British", "United Kingdom"},
+		{"Mexican", "Mexico"},
+		{"Swiss", "Switzerland"},
+	}
 
-	// Property: ParseLocation should be idempotent
-	properties.Property("parse location idempotent", prop.ForAll(
-		func(description string) bool {
-			location1 := service.ParseLocation(description)
-			location2 := service.ParseLocation(location1)
-			return location1 == location2
-		},
-		gen.AlphaString(),
-	))
+	t.Run("parse location idempotent", func(t *testing.T) {
+		if err := quick.Check(func(description string) bool {
+			loc1 := service.ParseLocation(description)
+			loc2 := service.ParseLocation(loc1)
+			return loc1 == loc2
+		}, nil); err != nil {
+			t.Error(err)
+		}
+	})
 
-	// Property: "Okay" status should always return "Torn"
-	properties.Property("okay status returns torn", prop.ForAll(
-		func() bool {
-			location := service.ParseLocation("Okay")
-			return location == "Torn"
-		},
-	))
+	t.Run("okay status returns torn", func(t *testing.T) {
+		if got := service.ParseLocation("Okay"); got != "Torn" {
+			t.Errorf("ParseLocation(%q) = %q, want %q", "Okay", got, "Torn")
+		}
+	})
 
-	// Property: Traveling patterns should extract destination correctly
-	properties.Property("traveling patterns extract destination", prop.ForAll(
-		func(destination string) bool {
+	t.Run("empty description returns empty", func(t *testing.T) {
+		if got := service.ParseLocation(""); got != "" {
+			t.Errorf("ParseLocation(%q) = %q, want empty", "", got)
+		}
+	})
+
+	t.Run("traveling patterns extract destination", func(t *testing.T) {
+		for _, dest := range destinations {
 			patterns := []string{
-				"Traveling to " + destination,
-				"TRAVELING TO " + strings.ToUpper(destination),
-				"traveling to " + strings.ToLower(destination),
+				"Traveling to " + dest,
+				"TRAVELING TO " + strings.ToUpper(dest),
+				"traveling to " + strings.ToLower(dest),
 			}
-
-			for _, pattern := range patterns {
-				location := service.ParseLocation(pattern)
-				if location != destination {
-					return false
+			for _, p := range patterns {
+				if got := service.ParseLocation(p); got != dest {
+					t.Errorf("ParseLocation(%q) = %q, want %q", p, got, dest)
 				}
 			}
-			return true
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
+		}
+	})
 
-	// Property: "In [Location]" patterns should extract location correctly
-	properties.Property("in location patterns extract location", prop.ForAll(
-		func(location string) bool {
+	t.Run("in location patterns extract location", func(t *testing.T) {
+		for _, dest := range destinations {
 			patterns := []string{
-				"In " + location,
-				"IN " + strings.ToUpper(location),
-				"in " + strings.ToLower(location),
+				"In " + dest,
+				"IN " + strings.ToUpper(dest),
+				"in " + strings.ToLower(dest),
 			}
-
-			for _, pattern := range patterns {
-				result := service.ParseLocation(pattern)
-				if result != location {
-					return false
+			for _, p := range patterns {
+				if got := service.ParseLocation(p); got != dest {
+					t.Errorf("ParseLocation(%q) = %q, want %q", p, got, dest)
 				}
 			}
-			return true
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
+		}
+	})
 
-	// Property: Return travel should always return "Torn"
-	properties.Property("return travel returns torn", prop.ForAll(
-		func(origin string) bool {
+	t.Run("return travel returns torn", func(t *testing.T) {
+		for _, origin := range destinations {
 			patterns := []string{
 				"Returning to Torn from " + origin,
 				"RETURNING TO TORN FROM " + strings.ToUpper(origin),
 				"returning to torn from " + strings.ToLower(origin),
 			}
-
-			for _, pattern := range patterns {
-				location := service.ParseLocation(pattern)
-				if location != "Torn" {
-					return false
+			for _, p := range patterns {
+				if got := service.ParseLocation(p); got != "Torn" {
+					t.Errorf("ParseLocation(%q) = %q, want %q", p, got, "Torn")
 				}
 			}
-			return true
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
+		}
+	})
 
-	// Property: Hospital patterns should map to correct countries
-	properties.Property("hospital patterns map to countries", prop.ForAll(
-		func(pair [2]string) bool {
-			adjective := pair[0]
-			expectedCountry := pair[1]
+	t.Run("hospital patterns map to countries", func(t *testing.T) {
+		for _, pair := range hospitalPairs {
+			adjective, country := pair[0], pair[1]
 			patterns := []string{
 				"In a " + adjective + " hospital for 30mins",
 				"IN A " + strings.ToUpper(adjective) + " HOSPITAL FOR 2HRS",
 				"in a " + strings.ToLower(adjective) + " hospital for 45mins",
 			}
-
-			for _, pattern := range patterns {
-				location := service.ParseLocation(pattern)
-				if location != expectedCountry {
-					return false
+			for _, p := range patterns {
+				if got := service.ParseLocation(p); got != country {
+					t.Errorf("ParseLocation(%q) = %q, want %q", p, got, country)
 				}
 			}
-			return true
-		},
-		gen.OneConstOf(
-			[2]string{"British", "United Kingdom"},
-			[2]string{"Mexican", "Mexico"},
-			[2]string{"Swiss", "Switzerland"},
-		),
-	))
+		}
+	})
 
-	// Property: Descriptions containing "torn" should return "Torn"
-	properties.Property("descriptions with torn return torn", prop.ForAll(
-		func(prefix, suffix string) bool {
-			// Create descriptions that contain "torn" (case insensitive)
-			patterns := []string{
-				prefix + "torn" + suffix,
-				prefix + "Torn" + suffix,
-				prefix + "TORN" + suffix,
-			}
-
-			for _, pattern := range patterns {
-				location := service.ParseLocation(pattern)
-				if location != "Torn" {
-					return false
+	t.Run("descriptions containing torn return torn", func(t *testing.T) {
+		prefixes := []string{"In ", "At ", "Chilling in ", ""}
+		suffixes := []string{" city", " location", ""}
+		for _, prefix := range prefixes {
+			for _, suffix := range suffixes {
+				for _, variant := range []string{"torn", "Torn", "TORN"} {
+					p := prefix + variant + suffix
+					if got := service.ParseLocation(p); got != "Torn" {
+						t.Errorf("ParseLocation(%q) = %q, want %q", p, got, "Torn")
+					}
 				}
 			}
-			return true
-		},
-		gen.OneConstOf("In ", "At ", "Chilling in ", ""),
-		gen.OneConstOf(" city", " location", ""),
-	))
+		}
+	})
 
-	// Property: GetTravelDestinationForCalculation should handle return journeys
-	properties.Property("travel destination calculation for returns", prop.ForAll(
-		func(origin string) bool {
-			description := "Returning to Torn from " + origin
-			parsedLocation := "Torn" // Should be parsed as Torn
-
-			destination := service.GetTravelDestinationForCalculation(description, parsedLocation)
-			return destination == origin
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
-
-	// Property: GetTravelDestinationForCalculation should return parsed location for non-returns
-	properties.Property("travel destination calculation for non-returns", prop.ForAll(
-		func(destination string) bool {
-			description := "Traveling to " + destination
-			parsedLocation := destination
-
-			result := service.GetTravelDestinationForCalculation(description, parsedLocation)
-			return result == destination
-		},
-		gen.OneConstOf("Mexico", "United Kingdom", "Switzerland", "Hawaii", "Canada"),
-	))
-
-	// Property: Empty descriptions should return empty strings
-	properties.Property("empty descriptions return empty", prop.ForAll(
-		func() bool {
-			location := service.ParseLocation("")
-			return location == ""
-		},
-	))
-
-	// Property: Unknown descriptions should return themselves
-	properties.Property("unknown descriptions return themselves", prop.ForAll(
-		func(description string) bool {
-			// Only test strings that don't match known patterns
-			lowerDesc := strings.ToLower(description)
-			if strings.Contains(lowerDesc, "traveling") ||
-				strings.Contains(lowerDesc, "hospital") ||
-				strings.Contains(lowerDesc, "torn") ||
-				strings.Contains(lowerDesc, "okay") ||
-				strings.HasPrefix(lowerDesc, "in ") ||
-				strings.Contains(lowerDesc, "returning") {
-				return true // Skip known patterns
+	t.Run("unknown descriptions return themselves", func(t *testing.T) {
+		unknowns := []string{"At the beach", "Doing crimes", "Random activity", "Custom status"}
+		for _, desc := range unknowns {
+			if got := service.ParseLocation(desc); got != desc {
+				t.Errorf("ParseLocation(%q) = %q, want %q", desc, got, desc)
 			}
+		}
+	})
 
-			location := service.ParseLocation(description)
-			return location == description
-		},
-		gen.OneConstOf("At the beach", "Doing crimes", "Random activity", "Custom status"),
-	))
+	t.Run("travel destination calculation for returns", func(t *testing.T) {
+		for _, origin := range destinations {
+			desc := "Returning to Torn from " + origin
+			got := service.GetTravelDestinationForCalculation(desc, "Torn")
+			if got != origin {
+				t.Errorf("GetTravelDestinationForCalculation(%q, %q) = %q, want %q", desc, "Torn", got, origin)
+			}
+		}
+	})
 
-	properties.TestingRun(t)
+	t.Run("travel destination calculation for non-returns", func(t *testing.T) {
+		for _, dest := range destinations {
+			desc := "Traveling to " + dest
+			got := service.GetTravelDestinationForCalculation(desc, dest)
+			if got != dest {
+				t.Errorf("GetTravelDestinationForCalculation(%q, %q) = %q, want %q", desc, dest, got, dest)
+			}
+		}
+	})
 }
