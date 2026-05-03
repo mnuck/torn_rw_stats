@@ -35,7 +35,6 @@ spec:
               cpu: "100m"
             limits:
               memory: "64Mi"
-              cpu: "200m"
 
           # Environment variables from ConfigMap
           envFrom:
