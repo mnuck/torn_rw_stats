@@ -40,6 +40,9 @@ logs/
 ehthumbs.db
 Thumbs.db
 
+# Claude Code local state
+.claude/
+
 # Temporary files
 tmp/
 temp/

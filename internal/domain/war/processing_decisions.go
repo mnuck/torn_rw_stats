@@ -1,9 +1,5 @@
 package war
 
-import (
-	"torn_rw_stats/internal/app"
-)
-
 // AttackFetchDecision describes how to fetch attacks for a war
 type AttackFetchDecision struct {
 	UseFullMode     bool
@@ -39,22 +35,4 @@ func DetermineAttackFetchMode(existingRecordCount int, latestTimestamp int64) At
 		RecordCount:     existingRecordCount,
 		LatestTimestamp: latestTimestamp,
 	}
-}
-
-// DetermineOurFactionID identifies which faction in the war is ours
-// Returns 0 if our faction is not found in the war
-func DetermineOurFactionID(war *app.War, knownFactionID int) int {
-	for factionID := range war.Factions {
-		if factionID == knownFactionID {
-			return knownFactionID
-		}
-	}
-	return 0
-}
-
-// ShouldProcessMember determines if a member should be included in processing
-// based on faction membership
-func ShouldProcessMember(memberID string, factionMembers map[string]app.FactionMember) bool {
-	_, exists := factionMembers[memberID]
-	return exists
 }
