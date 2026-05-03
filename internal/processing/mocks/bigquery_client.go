@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"torn_rw_stats/internal/app"
 )
@@ -9,17 +10,25 @@ import (
 // MockBigQueryClient is a test double for bigquery.Client
 type MockBigQueryClient struct {
 	// Errors to return
-	InsertStateRecordsError        error
-	QueryLatestStatePerMemberError error
+	InsertStateRecordsError         error
+	QueryLatestStatePerMemberError  error
+	QueryLatestStatePerFactionError error
+	QueryDepartureTimesError        error
 
 	// Responses to return
-	QueryLatestStatePerMemberResponse []app.StateRecord
+	QueryLatestStatePerMemberResponse  []app.StateRecord
+	QueryLatestStatePerFactionResponse []app.StateRecord
+	QueryDepartureTimesResponse        map[string]time.Time
 
 	// Call tracking
-	InsertStateRecordsCalled            bool
-	InsertStateRecordsCalledWith        []app.StateRecord
-	QueryLatestStatePerMemberCalled     bool
-	QueryLatestStatePerMemberCalledWith []string
+	InsertStateRecordsCalled             bool
+	InsertStateRecordsCalledWith         []app.StateRecord
+	QueryLatestStatePerMemberCalled      bool
+	QueryLatestStatePerMemberCalledWith  []string
+	QueryLatestStatePerFactionCalled     bool
+	QueryLatestStatePerFactionCalledWith string
+	QueryDepartureTimesCalled            bool
+	QueryDepartureTimesCalledWith        []string
 }
 
 // NewMockBigQueryClient creates a new mock BigQuery client
@@ -39,6 +48,18 @@ func (m *MockBigQueryClient) QueryLatestStatePerMember(_ context.Context, member
 	return m.QueryLatestStatePerMemberResponse, m.QueryLatestStatePerMemberError
 }
 
+func (m *MockBigQueryClient) QueryLatestStatePerFaction(_ context.Context, factionID string) ([]app.StateRecord, error) {
+	m.QueryLatestStatePerFactionCalled = true
+	m.QueryLatestStatePerFactionCalledWith = factionID
+	return m.QueryLatestStatePerFactionResponse, m.QueryLatestStatePerFactionError
+}
+
+func (m *MockBigQueryClient) QueryDepartureTimes(_ context.Context, memberIDs []string) (map[string]time.Time, error) {
+	m.QueryDepartureTimesCalled = true
+	m.QueryDepartureTimesCalledWith = memberIDs
+	return m.QueryDepartureTimesResponse, m.QueryDepartureTimesError
+}
+
 // Reset clears all call tracking and errors
 func (m *MockBigQueryClient) Reset() {
 	m.InsertStateRecordsError = nil
@@ -48,4 +69,12 @@ func (m *MockBigQueryClient) Reset() {
 	m.QueryLatestStatePerMemberResponse = nil
 	m.QueryLatestStatePerMemberCalled = false
 	m.QueryLatestStatePerMemberCalledWith = nil
+	m.QueryLatestStatePerFactionError = nil
+	m.QueryLatestStatePerFactionResponse = nil
+	m.QueryLatestStatePerFactionCalled = false
+	m.QueryLatestStatePerFactionCalledWith = ""
+	m.QueryDepartureTimesError = nil
+	m.QueryDepartureTimesResponse = nil
+	m.QueryDepartureTimesCalled = false
+	m.QueryDepartureTimesCalledWith = nil
 }

@@ -145,6 +145,140 @@ WHERE rn = 1`,
 	return records, nil
 }
 
+// QueryLatestStatePerFaction returns the most recent StateRecord for each member
+// of the given faction. Members with no history are omitted from the result.
+func (c *Client) QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]app.StateRecord, error) {
+	sql := fmt.Sprintf(`
+SELECT member_id, member_name, faction_id, faction_name,
+       last_action_status, status_description, status_state,
+       status_until, status_travel_type, timestamp
+FROM (
+  SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY timestamp DESC) AS rn
+  FROM %s.%s.%s
+  WHERE faction_id = @faction_id
+)
+WHERE rn = 1`,
+		c.projectID, c.datasetID, c.tableID)
+
+	q := c.bqClient.Query(sql)
+	q.Parameters = []bq.QueryParameter{
+		{Name: "faction_id", Value: factionID},
+	}
+
+	start := time.Now()
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("bigquery faction query failed: %w", err)
+	}
+
+	var records []app.StateRecord
+	for {
+		var row struct {
+			MemberID          string           `bigquery:"member_id"`
+			MemberName        string           `bigquery:"member_name"`
+			FactionID         string           `bigquery:"faction_id"`
+			FactionName       string           `bigquery:"faction_name"`
+			LastActionStatus  string           `bigquery:"last_action_status"`
+			StatusDescription string           `bigquery:"status_description"`
+			StatusState       string           `bigquery:"status_state"`
+			StatusUntil       bq.NullTimestamp `bigquery:"status_until"`
+			StatusTravelType  string           `bigquery:"status_travel_type"`
+			Timestamp         time.Time        `bigquery:"timestamp"`
+		}
+		err := it.Next(&row)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("bigquery row iteration failed: %w", err)
+		}
+
+		r := app.StateRecord{
+			Timestamp:         row.Timestamp.UTC(),
+			MemberID:          row.MemberID,
+			MemberName:        row.MemberName,
+			FactionID:         row.FactionID,
+			FactionName:       row.FactionName,
+			LastActionStatus:  row.LastActionStatus,
+			StatusDescription: row.StatusDescription,
+			StatusState:       row.StatusState,
+			StatusTravelType:  row.StatusTravelType,
+		}
+		if row.StatusUntil.Valid {
+			r.StatusUntil = row.StatusUntil.Timestamp.UTC()
+		}
+		records = append(records, r)
+	}
+
+	log.Debug().
+		Str("faction_id", factionID).
+		Int("records_returned", len(records)).
+		Dur("duration", time.Since(start)).
+		Msg("BigQuery latest-state-per-faction query complete")
+
+	return records, nil
+}
+
+// QueryDepartureTimes returns the most recent transition-to-traveling timestamp for
+// each of the given member IDs. Members with no traveling history are omitted.
+func (c *Client) QueryDepartureTimes(ctx context.Context, memberIDs []string) (map[string]time.Time, error) {
+	if len(memberIDs) == 0 {
+		return nil, nil
+	}
+
+	sql := fmt.Sprintf(`
+SELECT member_id, timestamp AS departure_time
+FROM (
+  SELECT
+    member_id,
+    timestamp,
+    status_state,
+    LAG(status_state) OVER (PARTITION BY member_id ORDER BY timestamp) AS prev_status_state
+  FROM %s.%s.%s
+  WHERE member_id IN UNNEST(@member_ids)
+)
+WHERE status_state = 'Traveling'
+  AND (prev_status_state IS NULL OR prev_status_state != 'Traveling')
+QUALIFY ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY timestamp DESC) = 1`,
+		c.projectID, c.datasetID, c.tableID)
+
+	q := c.bqClient.Query(sql)
+	q.Parameters = []bq.QueryParameter{
+		{Name: "member_ids", Value: memberIDs},
+	}
+
+	start := time.Now()
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("bigquery departure query failed: %w", err)
+	}
+
+	result := make(map[string]time.Time)
+	for {
+		var row struct {
+			MemberID      string    `bigquery:"member_id"`
+			DepartureTime time.Time `bigquery:"departure_time"`
+		}
+		err := it.Next(&row)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("bigquery row iteration failed: %w", err)
+		}
+		result[row.MemberID] = row.DepartureTime.UTC()
+	}
+
+	log.Debug().
+		Int("members_queried", len(memberIDs)).
+		Int("departures_found", len(result)).
+		Dur("duration", time.Since(start)).
+		Msg("BigQuery departure-times query complete")
+
+	return result, nil
+}
+
 // InsertStateRecords streams the provided records into BigQuery.
 func (c *Client) InsertStateRecords(ctx context.Context, records []app.StateRecord) error {
 	if len(records) == 0 {

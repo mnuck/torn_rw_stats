@@ -25,16 +25,23 @@ type StatusV2Processor struct {
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface, deployURL string) *StatusV2Processor {
+func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface, bqClient processing.BigQueryClientInterface, deployURL string) *StatusV2Processor {
 	var deployer *deployment.SSHDeployer
 	if deployURL != "" {
 		deployer = deployment.NewSSHDeployer(deployURL)
 	}
 
+	var svc *StatusV2Service
+	if bqClient != nil {
+		svc = NewStatusV2ServiceWithBigQuery(sheetsClient, bqClient)
+	} else {
+		svc = NewStatusV2Service(sheetsClient)
+	}
+
 	return &StatusV2Processor{
 		tornClient:   tornClient,
 		sheetsClient: sheetsClient,
-		service:      NewStatusV2Service(sheetsClient),
+		service:      svc,
 		ourFactionID: 0, // will be fetched via API when needed
 		deployer:     deployer,
 	}
@@ -103,8 +110,9 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 		return fmt.Errorf("failed to get faction data: %w", err)
 	}
 
-	// Step 3: Read all state records from Changed States sheet to get current state
-	allStateRecords, err := p.service.ReadAllStateRecords(ctx, spreadsheetID)
+	// Step 3: Get current state records for this faction — prefer BigQuery over full sheet scan
+	factionIDStr := fmt.Sprintf("%d", factionID)
+	currentStateRecords, err := p.service.readCurrentStateRecords(ctx, spreadsheetID, factionIDStr)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -112,14 +120,6 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 			Msg("Failed to read state records")
 		return fmt.Errorf("failed to read state records: %w", err)
 	}
-
-	log.Info().
-		Int("faction_id", factionID).
-		Int("total_state_records", len(allStateRecords)).
-		Msg("Successfully read all state records")
-
-	// Step 4: Find current state records for this faction
-	currentStateRecords := p.filterStateRecordsForFaction(allStateRecords, factionID)
 
 	log.Info().
 		Int("faction_id", factionID).
@@ -185,69 +185,6 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 	}
 
 	return nil
-}
-
-// filterStateRecordsForFaction filters state records to only include current records for the specified faction
-func (p *StatusV2Processor) filterStateRecordsForFaction(allStateRecords []app.StateRecord, factionID int) []app.StateRecord {
-	factionIDStr := fmt.Sprintf("%d", factionID)
-
-	log.Debug().
-		Int("faction_id", factionID).
-		Str("faction_id_str", factionIDStr).
-		Int("total_records_to_filter", len(allStateRecords)).
-		Msg("Starting faction filtering")
-
-	// Group by member ID and find the most recent record for each member
-	memberLatest := make(map[string]app.StateRecord)
-	matchingRecords := 0
-
-	// Debug: Show what we're actually reading from each column
-	if len(allStateRecords) > 0 {
-		firstRecord := allStateRecords[0]
-		log.Info().
-			Str("member_id", firstRecord.MemberID).
-			Str("member_name", firstRecord.MemberName).
-			Str("faction_id", firstRecord.FactionID).
-			Str("faction_name", firstRecord.FactionName).
-			Str("last_action_status", firstRecord.LastActionStatus).
-			Str("status_description", firstRecord.StatusDescription).
-			Str("status_state", firstRecord.StatusState).
-			Str("status_travel_type", firstRecord.StatusTravelType).
-			Msg("DEBUG: First record parsed values")
-	}
-
-	for _, record := range allStateRecords {
-		if record.FactionID != factionIDStr {
-			continue
-		}
-		matchingRecords++
-
-		existing, exists := memberLatest[record.MemberID]
-		if !exists || record.Timestamp.After(existing.Timestamp) {
-			memberLatest[record.MemberID] = record
-		}
-	}
-
-	log.Info().
-		Int("faction_id", factionID).
-		Str("faction_id_str", factionIDStr).
-		Int("total_records_checked", len(allStateRecords)).
-		Int("matching_faction_records", matchingRecords).
-		Int("unique_members", len(memberLatest)).
-		Msg("Faction filtering progress")
-
-	// Convert map back to slice
-	var currentRecords []app.StateRecord
-	for _, record := range memberLatest {
-		currentRecords = append(currentRecords, record)
-	}
-
-	log.Debug().
-		Int("faction_id", factionID).
-		Int("final_current_records", len(currentRecords)).
-		Msg("Completed faction filtering")
-
-	return currentRecords
 }
 
 // exportAndDeployJSON converts StatusV2Records to JSON format and deploys it

@@ -16,6 +16,7 @@ import (
 // tracking departure times for traveling players and calculating arrival predictions.
 type StatusV2Service struct {
 	sheetsClient      processing.SheetsClientInterface
+	bigqueryClient    processing.BigQueryClientInterface // nil = disabled
 	locationService   *travel.LocationService
 	travelTimeService *travel.TravelTimeService
 }
@@ -24,6 +25,16 @@ type StatusV2Service struct {
 func NewStatusV2Service(sheetsClient processing.SheetsClientInterface) *StatusV2Service {
 	return &StatusV2Service{
 		sheetsClient:      sheetsClient,
+		locationService:   travel.NewLocationService(),
+		travelTimeService: travel.NewTravelTimeService(),
+	}
+}
+
+// NewStatusV2ServiceWithBigQuery creates a Status v2 service that uses BigQuery for history lookups.
+func NewStatusV2ServiceWithBigQuery(sheetsClient processing.SheetsClientInterface, bqClient processing.BigQueryClientInterface) *StatusV2Service {
+	return &StatusV2Service{
+		sheetsClient:      sheetsClient,
+		bigqueryClient:    bqClient,
 		locationService:   travel.NewLocationService(),
 		travelTimeService: travel.NewTravelTimeService(),
 	}
