@@ -31,10 +31,10 @@ spec:
           # Resource limits based on Go application profile
           resources:
             requests:
-              memory: "128Mi"
+              memory: "32Mi"
               cpu: "100m"
             limits:
-              memory: "256Mi"
+              memory: "64Mi"
               cpu: "200m"
 
           # Environment variables from ConfigMap
