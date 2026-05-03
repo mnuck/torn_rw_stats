@@ -7,7 +7,7 @@ import (
 
 	"torn_rw_stats/internal/app"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 // StatusV2Manager handles Status v2 sheets for faction monitoring
@@ -33,10 +33,9 @@ func (m *StatusV2Manager) EnsureStatusV2Sheet(ctx context.Context, spreadsheetID
 	}
 
 	if !exists {
-		log.Info().
-			Str("sheet_name", sheetName).
-			Int("faction_id", factionID).
-			Msg("Creating Status v2 sheet")
+		slog.Info("Creating Status v2 sheet",
+			"sheet_name", sheetName,
+			"faction_id", factionID)
 
 		if err := m.api.CreateSheet(ctx, spreadsheetID, sheetName); err != nil {
 			return "", fmt.Errorf("failed to create Status v2 sheet: %w", err)
@@ -65,9 +64,8 @@ func (m *StatusV2Manager) InitializeStatusV2Sheet(ctx context.Context, spreadshe
 		return fmt.Errorf("failed to write Status v2 headers: %w", err)
 	}
 
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Msg("Initialized Status v2 sheet with headers")
+	slog.Debug("Initialized Status v2 sheet with headers",
+		"sheet_name", sheetName)
 
 	return nil
 }
@@ -94,9 +92,8 @@ func (m *StatusV2Manager) GenerateStatusV2Headers() [][]interface{} {
 // UpdateStatusV2 updates the Status v2 sheet with current state record data
 func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
 	if len(records) == 0 {
-		log.Debug().
-			Str("sheet_name", sheetName).
-			Msg("No Status v2 records to update")
+		slog.Debug("No Status v2 records to update",
+			"sheet_name", sheetName)
 		return nil
 	}
 
@@ -130,16 +127,14 @@ func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, she
 	// Apply formatting after data is added
 	if err := m.api.FormatStatusSheet(ctx, spreadsheetID, sheetName); err != nil {
 		// Log error but don't fail - formatting is nice-to-have
-		log.Warn().
-			Err(err).
-			Str("sheet_name", sheetName).
-			Msg("Failed to apply formatting to Status v2 sheet")
+		slog.Warn("Failed to apply formatting to Status v2 sheet",
+			"err", err,
+			"sheet_name", sheetName)
 	}
 
-	log.Info().
-		Str("sheet_name", sheetName).
-		Int("records_updated", len(records)).
-		Msg("Updated Status v2 sheet")
+	slog.Info("Updated Status v2 sheet",
+		"sheet_name", sheetName,
+		"records_updated", len(records))
 
 	return nil
 }

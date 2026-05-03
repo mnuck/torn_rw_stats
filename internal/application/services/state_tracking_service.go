@@ -7,9 +7,9 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/state"
-	"torn_rw_stats/internal/processing"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/processing"
 )
 
 // StateTrackingService handles the complete state tracking workflow, detecting
@@ -35,9 +35,8 @@ func NewStateTrackingService(tornClient processing.TornClientInterface, bqClient
 func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsheetID string, factionIDs []int) error {
 	currentTime := time.Now().UTC()
 
-	log.Info().
-		Int("faction_count", len(factionIDs)).
-		Msg("Starting state change processing")
+	slog.Info("Starting state change processing",
+		"faction_count", len(factionIDs))
 
 	// Step 1: Get current StateRecords for all factions
 	currentStateRecords, err := s.getCurrentStateRecords(ctx, factionIDs, currentTime)
@@ -45,9 +44,8 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 		return fmt.Errorf("failed to get current state records: %w", err)
 	}
 
-	log.Debug().
-		Int("current_records", len(currentStateRecords)).
-		Msg("Retrieved current state records")
+	slog.Debug("Retrieved current state records",
+		"current_records", len(currentStateRecords))
 
 	// Step 2: Read previous states from BigQuery
 	var allPreviousStates []app.StateRecord
@@ -62,16 +60,14 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 		}
 	}
 
-	log.Debug().
-		Int("previous_records", len(allPreviousStates)).
-		Msg("Read previous state records")
+	slog.Debug("Read previous state records",
+		"previous_records", len(allPreviousStates))
 
 	// Step 3: Create previous state collection for comparison
 	previousStateRecords := s.comparator.CreatePreviousStateCollection(currentStateRecords, allPreviousStates)
 
-	log.Debug().
-		Int("previous_for_comparison", len(previousStateRecords)).
-		Msg("Created previous states collection for comparison")
+	slog.Debug("Created previous states collection for comparison",
+		"previous_for_comparison", len(previousStateRecords))
 
 	// Step 4: Compare states and find changes
 	updatedStateRecords := s.comparator.FindChangedStates(currentStateRecords, s.mapToSlice(previousStateRecords))
@@ -79,11 +75,10 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 	// Step 5: Use domain function to determine action
 	decision := state.DetermineStateChangeAction(currentStateRecords, s.mapToSlice(previousStateRecords), updatedStateRecords)
 
-	log.Info().
-		Int("changed_states", decision.ChangeCount).
-		Bool("should_write", decision.ShouldWriteChanges).
-		Str("reason", decision.Reason).
-		Msg("Determined state change action")
+	slog.Info("Determined state change action",
+		"changed_states", decision.ChangeCount,
+		"should_write", decision.ShouldWriteChanges,
+		"reason", decision.Reason)
 
 	// Step 6: Write changed records to BigQuery
 	if decision.ShouldWriteChanges {
@@ -91,11 +86,10 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 			return fmt.Errorf("failed to add state records: %w", err)
 		}
 
-		log.Info().
-			Int("records_added", len(decision.RecordsToWrite)).
-			Msg("Successfully added state changes")
+		slog.Info("Successfully added state changes",
+			"records_added", len(decision.RecordsToWrite))
 	} else {
-		log.Info().Msg(decision.Reason)
+		slog.Info(decision.Reason)
 	}
 
 	return nil
@@ -108,20 +102,18 @@ func (s *StateTrackingService) getCurrentStateRecords(ctx context.Context, facti
 	for _, factionID := range factionIDs {
 		factionData, err := s.tornClient.GetFactionBasic(ctx, factionID)
 		if err != nil {
-			log.Error().
-				Err(err).
-				Int("faction_id", factionID).
-				Msg("Failed to get faction data - skipping")
+			slog.Error("Failed to get faction data - skipping",
+				"err", err,
+				"faction_id", factionID)
 			continue
 		}
 
 		records := s.converter.ConvertFromFactionBasic(factionData, currentTime)
 		allRecords = append(allRecords, records...)
 
-		log.Debug().
-			Int("faction_id", factionID).
-			Int("member_count", len(records)).
-			Msg("Retrieved state records for faction")
+		slog.Debug("Retrieved state records for faction",
+			"faction_id", factionID,
+			"member_count", len(records))
 	}
 
 	return allRecords, nil

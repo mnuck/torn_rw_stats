@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	cloud.google.com/go/bigquery v1.74.0
 	github.com/leanovate/gopter v0.2.11
-	github.com/rs/zerolog v1.34.0
 	golang.org/x/crypto v0.47.0
 	google.golang.org/api v0.265.0
 )
@@ -29,8 +28,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.17.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

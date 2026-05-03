@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
@@ -178,15 +179,14 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 		return nil
 	}
 
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Int("current_rows", currentRows).
-		Int("current_cols", currentCols).
-		Int("required_rows", requiredRows).
-		Int("required_cols", requiredCols).
-		Int("new_rows", newRows).
-		Int("new_cols", newCols).
-		Msg("Expanding sheet capacity")
+	slog.Debug("Expanding sheet capacity",
+		"sheet_name", sheetName,
+		"current_rows", currentRows,
+		"current_cols", currentCols,
+		"required_rows", requiredRows,
+		"required_cols", requiredCols,
+		"new_rows", newRows,
+		"new_cols", newCols)
 
 	req := &sheets.Request{
 		UpdateSheetProperties: &sheets.UpdateSheetPropertiesRequest{
@@ -212,11 +212,10 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 		return fmt.Errorf("failed to resize sheet %s: %w", sheetName, err)
 	}
 
-	log.Info().
-		Str("sheet_name", sheetName).
-		Int("new_rows", newRows).
-		Int("new_cols", newCols).
-		Msg("Successfully expanded sheet capacity")
+	slog.Info("Successfully expanded sheet capacity",
+		"sheet_name", sheetName,
+		"new_rows", newRows,
+		"new_cols", newCols)
 
 	return nil
 }
@@ -224,8 +223,7 @@ func (c *Client) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetNa
 // FormatStatusSheet is disabled - formatting is handled manually in Google Sheets
 // We only keep the apostrophe prefix in travel time formatting to prevent decimal conversion
 func (c *Client) FormatStatusSheet(ctx context.Context, spreadsheetID, sheetName string) error {
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Msg("Skipping automatic formatting - handled manually")
+	slog.Debug("Skipping automatic formatting - handled manually",
+		"sheet_name", sheetName)
 	return nil
 }

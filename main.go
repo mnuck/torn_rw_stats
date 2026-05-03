@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,8 +15,6 @@ import (
 	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
-
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -32,15 +31,15 @@ func main() {
 	runOnce := flag.Bool("once", false, "Run once and exit (don't start scheduler)")
 	flag.Parse()
 
-	log.Info().
-		Dur("interval", *interval).
-		Bool("run_once", *runOnce).
-		Msg("Starting Torn RW Stats application")
+	slog.Info("Starting Torn RW Stats application",
+		"interval", *interval,
+		"run_once", *runOnce)
 
 	// Load configuration
 	config, err := app.LoadConfig()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load configuration")
+		slog.Error("Failed to load configuration", "err", err)
+		os.Exit(1)
 	}
 
 	// Set the update interval from command line flag
@@ -54,7 +53,7 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Info().Msg("Shutdown signal received, stopping gracefully")
+		slog.Info("Shutdown signal received, stopping gracefully")
 		cancel()
 	}()
 
@@ -62,7 +61,8 @@ func main() {
 	tornClient := torn.NewClient(config.TornAPIKey)
 	sheetsClient, err := sheets.NewClient(ctx, config.CredentialsFile)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create sheets client")
+		slog.Error("Failed to create sheets client", "err", err)
+		os.Exit(1)
 	}
 
 	// Optionally initialize BigQuery client (disabled if BIGQUERY_PROJECT_ID is unset)
@@ -72,14 +72,13 @@ func main() {
 		bqClient, bqErr = bqclient.NewClient(ctx, config.CredentialsFile,
 			config.BigQueryProjectID, config.BigQueryDatasetID, config.BigQueryTableID)
 		if bqErr != nil {
-			log.Error().Err(bqErr).Msg("Failed to create BigQuery client — BigQuery integration disabled")
+			slog.Error("Failed to create BigQuery client — BigQuery integration disabled", "err", bqErr)
 			bqClient = nil
 		} else {
-			log.Info().
-				Str("project", config.BigQueryProjectID).
-				Str("dataset", config.BigQueryDatasetID).
-				Str("table", config.BigQueryTableID).
-				Msg("BigQuery client initialized")
+			slog.Info("BigQuery client initialized",
+				"project", config.BigQueryProjectID,
+				"dataset", config.BigQueryDatasetID,
+				"table", config.BigQueryTableID)
 		}
 	}
 
@@ -88,13 +87,13 @@ func main() {
 
 	// Define the main processing function that returns next check time
 	processWars := func() time.Duration {
-		log.Debug().Msg("Starting war processing cycle")
+		slog.Debug("Starting war processing cycle")
 
 		// Reset API call counter at the start of each cycle
 		tornClient.ResetAPICallCount()
 
 		if err := warProcessor.ProcessActiveWars(ctx); err != nil {
-			log.Error().Err(err).Msg("Failed to process active wars")
+			slog.Error("Failed to process active wars", "err", err)
 			return *interval // Use CLI interval as fallback on error
 		}
 
@@ -112,29 +111,27 @@ func main() {
 			nextCheckDuration = *interval
 		}
 
-		log.Info().
-			Int64("api_calls", apiCalls).
-			Dur("next_check_in", nextCheckDuration).
-			Msg("Completed war processing cycle")
+		slog.Info("Completed war processing cycle",
+			"api_calls", apiCalls,
+			"next_check_in", nextCheckDuration)
 
 		return nextCheckDuration
 	}
 
 	// Run initial processing
-	log.Info().Msg("Running initial war processing")
+	slog.Info("Running initial war processing")
 	nextInterval := processWars()
 
 	// Exit if run-once flag is set
 	if *runOnce {
-		log.Info().Msg("Run-once mode: exiting after initial processing")
+		slog.Info("Run-once mode: exiting after initial processing")
 		return
 	}
 
 	// Start scheduled processing with dynamic intervals
-	log.Info().
-		Dur("fallback_interval", *interval).
-		Dur("initial_next_check", nextInterval).
-		Msg("Starting scheduled war processing with intelligent timing")
+	slog.Info("Starting scheduled war processing with intelligent timing",
+		"fallback_interval", *interval,
+		"initial_next_check", nextInterval)
 
 	ticker := time.NewTicker(nextInterval)
 	defer ticker.Stop()
@@ -145,7 +142,7 @@ func main() {
 			nextInterval = processWars()
 			ticker.Reset(nextInterval)
 		case <-ctx.Done():
-			log.Info().Msg("Shutting down war processor")
+			slog.Info("Shutting down war processor")
 			return
 		}
 	}

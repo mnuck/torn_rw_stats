@@ -6,7 +6,7 @@ import (
 
 	"torn_rw_stats/internal/app"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 // WarSheetsManager handles business logic for war sheet management
@@ -27,11 +27,10 @@ func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID st
 	summaryTabName := m.GenerateSummaryTabName(war.ID)
 	recordsTabName := m.GenerateRecordsTabName(war.ID)
 
-	log.Debug().
-		Int("war_id", war.ID).
-		Str("summary_tab", summaryTabName).
-		Str("records_tab", recordsTabName).
-		Msg("Ensuring war sheets exist")
+	slog.Debug("Ensuring war sheets exist",
+		"war_id", war.ID,
+		"summary_tab", summaryTabName,
+		"records_tab", recordsTabName)
 
 	// Check if summary sheet exists
 	summaryExists, err := m.api.SheetExists(ctx, spreadsheetID, summaryTabName)
@@ -40,9 +39,8 @@ func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID st
 	}
 
 	if !summaryExists {
-		log.Info().
-			Str("sheet_name", summaryTabName).
-			Msg("Creating summary sheet")
+		slog.Info("Creating summary sheet",
+			"sheet_name", summaryTabName)
 
 		if err := m.api.CreateSheet(ctx, spreadsheetID, summaryTabName); err != nil {
 			return nil, fmt.Errorf("failed to create summary sheet: %w", err)
@@ -61,9 +59,8 @@ func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID st
 	}
 
 	if !recordsExists {
-		log.Info().
-			Str("sheet_name", recordsTabName).
-			Msg("Creating records sheet")
+		slog.Info("Creating records sheet",
+			"sheet_name", recordsTabName)
 
 		if err := m.api.CreateSheet(ctx, spreadsheetID, recordsTabName); err != nil {
 			return nil, fmt.Errorf("failed to create records sheet: %w", err)
@@ -102,10 +99,9 @@ func (m *WarSheetsManager) InitializeSummarySheet(ctx context.Context, spreadshe
 		return fmt.Errorf("failed to write summary headers: %w", err)
 	}
 
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Int("header_rows", len(headers)).
-		Msg("Initialized summary sheet with headers")
+	slog.Debug("Initialized summary sheet with headers",
+		"sheet_name", sheetName,
+		"header_rows", len(headers))
 
 	return nil
 }
@@ -149,10 +145,9 @@ func (m *WarSheetsManager) InitializeRecordsSheet(ctx context.Context, spreadshe
 		return fmt.Errorf("failed to write records headers: %w", err)
 	}
 
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Int("header_columns", len(headers[0])).
-		Msg("Initialized records sheet with headers")
+	slog.Debug("Initialized records sheet with headers",
+		"sheet_name", sheetName,
+		"header_columns", len(headers[0]))
 
 	return nil
 }
@@ -215,11 +210,10 @@ func (m *WarSheetsManager) UpdateWarSummary(ctx context.Context, spreadsheetID s
 		return fmt.Errorf("failed to update war summary: %w", err)
 	}
 
-	log.Debug().
-		Int("war_id", config.WarID).
-		Str("sheet_name", config.SummaryTabName).
-		Int("data_rows", len(summaryData)).
-		Msg("Updated war summary sheet")
+	slog.Debug("Updated war summary sheet",
+		"war_id", config.WarID,
+		"sheet_name", config.SummaryTabName,
+		"data_rows", len(summaryData))
 
 	return nil
 }

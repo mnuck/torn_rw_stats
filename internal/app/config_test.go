@@ -1,11 +1,10 @@
 package app
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/rs/zerolog"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -96,34 +95,34 @@ func TestSetupEnvironment(t *testing.T) {
 	// Save original environment
 	originalENV := os.Getenv("ENV")
 	originalLOGLEVEL := os.Getenv("LOGLEVEL")
-	originalLevel := zerolog.GlobalLevel()
+	originalLevel := LogLevel.Level()
 
 	// Cleanup function
 	defer func() {
 		setOrUnset("ENV", originalENV)
 		setOrUnset("LOGLEVEL", originalLOGLEVEL)
-		zerolog.SetGlobalLevel(originalLevel)
+		LogLevel.Set(originalLevel)
 	}()
 
 	testCases := []struct {
 		name          string
 		env           string
 		logLevel      string
-		expectedLevel zerolog.Level
+		expectedLevel slog.Level
 	}{
-		{"ProductionDebug", "production", "debug", zerolog.DebugLevel},
-		{"ProductionInfo", "production", "info", zerolog.InfoLevel},
-		{"ProductionWarn", "production", "warn", zerolog.WarnLevel},
-		{"ProductionWarning", "production", "warning", zerolog.WarnLevel},
-		{"ProductionError", "production", "error", zerolog.ErrorLevel},
-		{"ProductionFatal", "production", "fatal", zerolog.FatalLevel},
-		{"ProductionPanic", "production", "panic", zerolog.PanicLevel},
-		{"ProductionDisabled", "production", "disabled", zerolog.Disabled},
-		{"ProductionDefault", "production", "", zerolog.WarnLevel},
-		{"ProductionUnknown", "production", "unknown", zerolog.InfoLevel},
-		{"DevelopmentDebug", "development", "debug", zerolog.DebugLevel},
-		{"DevelopmentDefault", "development", "", zerolog.InfoLevel},
-		{"DevelopmentUnknown", "", "unknown", zerolog.InfoLevel},
+		{"ProductionDebug", "production", "debug", slog.LevelDebug},
+		{"ProductionInfo", "production", "info", slog.LevelInfo},
+		{"ProductionWarn", "production", "warn", slog.LevelWarn},
+		{"ProductionWarning", "production", "warning", slog.LevelWarn},
+		{"ProductionError", "production", "error", slog.LevelError},
+		{"ProductionFatal", "production", "fatal", slog.LevelError},
+		{"ProductionPanic", "production", "panic", slog.LevelError},
+		{"ProductionDisabled", "production", "disabled", LevelDisabled},
+		{"ProductionDefault", "production", "", slog.LevelWarn},
+		{"ProductionUnknown", "production", "unknown", slog.LevelInfo},
+		{"DevelopmentDebug", "development", "debug", slog.LevelDebug},
+		{"DevelopmentDefault", "development", "", slog.LevelInfo},
+		{"DevelopmentUnknown", "", "unknown", slog.LevelInfo},
 	}
 
 	for _, tc := range testCases {
@@ -133,8 +132,8 @@ func TestSetupEnvironment(t *testing.T) {
 
 			SetupEnvironment()
 
-			if zerolog.GlobalLevel() != tc.expectedLevel {
-				t.Errorf("Expected log level %v, got %v", tc.expectedLevel, zerolog.GlobalLevel())
+			if LogLevel.Level() != tc.expectedLevel {
+				t.Errorf("Expected log level %v, got %v", tc.expectedLevel, LogLevel.Level())
 			}
 		})
 	}
@@ -162,10 +161,10 @@ func TestGetRequiredEnv(t *testing.T) {
 	t.Run("MissingVariable", func(t *testing.T) {
 		os.Unsetenv("TEST_REQUIRED_VAR")
 
-		// This function calls log.Fatal() which would exit the process
+		// This function calls os.Exit(1) which would exit the process
 		// We can't easily test this without complex setup, so we skip it
 		// In a real scenario, you might use dependency injection for the logger
-		t.Skip("Cannot test log.Fatal() without complex test setup")
+		t.Skip("Cannot test os.Exit(1) without complex test setup")
 	})
 }
 

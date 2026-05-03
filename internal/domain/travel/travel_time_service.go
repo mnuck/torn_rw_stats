@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 const (
@@ -92,10 +92,9 @@ func (tts *TravelTimeService) GetTravelTime(destination string, travelType strin
 	}
 
 	if minutes == 0 {
-		log.Warn().
-			Str("destination", destination).
-			Str("travel_type", travelType).
-			Msg("Unknown travel destination, using default time")
+		slog.Warn("Unknown travel destination, using default time",
+			"destination", destination,
+			"travel_type", travelType)
 		return DefaultTravelTimeFallback
 	}
 
@@ -143,14 +142,13 @@ func (tts *TravelTimeService) CalculateTravelTimes(ctx context.Context, userID i
 		countdown = "00:00:00"
 	}
 
-	log.Debug().
-		Int("user_id", userID).
-		Str("destination", destination).
-		Str("travel_type", travelType).
-		Dur("travel_duration", travelDuration).
-		Str("business_arrival", businessArrival).
-		Str("countdown", countdown).
-		Msg("Calculated travel times")
+	slog.Debug("Calculated travel times",
+		"user_id", userID,
+		"destination", destination,
+		"travel_type", travelType,
+		"travel_duration", travelDuration,
+		"business_arrival", businessArrival,
+		"countdown", countdown)
 
 	return &TravelTimeData{
 		Departure:       estimatedDepartureTime.UTC().Format("2006-01-02 15:04:05"),
@@ -165,11 +163,10 @@ func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Cont
 	// Parse existing departure time as UTC to match how times are stored
 	departureTime, err := time.ParseInLocation("2006-01-02 15:04:05", departureStr, time.UTC)
 	if err != nil {
-		log.Warn().
-			Err(err).
-			Str("departure_str", departureStr).
-			Int("user_id", userID).
-			Msg("Failed to parse existing departure time")
+		slog.Warn("Failed to parse existing departure time",
+			"err", err,
+			"departure_str", departureStr,
+			"user_id", userID)
 		return nil
 	}
 
@@ -182,10 +179,9 @@ func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Cont
 			arrivalTime = parsedArrival
 			travelDuration = arrivalTime.Sub(departureTime)
 		} else {
-			log.Warn().
-				Err(err).
-				Str("existing_arrival_str", existingArrivalStr).
-				Msg("Failed to parse existing arrival time, falling back to calculation")
+			slog.Warn("Failed to parse existing arrival time, falling back to calculation",
+				"err", err,
+				"existing_arrival_str", existingArrivalStr)
 		}
 	}
 
@@ -215,16 +211,15 @@ func (tts *TravelTimeService) CalculateTravelTimesFromDeparture(ctx context.Cont
 		countdown = "00:00:00"
 	}
 
-	log.Debug().
-		Int("user_id", userID).
-		Str("destination", destination).
-		Str("travel_type", travelType).
-		Dur("travel_duration", travelDuration).
-		Str("departure", departureStr).
-		Str("arrival", arrivalTime.UTC().Format("2006-01-02 15:04:05")).
-		Str("business_arrival", businessArrival).
-		Str("countdown", countdown).
-		Msg("Recalculated travel times from existing departure")
+	slog.Debug("Recalculated travel times from existing departure",
+		"user_id", userID,
+		"destination", destination,
+		"travel_type", travelType,
+		"travel_duration", travelDuration,
+		"departure", departureStr,
+		"arrival", arrivalTime.UTC().Format("2006-01-02 15:04:05"),
+		"business_arrival", businessArrival,
+		"countdown", countdown)
 
 	return &TravelTimeData{
 		Departure:       departureStr, // Keep original departure time

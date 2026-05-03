@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -67,7 +68,7 @@ func (d *SSHDeployer) parseDeployURL() (user, host, remotePath string, err error
 func (d *SSHDeployer) Connect() error {
 	if d.connected {
 		if err := d.Disconnect(); err != nil {
-			log.Warn().Err(err).Msg("Failed to disconnect before reconnecting")
+			slog.Warn("Failed to disconnect before reconnecting", "err", err)
 		}
 	}
 
@@ -105,10 +106,9 @@ func (d *SSHDeployer) Connect() error {
 	}
 
 	d.connected = true
-	log.Info().
-		Str("host", host).
-		Str("user", user).
-		Msg("Successfully connected to SSH server")
+	slog.Info("Successfully connected to SSH server",
+		"host", host,
+		"user", user)
 
 	return nil
 }
@@ -135,7 +135,7 @@ func (d *SSHDeployer) DeployData(data io.Reader, size int64, filename string) er
 	}
 	defer func() {
 		if err := d.Disconnect(); err != nil {
-			log.Warn().Err(err).Msg("Failed to disconnect SSH after deployment")
+			slog.Warn("Failed to disconnect SSH after deployment", "err", err)
 		}
 	}()
 
@@ -195,10 +195,9 @@ func (d *SSHDeployer) DeployData(data io.Reader, size int64, filename string) er
 		return fmt.Errorf("SCP session failed: %w", err)
 	}
 
-	log.Info().
-		Str("remote_path", remoteFilePath).
-		Int64("size", size).
-		Msg("Successfully deployed data via SCP")
+	slog.Info("Successfully deployed data via SCP",
+		"remote_path", remoteFilePath,
+		"size", size)
 
 	return nil
 }

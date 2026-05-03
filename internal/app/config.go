@@ -2,12 +2,11 @@ package app
 
 import (
 	"fmt"
+	"log/slog"
+	"math"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Config holds application configuration
@@ -24,52 +23,58 @@ type Config struct {
 	BigQueryTableID   string
 }
 
-// SetupEnvironment loads .env file and configures zerolog output and log level.
+// LogLevel is the package-level log level variable used by SetupEnvironment.
+var LogLevel slog.LevelVar
+
+// LevelDisabled is a sentinel level that disables all logging.
+const LevelDisabled = slog.Level(math.MaxInt)
+
+// SetupEnvironment loads .env file and configures slog output and log level.
 func SetupEnvironment() {
-	// Load .env file if it exists
 	err := LoadDotEnv(".env")
 
-	// Configure logging
-	if os.Getenv("ENV") == "production" {
-		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-		log.Logger = log.Output(os.Stderr)
-	} else {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
-	}
-
+	var unknownLevel bool
 	levelStr := strings.ToLower(os.Getenv("LOGLEVEL"))
 	switch levelStr {
 	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		LogLevel.Set(slog.LevelDebug)
 	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		LogLevel.Set(slog.LevelInfo)
 	case "warn", "warning":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+		LogLevel.Set(slog.LevelWarn)
 	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	case "fatal":
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-	case "panic":
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+		LogLevel.Set(slog.LevelError)
+	case "fatal", "panic":
+		LogLevel.Set(slog.LevelError)
 	case "disabled":
-		zerolog.SetGlobalLevel(zerolog.Disabled)
+		LogLevel.Set(LevelDisabled)
 	case "":
-		// Default based on environment
 		if os.Getenv("ENV") == "production" {
-			zerolog.SetGlobalLevel(zerolog.WarnLevel)
+			LogLevel.Set(slog.LevelWarn)
 		} else {
-			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+			LogLevel.Set(slog.LevelInfo)
 		}
 	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		log.Warn().Msgf("Unknown LOGLEVEL '%s', defaulting to info.", levelStr)
+		LogLevel.Set(slog.LevelInfo)
+		unknownLevel = true
 	}
 
-	// wait until now to report on the .env file so we have the chance to set up logging first
-	if err == nil {
-		log.Debug().Msg("Loaded environment variables from .env file.")
+	opts := &slog.HandlerOptions{Level: &LogLevel}
+	var handler slog.Handler
+	if os.Getenv("ENV") == "production" {
+		handler = slog.NewJSONHandler(os.Stderr, opts)
 	} else {
-		log.Debug().Msg("No .env file found or error loading .env file; proceeding with existing environment variables.")
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	}
+	slog.SetDefault(slog.New(handler))
+
+	if unknownLevel {
+		slog.Warn("Unknown LOGLEVEL, defaulting to info", "loglevel", levelStr)
+	}
+	if err == nil {
+		slog.Debug("Loaded environment variables from .env file")
+	} else {
+		slog.Debug("No .env file found; proceeding with existing environment variables")
 	}
 }
 
@@ -110,11 +115,12 @@ func LoadConfig() (*Config, error) {
 	}, nil
 }
 
-// GetRequiredEnv gets an environment variable or panics if not found
+// GetRequiredEnv gets an environment variable or exits if not found
 func GetRequiredEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatal().Str("key", key).Msg("Required environment variable not set")
+		slog.Error("Required environment variable not set", "key", key)
+		os.Exit(1)
 	}
 	return value
 }

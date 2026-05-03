@@ -8,11 +8,11 @@ import (
 	"torn_rw_stats/internal/domain/attack"
 	"torn_rw_stats/internal/domain/travel"
 	wardomain "torn_rw_stats/internal/domain/war"
+	"log/slog"
+
 	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
-
-	"github.com/rs/zerolog/log"
 )
 
 // WarProcessor handles war detection and processing, coordinating attack collection,
@@ -73,7 +73,7 @@ func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client,
 // ensureOurFactionID fetches and caches our faction ID if not already set
 func (wp *WarProcessor) ensureOurFactionID(ctx context.Context) error {
 	if wp.ourFactionID == 0 {
-		log.Debug().Msg("Fetching our faction ID from API")
+		slog.Debug("Fetching our faction ID from API")
 
 		factionInfo, err := wp.tornClient.GetOwnFaction(ctx)
 		if err != nil {
@@ -81,18 +81,17 @@ func (wp *WarProcessor) ensureOurFactionID(ctx context.Context) error {
 		}
 
 		wp.ourFactionID = factionInfo.ID
-		log.Info().
-			Int("faction_id", wp.ourFactionID).
-			Str("faction_name", factionInfo.Name).
-			Str("faction_tag", factionInfo.Tag).
-			Msg("Detected our faction ID")
+		slog.Info("Detected our faction ID",
+			"faction_id", wp.ourFactionID,
+			"faction_name", factionInfo.Name,
+			"faction_tag", factionInfo.Tag)
 	}
 	return nil
 }
 
 // ProcessActiveWars fetches current wars and processes each one
 func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
-	log.Info().Msg("Processing active wars")
+	slog.Info("Processing active wars")
 
 	// Ensure our faction ID is loaded
 	if err := wp.ensureOurFactionID(ctx); err != nil {
@@ -108,15 +107,13 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Process ranked war if it exists
 	if warResponse.Wars.Ranked != nil {
-		log.Info().
-			Int("war_id", warResponse.Wars.Ranked.ID).
-			Msg("Processing ranked war")
+		slog.Info("Processing ranked war",
+			"war_id", warResponse.Wars.Ranked.ID)
 
 		if err := wp.processWar(ctx, warResponse.Wars.Ranked); err != nil {
-			log.Error().
-				Err(err).
-				Int("war_id", warResponse.Wars.Ranked.ID).
-				Msg("Failed to process ranked war")
+			slog.Error("Failed to process ranked war",
+				"err", err,
+				"war_id", warResponse.Wars.Ranked.ID)
 		} else {
 			processedWars++
 		}
@@ -124,15 +121,13 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Process raid wars
 	for _, war := range warResponse.Wars.Raids {
-		log.Info().
-			Int("war_id", war.ID).
-			Msg("Processing raid war")
+		slog.Info("Processing raid war",
+			"war_id", war.ID)
 
 		if err := wp.processWar(ctx, &war); err != nil {
-			log.Error().
-				Err(err).
-				Int("war_id", war.ID).
-				Msg("Failed to process raid war")
+			slog.Error("Failed to process raid war",
+				"err", err,
+				"war_id", war.ID)
 		} else {
 			processedWars++
 		}
@@ -140,34 +135,30 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Process territory wars
 	for _, war := range warResponse.Wars.Territory {
-		log.Info().
-			Int("war_id", war.ID).
-			Msg("Processing territory war")
+		slog.Info("Processing territory war",
+			"war_id", war.ID)
 
 		if err := wp.processWar(ctx, &war); err != nil {
-			log.Error().
-				Err(err).
-				Int("war_id", war.ID).
-				Msg("Failed to process territory war")
+			slog.Error("Failed to process territory war",
+				"err", err,
+				"war_id", war.ID)
 		} else {
 			processedWars++
 		}
 	}
 
-	log.Info().
-		Int("processed_wars", processedWars).
-		Msg("Completed processing active wars")
+	slog.Info("Completed processing active wars",
+		"processed_wars", processedWars)
 
 	return nil
 }
 
 // processWar handles processing a single war
 func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
-	log.Info().
-		Int("war_id", war.ID).
-		Int("factions_count", len(war.Factions)).
-		Int64("start_time", war.Start).
-		Msg("=== ENTERING processWar ===")
+	slog.Info("=== ENTERING processWar ===",
+		"war_id", war.ID,
+		"factions_count", len(war.Factions),
+		"start_time", war.Start)
 
 	// Ensure sheets exist for this war
 	sheetConfig, err := wp.sheetsClient.EnsureWarSheets(ctx, wp.config.SpreadsheetID, war)
@@ -183,12 +174,11 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 
 	// Use domain function to determine fetch mode
 	fetchDecision := wardomain.DetermineAttackFetchMode(existingInfo.RecordCount, existingInfo.LatestTimestamp)
-	log.Debug().
-		Int("war_id", war.ID).
-		Bool("use_full_mode", fetchDecision.UseFullMode).
-		Bool("use_incremental", fetchDecision.UseIncremental).
-		Str("reason", fetchDecision.Reason).
-		Msg("Determined attack fetch mode")
+	slog.Debug("Determined attack fetch mode",
+		"war_id", war.ID,
+		"use_full_mode", fetchDecision.UseFullMode,
+		"use_incremental", fetchDecision.UseIncremental,
+		"reason", fetchDecision.Reason)
 
 	// Fetch attacks based on decision
 	var attacks []app.Attack
@@ -203,10 +193,9 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		return fmt.Errorf("failed to fetch attacks for war: %w", err)
 	}
 
-	log.Debug().
-		Int("war_id", war.ID).
-		Int("attacks_count", len(attacks)).
-		Msg("Fetched attacks for war")
+	slog.Debug("Fetched attacks for war",
+		"war_id", war.ID,
+		"attacks_count", len(attacks))
 
 	// Get our faction ID for processing
 	ourFactionID := wp.getOurFactionID(war)
@@ -225,11 +214,10 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 	}
 
 	if len(duplicateRecords) > 0 {
-		log.Error().
-			Int("total_records", len(records)).
-			Int("duplicate_codes", len(duplicateRecords)).
-			Strs("duplicate_records", duplicateRecords).
-			Msg("=== DUPLICATES DETECTED IN PROCESSED RECORDS ===")
+		slog.Error("=== DUPLICATES DETECTED IN PROCESSED RECORDS ===",
+			"total_records", len(records),
+			"duplicate_codes", len(duplicateRecords),
+			"duplicate_records", duplicateRecords)
 	}
 
 	// Generate war summary
@@ -244,11 +232,10 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		return fmt.Errorf("failed to update attack records: %w", err)
 	}
 
-	log.Info().
-		Int("war_id", war.ID).
-		Int("attacks_processed", len(attacks)).
-		Int("records_created", len(records)).
-		Msg("=== EXITING processWar - Successfully processed war ===")
+	slog.Info("=== EXITING processWar - Successfully processed war ===",
+		"war_id", war.ID,
+		"attacks_processed", len(attacks),
+		"records_created", len(records))
 
 	return nil
 }

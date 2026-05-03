@@ -7,9 +7,9 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/war"
-	"torn_rw_stats/internal/processing"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/processing"
 )
 
 // OptimizedWarProcessor wraps WarProcessor with intelligent war state management,
@@ -73,8 +73,7 @@ func NewOptimizedWarProcessor(
 // ProcessActiveWars processes wars with continuous monitoring
 func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	// Always fetch war data first to determine actual current state
-	log.Debug().
-		Msg("Fetching war data to determine current state")
+	slog.Debug("Fetching war data to determine current state")
 
 	warResponse, err := owp.tornClient.GetFactionWars(ctx)
 	if err != nil {
@@ -87,37 +86,33 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Log current state at start of processing loop
 	stateInfo := owp.stateManager.GetStateInfo()
-	log.Info().
-		Str("current_state", stateInfo.State.String()).
-		Str("state_description", stateInfo.Description).
-		Dur("time_in_state", stateInfo.TimeInState).
-		Dur("time_until_next_check", stateInfo.TimeUntilCheck).
-		Msg("Starting war processor loop")
+	slog.Info("Starting war processor loop",
+		"current_state", stateInfo.State.String(),
+		"state_description", stateInfo.Description,
+		"time_in_state", stateInfo.TimeInState,
+		"time_until_next_check", stateInfo.TimeUntilCheck)
 
 	// Continuous monitoring enabled - always process all states
-	log.Debug().
-		Str("current_state", stateInfo.State.String()).
-		Msg("Continuous monitoring enabled - processing all states")
+	slog.Debug("Continuous monitoring enabled - processing all states",
+		"current_state", stateInfo.State.String())
 
 	// Log pre-processing stats
 	preStats := owp.tracker.GetSessionStats()
-	log.Debug().
-		Int64("session_calls_before", preStats.SessionCalls).
-		Msg("API calls before processing")
+	slog.Debug("API calls before processing",
+		"session_calls_before", preStats.SessionCalls)
 
 	// Log state information
 	stateInfo = owp.stateManager.GetStateInfo()
-	log.Info().
-		Str("war_state", currentState.String()).
-		Str("description", stateInfo.Description).
-		Dur("time_in_state", stateInfo.TimeInState).
-		Dur("next_check_in", stateInfo.TimeUntilCheck).
-		Bool("state_changed", previousState != currentState).
-		Msg("War state analysis complete")
+	slog.Info("War state analysis complete",
+		"war_state", currentState.String(),
+		"description", stateInfo.Description,
+		"time_in_state", stateInfo.TimeInState,
+		"next_check_in", stateInfo.TimeUntilCheck,
+		"state_changed", previousState != currentState)
 
 	// Ensure our faction ID is available for state tracking
 	if err := owp.processor.ensureOurFactionID(ctx); err != nil {
-		log.Error().Err(err).Msg("Failed to ensure our faction ID - continuing without state tracking")
+		slog.Error("Failed to ensure our faction ID - continuing without state tracking", "err", err)
 	}
 
 	// Process state changes for all observed factions
@@ -126,28 +121,24 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 	// Handle different states
 	switch currentState {
 	case war.NoWars:
-		log.Info().
-			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("No active wars - processing our faction status only")
+		slog.Info("No active wars - processing our faction status only",
+			"next_matchmaking", owp.stateManager.GetNextCheckTime())
 
 		// Process just our faction's status when no wars exist
 		return owp.processOurFactionOnly(ctx)
 
 	case war.PostWar:
-		log.Info().
-			Time("next_matchmaking", owp.stateManager.GetNextCheckTime()).
-			Msg("War completed - continuing processing for post-war analysis")
+		slog.Info("War completed - continuing processing for post-war analysis",
+			"next_matchmaking", owp.stateManager.GetNextCheckTime())
 
 	case war.PreWar:
-		log.Info().
-			Dur("update_interval", stateInfo.UpdateInterval).
-			Msg("Pre-war reconnaissance mode - monitoring opponent")
+		slog.Info("Pre-war reconnaissance mode - monitoring opponent",
+			"update_interval", stateInfo.UpdateInterval)
 		// Continue to processing for reconnaissance data
 
 	case war.ActiveWar:
-		log.Info().
-			Dur("update_interval", stateInfo.UpdateInterval).
-			Msg("Active war detected - real-time monitoring enabled")
+		slog.Info("Active war detected - real-time monitoring enabled",
+			"update_interval", stateInfo.UpdateInterval)
 		// Continue to full processing
 	}
 
@@ -196,7 +187,7 @@ func (owp *OptimizedWarProcessor) GetProcessingSummary() ProcessingSummary {
 
 // processOurFactionOnly processes just our faction's status when no wars exist
 func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) error {
-	log.Info().Msg("Processing our faction status only (no active wars)")
+	slog.Info("Processing our faction status only (no active wars)")
 
 	// Ensure our faction ID is loaded
 	if err := owp.processor.ensureOurFactionID(ctx); err != nil {
@@ -208,9 +199,8 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 		return fmt.Errorf("our faction ID is not set")
 	}
 
-	log.Info().
-		Int("faction_id", ourFactionID).
-		Msg("Successfully processed our faction status")
+	slog.Info("Successfully processed our faction status",
+		"faction_id", ourFactionID)
 
 	return nil
 }
@@ -251,24 +241,21 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 
 	// If no factions to track, skip
 	if len(factionIDs) == 0 {
-		log.Debug().Msg("No factions to track for state changes")
+		slog.Debug("No factions to track for state changes")
 		return
 	}
 
 	// Process state changes for all factions (ranked, raids, territory)
-	log.Debug().
-		Ints("faction_ids", factionIDs).
-		Msg("Processing state changes for factions")
+	slog.Debug("Processing state changes for factions",
+		"faction_ids", factionIDs)
 
 	if err := owp.stateTracker.ProcessStateChanges(ctx, owp.spreadsheetID, factionIDs); err != nil {
-		log.Error().
-			Err(err).
-			Ints("faction_ids", factionIDs).
-			Msg("Failed to process state changes - continuing with main processing")
+		slog.Error("Failed to process state changes - continuing with main processing",
+			"err", err,
+			"faction_ids", factionIDs)
 	} else {
-		log.Debug().
-			Ints("faction_ids", factionIDs).
-			Msg("Successfully processed state changes")
+		slog.Debug("Successfully processed state changes",
+			"faction_ids", factionIDs)
 	}
 
 	// Build faction list scoped to ranked war only for the tactical dashboard.
@@ -290,19 +277,16 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 	dashboardFactionIDs = owp.removeDuplicateFactionIDs(dashboardFactionIDs)
 
 	// Process Status v2 sheets for ranked war factions only (tactical dashboard)
-	log.Debug().
-		Ints("faction_ids", dashboardFactionIDs).
-		Msg("Processing Status v2 for ranked war factions")
+	slog.Debug("Processing Status v2 for ranked war factions",
+		"faction_ids", dashboardFactionIDs)
 
 	if err := owp.statusV2Processor.ProcessStatusV2ForFactions(ctx, owp.spreadsheetID, dashboardFactionIDs, stateInfo.UpdateInterval); err != nil {
-		log.Error().
-			Err(err).
-			Ints("faction_ids", dashboardFactionIDs).
-			Msg("Failed to process Status v2 - continuing with main processing")
+		slog.Error("Failed to process Status v2 - continuing with main processing",
+			"err", err,
+			"faction_ids", dashboardFactionIDs)
 	} else {
-		log.Debug().
-			Ints("faction_ids", dashboardFactionIDs).
-			Msg("Successfully processed Status v2")
+		slog.Debug("Successfully processed Status v2",
+			"faction_ids", dashboardFactionIDs)
 	}
 }
 
