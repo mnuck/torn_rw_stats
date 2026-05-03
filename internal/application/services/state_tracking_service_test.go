@@ -33,13 +33,9 @@ func TestStateTrackingService_BigQueryCalledWhenClientNonNil(t *testing.T) {
 	tornMock := mocks.NewMockTornClient()
 	tornMock.FactionBasicResponse = factionBasicWithMember(100, "42", "Player1", "okay", "Okay")
 
-	sheetsMock := mocks.NewMockSheetsClient()
-	sheetsMock.SheetExistsResponse = true // Changed States sheet already exists
-	// ReadSheetResponse nil → no previous records → member is "new" → change detected
-
 	bqMock := mocks.NewMockBigQueryClient()
 
-	svc := NewStateTrackingServiceWithBigQuery(tornMock, sheetsMock, bqMock)
+	svc := NewStateTrackingService(tornMock, bqMock)
 	if err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{100}); err != nil {
 		t.Fatalf("ProcessStateChanges() returned unexpected error: %v", err)
 	}
@@ -52,39 +48,19 @@ func TestStateTrackingService_BigQueryCalledWhenClientNonNil(t *testing.T) {
 	}
 }
 
-func TestStateTrackingService_BigQuerySkippedWhenClientNil(t *testing.T) {
+func TestStateTrackingService_BigQueryFailureIsFatal(t *testing.T) {
 	ctx := context.Background()
 
 	tornMock := mocks.NewMockTornClient()
 	tornMock.FactionBasicResponse = factionBasicWithMember(100, "42", "Player1", "okay", "Okay")
-
-	sheetsMock := mocks.NewMockSheetsClient()
-	sheetsMock.SheetExistsResponse = true
-
-	// Use the constructor without BigQuery — must not panic
-	svc := NewStateTrackingService(tornMock, sheetsMock)
-	if err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{100}); err != nil {
-		t.Fatalf("ProcessStateChanges() returned unexpected error: %v", err)
-	}
-	// No assertion needed beyond "did not panic"
-}
-
-func TestStateTrackingService_BigQueryFailureIsNonFatal(t *testing.T) {
-	ctx := context.Background()
-
-	tornMock := mocks.NewMockTornClient()
-	tornMock.FactionBasicResponse = factionBasicWithMember(100, "42", "Player1", "okay", "Okay")
-
-	sheetsMock := mocks.NewMockSheetsClient()
-	sheetsMock.SheetExistsResponse = true
 
 	bqMock := mocks.NewMockBigQueryClient()
 	bqMock.InsertStateRecordsError = errors.New("simulated BigQuery failure")
 
-	svc := NewStateTrackingServiceWithBigQuery(tornMock, sheetsMock, bqMock)
+	svc := NewStateTrackingService(tornMock, bqMock)
 	err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{100})
-	if err != nil {
-		t.Errorf("ProcessStateChanges() should succeed even when BigQuery fails, but got: %v", err)
+	if err == nil {
+		t.Error("ProcessStateChanges() should fail when BigQuery write fails")
 	}
 }
 
@@ -94,9 +70,6 @@ func TestStateTrackingService_BigQueryNotCalledWhenNoChanges(t *testing.T) {
 	tornMock := mocks.NewMockTornClient()
 	tornMock.FactionBasicResponse = factionBasicWithMember(100, "42", "Player1", "okay", "Okay")
 
-	sheetsMock := mocks.NewMockSheetsClient()
-	sheetsMock.SheetExistsResponse = true
-
 	bqMock := mocks.NewMockBigQueryClient()
 	// Return a previous record for the same member with the same state → no change
 	bqMock.QueryLatestStatePerMemberResponse = []app.StateRecord{
@@ -104,7 +77,7 @@ func TestStateTrackingService_BigQueryNotCalledWhenNoChanges(t *testing.T) {
 			LastActionStatus: "Online", StatusDescription: "Okay", StatusState: "okay"},
 	}
 
-	svc := NewStateTrackingServiceWithBigQuery(tornMock, sheetsMock, bqMock)
+	svc := NewStateTrackingService(tornMock, bqMock)
 	if err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{100}); err != nil {
 		t.Fatalf("ProcessStateChanges() returned unexpected error: %v", err)
 	}
@@ -118,11 +91,9 @@ func TestStateTrackingService_BigQueryNotCalledForEmptyFactions(t *testing.T) {
 	ctx := context.Background()
 
 	tornMock := mocks.NewMockTornClient()
-	sheetsMock := mocks.NewMockSheetsClient()
-	sheetsMock.SheetExistsResponse = true
 	bqMock := mocks.NewMockBigQueryClient()
 
-	svc := NewStateTrackingServiceWithBigQuery(tornMock, sheetsMock, bqMock)
+	svc := NewStateTrackingService(tornMock, bqMock)
 	// Pass empty faction list — GetFactionBasic should never be called
 	if err := svc.ProcessStateChanges(ctx, "spreadsheet-id", []int{}); err != nil {
 		t.Fatalf("ProcessStateChanges() returned unexpected error: %v", err)
