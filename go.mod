@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	cloud.google.com/go/bigquery v1.74.0
-	github.com/leanovate/gopter v0.2.11
 	golang.org/x/crypto v0.47.0
 	google.golang.org/api v0.265.0
 )
