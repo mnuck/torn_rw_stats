@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -28,7 +27,7 @@ type Config struct {
 // SetupEnvironment loads .env file and configures zerolog output and log level.
 func SetupEnvironment() {
 	// Load .env file if it exists
-	err := godotenv.Load()
+	err := LoadDotEnv(".env")
 
 	// Configure logging
 	if os.Getenv("ENV") == "production" {

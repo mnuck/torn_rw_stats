@@ -24,13 +24,13 @@ import (
 	"os"
 
 	bq "cloud.google.com/go/bigquery"
-	"github.com/joho/godotenv"
+	"torn_rw_stats/internal/app"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
 func main() {
-	_ = godotenv.Load()
+	_ = app.LoadDotEnv(".env")
 
 	projectID := os.Getenv("BIGQUERY_PROJECT_ID")
 	if projectID == "" {
