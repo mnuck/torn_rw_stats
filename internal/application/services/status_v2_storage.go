@@ -76,6 +76,39 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 	return data, nil
 }
 
+// readCurrentStateRecords returns the latest state record per member for a faction.
+// Uses BigQuery when available; falls back to a full sheet scan.
+func (s *StatusV2Service) readCurrentStateRecords(ctx context.Context, spreadsheetID, factionID string) ([]app.StateRecord, error) {
+	if s.bigqueryClient != nil {
+		records, err := s.bigqueryClient.QueryLatestStatePerFaction(ctx, factionID)
+		if err != nil {
+			log.Warn().Err(err).Str("faction_id", factionID).Msg("BigQuery faction query failed, falling back to sheet scan")
+		} else {
+			return records, nil
+		}
+	}
+
+	// Fall back: full sheet scan + in-process filter
+	all, err := s.ReadAllStateRecords(ctx, spreadsheetID)
+	if err != nil {
+		return nil, err
+	}
+	memberLatest := make(map[string]app.StateRecord)
+	for _, r := range all {
+		if r.FactionID != factionID {
+			continue
+		}
+		if existing, ok := memberLatest[r.MemberID]; !ok || r.Timestamp.After(existing.Timestamp) {
+			memberLatest[r.MemberID] = r
+		}
+	}
+	result := make([]app.StateRecord, 0, len(memberLatest))
+	for _, r := range memberLatest {
+		result = append(result, r)
+	}
+	return result, nil
+}
+
 // ReadAllStateRecords reads all state records from the Changed States sheet
 func (s *StatusV2Service) ReadAllStateRecords(ctx context.Context, spreadsheetID string) ([]app.StateRecord, error) {
 	sheetName := "Changed States"

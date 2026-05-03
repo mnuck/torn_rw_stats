@@ -76,4 +76,6 @@ type WarStateManagerInterface interface {
 type BigQueryClientInterface interface {
 	InsertStateRecords(ctx context.Context, records []app.StateRecord) error
 	QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]app.StateRecord, error)
+	QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]app.StateRecord, error)
+	QueryDepartureTimes(ctx context.Context, memberIDs []string) (map[string]time.Time, error)
 }
