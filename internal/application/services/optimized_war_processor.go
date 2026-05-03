@@ -41,8 +41,8 @@ func NewOptimizedWarProcessor(
 	tracker := NewAPICallTracker()
 	stateManager := war.NewWarStateManager()
 
-	// Create state tracking service with optional BigQuery sink
-	stateTracker := NewStateTrackingServiceWithBigQuery(tornClient, sheetsClient, bqClient)
+	// Create state tracking service
+	stateTracker := NewStateTrackingService(tornClient, bqClient)
 
 	// Create Status v2 processor
 	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, config.DeployURL)
