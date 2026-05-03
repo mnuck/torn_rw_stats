@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/app"
 )
 
 // buildDepartureMap builds a map of member departure times from BigQuery state changes.
@@ -28,7 +28,7 @@ func (s *StatusV2Service) buildDepartureMap(ctx context.Context, _ string, curre
 
 	times, err := s.bigqueryClient.QueryDepartureTimes(ctx, travelingIDs)
 	if err != nil {
-		log.Warn().Err(err).Msg("BigQuery departure query failed")
+		slog.Warn("BigQuery departure query failed", "err", err)
 		return departureMap, fmt.Errorf("failed to query departure times: %w", err)
 	}
 

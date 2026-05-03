@@ -8,7 +8,7 @@ import (
 
 	"torn_rw_stats/internal/app"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 // AttackRecordsProcessor handles business logic for attack records management
@@ -34,9 +34,8 @@ type RecordsInfo struct {
 
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there
 func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
-	log.Debug().
-		Str("sheet_name", sheetName).
-		Msg("Reading existing attack records")
+	slog.Debug("Reading existing attack records",
+		"sheet_name", sheetName)
 
 	// Read all data from the sheet (starting from row 2 to skip headers)
 	rangeSpec := fmt.Sprintf("'%s'!A2:AF", sheetName)
@@ -79,19 +78,17 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 	info.RecordCount = validRows
 	info.LastRowProcessed = len(values) + 1 // +1 for header row
 
-	log.Debug().
-		Int("total_rows_read", len(values)).
-		Int("valid_records", info.RecordCount).
-		Int("unique_attack_codes", len(info.AttackCodes)).
-		Int64("latest_timestamp", info.LatestTimestamp).
-		Str("latest_time", time.Unix(info.LatestTimestamp, 0).Format("2006-01-02 15:04:05")).
-		Msg("Analyzed existing records")
+	slog.Debug("Analyzed existing records",
+		"total_rows_read", len(values),
+		"valid_records", info.RecordCount,
+		"unique_attack_codes", len(info.AttackCodes),
+		"latest_timestamp", info.LatestTimestamp,
+		"latest_time", time.Unix(info.LatestTimestamp, 0).Format("2006-01-02 15:04:05"))
 
 	// Validation: warn if no attack codes were parsed from non-empty sheet
 	if len(values) > 0 && len(info.AttackCodes) == 0 {
-		log.Warn().
-			Int("rows_in_sheet", len(values)).
-			Msg("No attack codes parsed from existing sheet - possible column mismatch")
+		slog.Warn("No attack codes parsed from existing sheet - possible column mismatch",
+			"rows_in_sheet", len(values))
 	}
 
 	return info, nil
@@ -103,11 +100,10 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 		return nil
 	}
 
-	log.Info().
-		Int("war_id", config.WarID).
-		Str("sheet_name", config.RecordsTabName).
-		Int("records_count", len(records)).
-		Msg("=== ENTERING UpdateAttackRecords ===")
+	slog.Info("=== ENTERING UpdateAttackRecords ===",
+		"war_id", config.WarID,
+		"sheet_name", config.RecordsTabName,
+		"records_count", len(records))
 
 	// Read existing records to determine update strategy
 	existing, err := p.ReadExistingRecords(ctx, spreadsheetID, config.RecordsTabName)
@@ -116,24 +112,22 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 	}
 
 	// Filter out duplicate attacks and sort chronologically
-	log.Debug().
-		Int("input_records", len(records)).
-		Int("existing_attack_codes", len(existing.AttackCodes)).
-		Int("existing_record_count", existing.RecordCount).
-		Msg("Starting deduplication")
+	slog.Debug("Starting deduplication",
+		"input_records", len(records),
+		"existing_attack_codes", len(existing.AttackCodes),
+		"existing_record_count", existing.RecordCount)
 
 	newRecords := p.FilterAndSortRecords(records, existing)
 
 	if len(newRecords) == 0 {
-		log.Info().Msg("=== EXITING UpdateAttackRecords - No new records after deduplication ===")
+		slog.Info("=== EXITING UpdateAttackRecords - No new records after deduplication ===")
 		return nil
 	}
 
-	log.Info().
-		Int("original_records", len(records)).
-		Int("new_records", len(newRecords)).
-		Int("existing_records", existing.RecordCount).
-		Msg("Processed records for update")
+	slog.Info("Processed records for update",
+		"original_records", len(records),
+		"new_records", len(newRecords),
+		"existing_records", existing.RecordCount)
 
 	// Convert to spreadsheet format
 	rows := p.ConvertRecordsToRows(newRecords)
@@ -163,11 +157,10 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 		}
 	}
 
-	log.Info().
-		Str("range", rangeSpec).
-		Int("rows_to_write", len(rows)).
-		Strs("sample_rows", sampleRows).
-		Msg("=== WRITING TO SHEET ===")
+	slog.Info("=== WRITING TO SHEET ===",
+		"range", rangeSpec,
+		"rows_to_write", len(rows),
+		"sample_rows", sampleRows)
 
 	// Use UpdateRange instead of AppendRows for exact range specification
 	err = p.api.UpdateRange(ctx, spreadsheetID, rangeSpec, rows)
@@ -175,11 +168,10 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 		return fmt.Errorf("failed to append attack records: %w", err)
 	}
 
-	log.Info().
-		Int("war_id", config.WarID).
-		Int("records_appended", len(newRecords)).
-		Str("range", rangeSpec).
-		Msg("=== EXITING UpdateAttackRecords - Successfully appended records ===")
+	slog.Info("=== EXITING UpdateAttackRecords - Successfully appended records ===",
+		"war_id", config.WarID,
+		"records_appended", len(newRecords),
+		"range", rangeSpec)
 
 	return nil
 }
@@ -194,21 +186,19 @@ func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord
 		// Skip if duplicate attack code
 		if existing.AttackCodes[record.Code] {
 			duplicates++
-			log.Debug().
-				Str("attack_code", record.Code).
-				Int64("attack_id", record.AttackID).
-				Msg("Filtered duplicate attack")
+			slog.Debug("Filtered duplicate attack",
+				"attack_code", record.Code,
+				"attack_id", record.AttackID)
 			continue
 		}
 
 		// Skip if record is older than or equal to existing timestamp (already processed)
 		if record.Started.Unix() <= existing.LatestTimestamp {
 			duplicates++
-			log.Debug().
-				Int64("attack_id", record.AttackID).
-				Int64("record_timestamp", record.Started.Unix()).
-				Int64("existing_timestamp", existing.LatestTimestamp).
-				Msg("Filtered old attack (timestamp)")
+			slog.Debug("Filtered old attack (timestamp)",
+				"attack_id", record.AttackID,
+				"record_timestamp", record.Started.Unix(),
+				"existing_timestamp", existing.LatestTimestamp)
 			continue
 		}
 
@@ -226,21 +216,19 @@ func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord
 		}
 	}
 
-	log.Info().
-		Int("input_records", len(records)).
-		Int("duplicates_filtered", duplicates).
-		Int("new_records", len(newRecords)).
-		Strs("sample_attack_codes", sampleCodes).
-		Msg("Completed deduplication filtering")
+	slog.Info("Completed deduplication filtering",
+		"input_records", len(records),
+		"duplicates_filtered", duplicates,
+		"new_records", len(newRecords),
+		"sample_attack_codes", sampleCodes)
 
 	// Sort chronologically (oldest first)
 	sort.Slice(newRecords, func(i, j int) bool {
 		return newRecords[i].Started.Before(newRecords[j].Started)
 	})
 
-	log.Debug().
-		Int("filtered_records", len(newRecords)).
-		Msg("Filtered and sorted records chronologically")
+	slog.Debug("Filtered and sorted records chronologically",
+		"filtered_records", len(newRecords))
 
 	return newRecords
 }

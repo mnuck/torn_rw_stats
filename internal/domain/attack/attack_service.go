@@ -3,9 +3,9 @@ package attack
 import (
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/app"
 )
 
 // AttackProcessingService handles attack data processing and analysis, converting
@@ -75,11 +75,10 @@ func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []app.Atta
 		records = append(records, record)
 	}
 
-	log.Debug().
-		Int("total_attacks", len(attacks)).
-		Int("records_created", len(records)).
-		Int("our_faction_id", ourFactionID).
-		Msg("Processed attacks into records")
+	slog.Debug("Processed attacks into records",
+		"total_attacks", len(attacks),
+		"records_created", len(records),
+		"our_faction_id", ourFactionID)
 
 	return records
 }

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/app"
 )
 
 const (
@@ -69,10 +69,9 @@ func (c *Client) makeAPIRequest(ctx context.Context, url string) (*http.Response
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		log.Debug().
-			Err(err).
-			Str("url", url).
-			Msg("API request failed")
+		slog.Debug("API request failed",
+			"err", err,
+			"url", url)
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
@@ -101,7 +100,7 @@ func (c *Client) handleAPIResponse(resp *http.Response) ([]byte, error) {
 func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
 	url := fmt.Sprintf("https://api.torn.com/v2/faction/wars?key=%s", c.apiKey)
 
-	log.Debug().Str("url", url).Msg("Fetching faction wars")
+	slog.Debug("Fetching faction wars", "url", url)
 
 	resp, err := c.makeAPIRequest(ctx, url)
 	if err != nil {
@@ -118,11 +117,10 @@ func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
 		return nil, fmt.Errorf("failed to decode war response: %w", err)
 	}
 
-	log.Debug().
-		Bool("has_ranked_war", warResponse.Wars.Ranked != nil).
-		Int("raid_wars", len(warResponse.Wars.Raids)).
-		Int("territory_wars", len(warResponse.Wars.Territory)).
-		Msg("Successfully fetched faction wars")
+	slog.Debug("Successfully fetched faction wars",
+		"has_ranked_war", warResponse.Wars.Ranked != nil,
+		"raid_wars", len(warResponse.Wars.Raids),
+		"territory_wars", len(warResponse.Wars.Territory))
 
 	return &warResponse, nil
 }
@@ -131,13 +129,12 @@ func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
 func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error) {
 	url := fmt.Sprintf("https://api.torn.com/v2/faction/attacks?key=%s&from=%d&to=%d", c.apiKey, from, to)
 
-	log.Debug().
-		Str("url", url).
-		Int64("from", from).
-		Int64("to", to).
-		Str("from_time", time.Unix(from, 0).Format("2006-01-02 15:04:05")).
-		Str("to_time", time.Unix(to, 0).Format("2006-01-02 15:04:05")).
-		Msg("Fetching faction attacks")
+	slog.Debug("Fetching faction attacks",
+		"url", url,
+		"from", from,
+		"to", to,
+		"from_time", time.Unix(from, 0).Format("2006-01-02 15:04:05"),
+		"to_time", time.Unix(to, 0).Format("2006-01-02 15:04:05"))
 
 	resp, err := c.makeAPIRequest(ctx, url)
 	if err != nil {
@@ -154,11 +151,10 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 		return nil, fmt.Errorf("failed to decode attack response: %w", err)
 	}
 
-	log.Debug().
-		Int("attacks_count", len(attackResponse.Attacks)).
-		Int64("from", from).
-		Int64("to", to).
-		Msg("Successfully fetched faction attacks")
+	slog.Debug("Successfully fetched faction attacks",
+		"attacks_count", len(attackResponse.Attacks),
+		"from", from,
+		"to", to)
 
 	return &attackResponse, nil
 }
@@ -167,10 +163,9 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
 	url := fmt.Sprintf("https://api.torn.com/faction/%d?selections=basic&key=%s", factionID, c.apiKey)
 
-	log.Debug().
-		Str("url", url).
-		Int("faction_id", factionID).
-		Msg("Fetching faction basic data")
+	slog.Debug("Fetching faction basic data",
+		"url", url,
+		"faction_id", factionID)
 
 	resp, err := c.makeAPIRequest(ctx, url)
 	if err != nil {
@@ -187,10 +182,9 @@ func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.Facti
 		return nil, fmt.Errorf("failed to decode faction response: %w", err)
 	}
 
-	log.Debug().
-		Int("faction_id", factionID).
-		Int("members_count", len(factionResponse.Members)).
-		Msg("Successfully fetched faction basic data")
+	slog.Debug("Successfully fetched faction basic data",
+		"faction_id", factionID,
+		"members_count", len(factionResponse.Members))
 
 	return &factionResponse, nil
 }
@@ -199,9 +193,7 @@ func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.Facti
 func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {
 	url := fmt.Sprintf("https://api.torn.com/faction/?selections=basic&key=%s", c.apiKey)
 
-	log.Debug().
-		Str("url", url).
-		Msg("Fetching own faction data")
+	slog.Debug("Fetching own faction data", "url", url)
 
 	resp, err := c.makeAPIRequest(ctx, url)
 	if err != nil {
@@ -218,11 +210,10 @@ func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, e
 		return nil, fmt.Errorf("failed to decode faction response: %w", err)
 	}
 
-	log.Debug().
-		Int("faction_id", factionResponse.ID).
-		Str("faction_name", factionResponse.Name).
-		Str("faction_tag", factionResponse.Tag).
-		Msg("Successfully fetched own faction data")
+	slog.Debug("Successfully fetched own faction data",
+		"faction_id", factionResponse.ID,
+		"faction_name", factionResponse.Name,
+		"faction_tag", factionResponse.Tag)
 
 	return &factionResponse, nil
 }

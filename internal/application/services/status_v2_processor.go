@@ -9,9 +9,9 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/deployment"
-	"torn_rw_stats/internal/processing"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/processing"
 )
 
 // StatusV2Processor handles Status v2 sheet processing, converting faction member
@@ -50,7 +50,7 @@ func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClien
 // ensureOurFactionID fetches and caches our faction ID if not already set
 func (p *StatusV2Processor) ensureOurFactionID(ctx context.Context) error {
 	if p.ourFactionID == 0 {
-		log.Debug().Msg("StatusV2Processor: Fetching our faction ID from API")
+		slog.Debug("StatusV2Processor: Fetching our faction ID from API")
 
 		factionInfo, err := p.tornClient.GetOwnFaction(ctx)
 		if err != nil {
@@ -58,11 +58,10 @@ func (p *StatusV2Processor) ensureOurFactionID(ctx context.Context) error {
 		}
 
 		p.ourFactionID = factionInfo.ID
-		log.Info().
-			Int("faction_id", p.ourFactionID).
-			Str("faction_name", factionInfo.Name).
-			Str("faction_tag", factionInfo.Tag).
-			Msg("StatusV2Processor: Detected our faction ID")
+		slog.Info("StatusV2Processor: Detected our faction ID",
+			"faction_id", p.ourFactionID,
+			"faction_name", factionInfo.Name,
+			"faction_tag", factionInfo.Tag)
 	}
 	return nil
 }
@@ -71,26 +70,23 @@ func (p *StatusV2Processor) ensureOurFactionID(ctx context.Context) error {
 func (p *StatusV2Processor) ProcessStatusV2ForFactions(ctx context.Context, spreadsheetID string, factionIDs []int, updateInterval time.Duration) error {
 	// Ensure our faction ID is loaded for proper filtering
 	if err := p.ensureOurFactionID(ctx); err != nil {
-		log.Error().Err(err).Msg("Failed to fetch our faction ID - continuing but filtering may be incorrect")
+		slog.Error("Failed to fetch our faction ID - continuing but filtering may be incorrect", "err", err)
 	}
 
-	log.Info().
-		Int("faction_count", len(factionIDs)).
-		Int("our_faction_id", p.ourFactionID).
-		Msg("Processing Status v2 for factions")
+	slog.Info("Processing Status v2 for factions",
+		"faction_count", len(factionIDs),
+		"our_faction_id", p.ourFactionID)
 
 	for _, factionID := range factionIDs {
 		if err := p.ProcessStatusV2ForFaction(ctx, spreadsheetID, factionID, updateInterval); err != nil {
-			log.Error().
-				Err(err).
-				Int("faction_id", factionID).
-				Msg("Failed to process Status v2 for faction - continuing with others")
+			slog.Error("Failed to process Status v2 for faction - continuing with others",
+				"err", err,
+				"faction_id", factionID)
 			continue
 		}
 
-		log.Debug().
-			Int("faction_id", factionID).
-			Msg("Successfully processed Status v2 for faction")
+		slog.Debug("Successfully processed Status v2 for faction",
+			"faction_id", factionID)
 	}
 
 	return nil
@@ -114,17 +110,15 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 	factionIDStr := fmt.Sprintf("%d", factionID)
 	currentStateRecords, err := p.service.readCurrentStateRecords(ctx, spreadsheetID, factionIDStr)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Int("faction_id", factionID).
-			Msg("Failed to read state records")
+		slog.Error("Failed to read state records",
+			"err", err,
+			"faction_id", factionID)
 		return fmt.Errorf("failed to read state records: %w", err)
 	}
 
-	log.Info().
-		Int("faction_id", factionID).
-		Int("filtered_state_records", len(currentStateRecords)).
-		Msg("Filtered state records for faction")
+	slog.Info("Filtered state records for faction",
+		"faction_id", factionID,
+		"filtered_state_records", len(currentStateRecords))
 
 	// Step 5: Convert to Status v2 records
 	statusV2Records, err := p.service.ConvertStateRecordsToStatusV2(
@@ -138,23 +132,20 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 		return fmt.Errorf("failed to convert state records to Status v2: %w", err)
 	}
 
-	log.Info().
-		Int("faction_id", factionID).
-		Int("status_v2_records", len(statusV2Records)).
-		Msg("Converted state records to Status v2 records")
+	slog.Info("Converted state records to Status v2 records",
+		"faction_id", factionID,
+		"status_v2_records", len(statusV2Records))
 
 	// Step 6: Update the Status v2 sheet
-	log.Info().
-		Int("faction_id", factionID).
-		Str("sheet_name", sheetName).
-		Int("records_to_write", len(statusV2Records)).
-		Msg("About to update Status v2 sheet")
+	slog.Info("About to update Status v2 sheet",
+		"faction_id", factionID,
+		"sheet_name", sheetName,
+		"records_to_write", len(statusV2Records))
 
 	if len(statusV2Records) == 0 {
-		log.Warn().
-			Int("faction_id", factionID).
-			Str("sheet_name", sheetName).
-			Msg("No Status v2 records to write - sheet will remain empty")
+		slog.Warn("No Status v2 records to write - sheet will remain empty",
+			"faction_id", factionID,
+			"sheet_name", sheetName)
 		return nil
 	}
 
@@ -162,26 +153,23 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 		return fmt.Errorf("failed to update Status v2 sheet: %w", err)
 	}
 
-	log.Info().
-		Int("faction_id", factionID).
-		Int("records_count", len(statusV2Records)).
-		Str("sheet_name", sheetName).
-		Int("state_records_found", len(currentStateRecords)).
-		Int("faction_members", len(factionData.Members)).
-		Msg("Successfully updated Status v2 sheet")
+	slog.Info("Successfully updated Status v2 sheet",
+		"faction_id", factionID,
+		"records_count", len(statusV2Records),
+		"sheet_name", sheetName,
+		"state_records_found", len(currentStateRecords),
+		"faction_members", len(factionData.Members))
 
 	// Step 7: Export JSON alongside sheet update (only for opposing factions)
 	if factionID != p.ourFactionID {
 		if err := p.exportAndDeployJSON(statusV2Records, factionData.Name, factionID, updateInterval); err != nil {
-			log.Warn().
-				Err(err).
-				Int("faction_id", factionID).
-				Msg("Failed to export/deploy Status v2 JSON - continuing with processing")
+			slog.Warn("Failed to export/deploy Status v2 JSON - continuing with processing",
+				"err", err,
+				"faction_id", factionID)
 		}
 	} else {
-		log.Debug().
-			Int("faction_id", factionID).
-			Msg("Skipping JSON export for our own faction")
+		slog.Debug("Skipping JSON export for our own faction",
+			"faction_id", factionID)
 	}
 
 	return nil
@@ -200,11 +188,10 @@ func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, fa
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	log.Info().
-		Int("faction_id", factionID).
-		Int("locations_count", len(jsonData.Locations)).
-		Int("json_size_bytes", len(jsonBytes)).
-		Msg("Successfully generated Status v2 JSON")
+	slog.Info("Successfully generated Status v2 JSON",
+		"faction_id", factionID,
+		"locations_count", len(jsonData.Locations),
+		"json_size_bytes", len(jsonBytes))
 
 	// Deploy to remote server if deployer is configured
 	if p.deployer != nil {
@@ -216,15 +203,13 @@ func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, fa
 			return fmt.Errorf("failed to deploy JSON data: %w", err)
 		}
 
-		log.Info().
-			Int("faction_id", factionID).
-			Str("remote_file", remoteFilename).
-			Int("size_bytes", len(jsonBytes)).
-			Msg("Successfully deployed Status v2 JSON")
+		slog.Info("Successfully deployed Status v2 JSON",
+			"faction_id", factionID,
+			"remote_file", remoteFilename,
+			"size_bytes", len(jsonBytes))
 	} else {
-		log.Debug().
-			Int("faction_id", factionID).
-			Msg("No deployer configured - skipping remote deployment")
+		slog.Debug("No deployer configured - skipping remote deployment",
+			"faction_id", factionID)
 	}
 
 	return nil

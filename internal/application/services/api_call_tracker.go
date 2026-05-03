@@ -2,10 +2,9 @@ package services
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 // APICallTracker monitors and optimizes API call usage, tracking session statistics,
@@ -75,19 +74,16 @@ func (t *APICallTracker) ResetSession() {
 // LogSessionSummary logs a summary of API usage for the session
 func (t *APICallTracker) LogSessionSummary(ctx context.Context) {
 	stats := t.GetSessionStats()
-
-	logEvent := log.Info().
-		Int64("session_calls", stats.SessionCalls).
-		Int64("total_calls", stats.TotalCalls).
-		Float64("calls_per_minute", stats.CallsPerMinute).
-		Dur("session_duration", stats.SessionDuration)
-
-	// Add breakdown by endpoint
-	for endpoint, count := range stats.CallsByEndpoint {
-		logEvent = logEvent.Int64(endpoint+"_calls", count)
+	args := []any{
+		"session_calls", stats.SessionCalls,
+		"total_calls", stats.TotalCalls,
+		"calls_per_minute", stats.CallsPerMinute,
+		"session_duration", stats.SessionDuration,
 	}
-
-	logEvent.Msg("API call session summary")
+	for endpoint, count := range stats.CallsByEndpoint {
+		args = append(args, endpoint+"_calls", count)
+	}
+	slog.Info("API call session summary", args...)
 }
 
 // APICallStats represents API call statistics for a session, including call counts,

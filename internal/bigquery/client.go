@@ -3,10 +3,10 @@ package bigquery
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	bq "cloud.google.com/go/bigquery"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 
@@ -136,11 +136,10 @@ WHERE rn = 1`,
 		records = append(records, r)
 	}
 
-	log.Debug().
-		Int("members_queried", len(memberIDs)).
-		Int("records_returned", len(records)).
-		Dur("duration", time.Since(start)).
-		Msg("BigQuery latest-state-per-member query complete")
+	slog.Debug("BigQuery latest-state-per-member query complete",
+		"members_queried", len(memberIDs),
+		"records_returned", len(records),
+		"duration", time.Since(start))
 
 	return records, nil
 }
@@ -211,11 +210,10 @@ WHERE rn = 1`,
 		records = append(records, r)
 	}
 
-	log.Debug().
-		Str("faction_id", factionID).
-		Int("records_returned", len(records)).
-		Dur("duration", time.Since(start)).
-		Msg("BigQuery latest-state-per-faction query complete")
+	slog.Debug("BigQuery latest-state-per-faction query complete",
+		"faction_id", factionID,
+		"records_returned", len(records),
+		"duration", time.Since(start))
 
 	return records, nil
 }
@@ -270,11 +268,10 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY timestamp DESC) = 1`,
 		result[row.MemberID] = row.DepartureTime.UTC()
 	}
 
-	log.Debug().
-		Int("members_queried", len(memberIDs)).
-		Int("departures_found", len(result)).
-		Dur("duration", time.Since(start)).
-		Msg("BigQuery departure-times query complete")
+	slog.Debug("BigQuery departure-times query complete",
+		"members_queried", len(memberIDs),
+		"departures_found", len(result),
+		"duration", time.Since(start))
 
 	return result, nil
 }
@@ -296,12 +293,11 @@ func (c *Client) InsertStateRecords(ctx context.Context, records []app.StateReco
 		return fmt.Errorf("bigquery insert failed (dataset=%s table=%s): %w", c.datasetID, c.tableID, err)
 	}
 
-	log.Debug().
-		Int("rows", len(records)).
-		Dur("duration", time.Since(start)).
-		Str("dataset", c.datasetID).
-		Str("table", c.tableID).
-		Msg("BigQuery streaming insert complete")
+	slog.Debug("BigQuery streaming insert complete",
+		"rows", len(records),
+		"duration", time.Since(start),
+		"dataset", c.datasetID,
+		"table", c.tableID)
 
 	return nil
 }

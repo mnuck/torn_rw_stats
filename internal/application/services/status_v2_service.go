@@ -7,9 +7,9 @@ import (
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/status"
 	"torn_rw_stats/internal/domain/travel"
-	"torn_rw_stats/internal/processing"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/processing"
 )
 
 // StatusV2Service handles conversion of StateRecords to StatusV2Records,
@@ -43,51 +43,47 @@ func NewStatusV2ServiceWithBigQuery(sheetsClient processing.SheetsClientInterfac
 // ConvertStateRecordsToStatusV2 converts StateRecords to StatusV2Records
 // incorporating departure time tracking and countdown calculations
 func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spreadsheetID string, stateRecords []app.StateRecord, factionMembers map[string]app.FactionMember, factionID int) ([]app.StatusV2Record, error) {
-	log.Info().
-		Int("faction_id", factionID).
-		Int("input_state_records", len(stateRecords)).
-		Int("faction_members", len(factionMembers)).
-		Msg("Starting StateRecord to StatusV2 conversion")
+	slog.Info("Starting StateRecord to StatusV2 conversion",
+		"faction_id", factionID,
+		"input_state_records", len(stateRecords),
+		"faction_members", len(factionMembers))
 
 	var records []app.StatusV2Record
 
 	// Get existing departure data to preserve manual adjustments
 	existingData, err := s.getExistingStatusV2Data(ctx, spreadsheetID, factionID)
 	if err != nil {
-		log.Warn().Err(err).Int("faction_id", factionID).Msg("Failed to get existing Status v2 data, will use defaults")
+		slog.Warn("Failed to get existing Status v2 data, will use defaults", "err", err, "faction_id", factionID)
 		existingData = make(map[string]app.StatusV2Record)
 	}
 
-	log.Debug().
-		Int("faction_id", factionID).
-		Int("existing_status_v2_records", len(existingData)).
-		Msg("Retrieved existing Status v2 data")
+	slog.Debug("Retrieved existing Status v2 data",
+		"faction_id", factionID,
+		"existing_status_v2_records", len(existingData))
 
 	// Get travel state changes for departure time tracking
 	departureMap, err := s.buildDepartureMap(ctx, spreadsheetID, stateRecords)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to build departure map, will use current timestamp for traveling players")
+		slog.Warn("Failed to build departure map, will use current timestamp for traveling players", "err", err)
 		departureMap = make(map[string]time.Time)
 	}
 
 	currentTime := time.Now().UTC()
 
 	for i, stateRecord := range stateRecords {
-		log.Debug().
-			Int("faction_id", factionID).
-			Int("record_index", i).
-			Str("member_id", stateRecord.MemberID).
-			Str("member_name", stateRecord.MemberName).
-			Str("status_state", stateRecord.StatusState).
-			Msg("Converting individual state record")
+		slog.Debug("Converting individual state record",
+			"faction_id", factionID,
+			"record_index", i,
+			"member_id", stateRecord.MemberID,
+			"member_name", stateRecord.MemberName,
+			"status_state", stateRecord.StatusState)
 
 		// Skip members who are no longer in the faction
 		if _, exists := factionMembers[stateRecord.MemberID]; !exists {
-			log.Debug().
-				Int("faction_id", factionID).
-				Str("member_id", stateRecord.MemberID).
-				Str("member_name", stateRecord.MemberName).
-				Msg("Skipping member who is no longer in faction")
+			slog.Debug("Skipping member who is no longer in faction",
+				"faction_id", factionID,
+				"member_id", stateRecord.MemberID,
+				"member_name", stateRecord.MemberName)
 			continue
 		}
 
@@ -95,10 +91,9 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 		records = append(records, record)
 	}
 
-	log.Info().
-		Int("faction_id", factionID).
-		Int("output_status_v2_records", len(records)).
-		Msg("Completed StateRecord to StatusV2 conversion")
+	slog.Info("Completed StateRecord to StatusV2 conversion",
+		"faction_id", factionID,
+		"output_status_v2_records", len(records))
 
 	return records, nil
 }

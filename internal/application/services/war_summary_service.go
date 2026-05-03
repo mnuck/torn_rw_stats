@@ -6,9 +6,9 @@ import (
 
 	"torn_rw_stats/internal/app"
 	"torn_rw_stats/internal/domain/attack"
-	wardomain "torn_rw_stats/internal/domain/war"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	wardomain "torn_rw_stats/internal/domain/war"
 )
 
 // WarSummaryService handles war summary generation and statistics calculation,
@@ -56,14 +56,13 @@ func (wss *WarSummaryService) GenerateWarSummary(war *app.War, attacks []app.Att
 	// Set war name based on factions
 	summary.WarName = fmt.Sprintf("%s vs %s", summary.OurFaction.Name, summary.EnemyFaction.Name)
 
-	log.Debug().
-		Int("war_id", war.ID).
-		Int("total_attacks", summary.TotalAttacks).
-		Int("attacks_won", summary.AttacksWon).
-		Int("attacks_lost", summary.AttacksLost).
-		Float64("respect_gained", summary.RespectGained).
-		Float64("respect_lost", summary.RespectLost).
-		Msg("Generated war summary")
+	slog.Debug("Generated war summary",
+		"war_id", war.ID,
+		"total_attacks", summary.TotalAttacks,
+		"attacks_won", summary.AttacksWon,
+		"attacks_lost", summary.AttacksLost,
+		"respect_gained", summary.RespectGained,
+		"respect_lost", summary.RespectLost)
 
 	return summary
 }

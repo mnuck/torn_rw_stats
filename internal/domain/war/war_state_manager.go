@@ -3,9 +3,9 @@ package war
 import (
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"log/slog"
 
-	"github.com/rs/zerolog/log"
+	"torn_rw_stats/internal/app"
 )
 
 // Configuration constants for war state management
@@ -139,21 +139,19 @@ func (wsm *WarStateManager) UpdateState(warResponse *app.WarResponse) WarState {
 	// Validate state transition to prevent oscillation
 	if wsm.isValidStateTransition(wsm.currentState, newState) {
 		if newState != wsm.currentState {
-			log.Info().
-				Str("previous_state", wsm.currentState.String()).
-				Str("new_state", newState.String()).
-				Dur("time_in_previous_state", time.Since(wsm.lastStateChange)).
-				Msg("War state transition")
+			slog.Info("War state transition",
+				"previous_state", wsm.currentState.String(),
+				"new_state", newState.String(),
+				"time_in_previous_state", time.Since(wsm.lastStateChange))
 
 			wsm.currentState = newState
 			wsm.lastStateChange = time.Now()
 		}
 	} else {
-		log.Debug().
-			Str("current_state", wsm.currentState.String()).
-			Str("attempted_state", newState.String()).
-			Dur("time_since_last_change", time.Since(wsm.lastStateChange)).
-			Msg("Invalid state transition blocked")
+		slog.Debug("Invalid state transition blocked",
+			"current_state", wsm.currentState.String(),
+			"attempted_state", newState.String(),
+			"time_since_last_change", time.Since(wsm.lastStateChange))
 	}
 
 	return wsm.currentState
@@ -347,10 +345,9 @@ func (wsm *WarStateManager) GetNextCheckTime() time.Time {
 		if wsm.currentState == PreWar && wsm.currentWarIsRanked && wsm.currentWar != nil {
 			warStart := time.Unix(wsm.currentWar.Start, 0)
 			if time.Until(warStart) <= PreWarRealTimeThreshold {
-				log.Debug().
-					Time("war_start", warStart).
-					Dur("time_until_start", time.Until(warStart)).
-					Msg("Within 12h of ranked war start - accelerating to real-time polling")
+				slog.Debug("Within 12h of ranked war start - accelerating to real-time polling",
+					"war_start", warStart,
+					"time_until_start", time.Until(warStart))
 				return now.Add(ActiveWarUpdateInterval)
 			}
 		}
