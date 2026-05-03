@@ -48,21 +48,3 @@ func ResolveLevel(
 
 	return 0
 }
-
-// ShouldPreserveTravelData determines if existing travel data should be preserved
-// This happens when the player is still traveling and we have existing departure/arrival times
-func ShouldPreserveTravelData(
-	statusState string,
-	existing *app.StatusV2Record,
-) bool {
-	if statusState != "Traveling" {
-		return false
-	}
-
-	if existing == nil {
-		return false
-	}
-
-	// Preserve if we have existing departure or arrival data
-	return existing.Departure != "" || existing.Arrival != ""
-}
