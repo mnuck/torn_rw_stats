@@ -3,8 +3,6 @@ name: CD
 on:
   push:
     branches: [ main ]
-    tags:
-      - 'v*'
   pull_request:
     branches: [ main ]
 
@@ -51,7 +49,7 @@ jobs:
 
     - name: Build and push Docker image
       id: build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         platforms: linux/amd64,linux/arm64
@@ -63,29 +61,25 @@ jobs:
 
     - name: Extract SHA tag
       id: sha-tag
+      if: github.event_name != 'pull_request'
       run: |
         echo "SHA_TAG=$(echo '${{ steps.meta.outputs.tags }}' | grep -o 'sha-[a-f0-9]*' | head -1)" >> $GITHUB_OUTPUT
-      if: github.event_name != 'pull_request'
 
     - name: Check for critical vulnerabilities
+      if: github.event_name != 'pull_request'
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.sha-tag.outputs.SHA_TAG }}
-        format: 'json'
-        output: 'trivy-results.json'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
-      if: github.event_name != 'pull_request'
 
-    - name: Show vulnerability scan results
+    - name: Upload Trivy scan results
       if: always() && github.event_name != 'pull_request'
-      run: |
-        if [ -f trivy-results.json ]; then
-          echo "=== Trivy Scan Results ==="
-          cat trivy-results.json
-        else
-          echo "No trivy-results.json file found"
-        fi
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-results.sarif
 
   sign-image:
     name: Sign Container Image
@@ -109,15 +103,11 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Sign container image
-      env:
-        COSIGN_EXPERIMENTAL: 1
       run: |
         cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.sha-tag }}
         cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
     - name: Verify signature
-      env:
-        COSIGN_EXPERIMENTAL: 1
       run: |
         cosign verify ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.sha-tag }} \
           --certificate-identity-regexp=".*" \
@@ -125,50 +115,3 @@ jobs:
         cosign verify ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
           --certificate-identity-regexp=".*" \
           --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
-
-  release-binaries:
-    name: Release Native Binaries
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    permissions:
-      contents: write
-      packages: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.23'
-
-    - name: Run GoReleaser (Tagged Release)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: goreleaser/goreleaser-action@v6
-      with:
-        distribution: goreleaser
-        version: '~> v2'
-        args: release --clean
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Run GoReleaser (Snapshot Build)
-      if: github.ref == 'refs/heads/main'
-      uses: goreleaser/goreleaser-action@v6
-      with:
-        distribution: goreleaser
-        version: '~> v2'
-        args: build --snapshot --clean
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload snapshot artifacts
-      if: github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v4
-      with:
-        name: snapshot-binaries
-        path: dist/*
-        retention-days: 30
