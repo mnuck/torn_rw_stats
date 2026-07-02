@@ -3,6 +3,7 @@ package main
 import (
 	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/bigquery"
+	"torn_rw_stats/internal/deployment"
 	"torn_rw_stats/internal/domain/attack"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/sheets"
@@ -19,4 +20,5 @@ var (
 	_ ports.TravelTimeService       = (*travel.TravelTimeService)(nil)
 	_ ports.AttackProcessingService = (*attack.AttackProcessingService)(nil)
 	_ ports.BigQueryClient          = (*bigquery.Client)(nil)
+	_ ports.Deployer                = (*deployment.SSHDeployer)(nil)
 )

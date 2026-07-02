@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"log/slog"
-	"torn_rw_stats/internal/deployment"
 	"torn_rw_stats/internal/domain"
 
 	"torn_rw_stats/internal/application/ports"
@@ -21,16 +20,12 @@ type StatusV2Processor struct {
 	sheetsClient ports.SheetsClient
 	service      *StatusV2Service
 	ourFactionID int // cached faction ID, fetched via API
-	deployer     *deployment.SSHDeployer
+	deployer     ports.Deployer
 }
 
-// NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient ports.TornClient, sheetsClient ports.SheetsClient, bqClient ports.BigQueryClient, deployURL string) *StatusV2Processor {
-	var deployer *deployment.SSHDeployer
-	if deployURL != "" {
-		deployer = deployment.NewSSHDeployer(deployURL)
-	}
-
+// NewStatusV2Processor creates a new Status v2 processor.
+// deployer may be nil to disable remote JSON deployment.
+func NewStatusV2Processor(tornClient ports.TornClient, sheetsClient ports.SheetsClient, bqClient ports.BigQueryClient, deployer ports.Deployer) *StatusV2Processor {
 	var svc *StatusV2Service
 	if bqClient != nil {
 		svc = NewStatusV2ServiceWithBigQuery(sheetsClient, bqClient)

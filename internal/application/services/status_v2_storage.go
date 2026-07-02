@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/domain"
-	"torn_rw_stats/internal/sheets"
 )
 
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
@@ -29,7 +29,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 		}
 
 		// Extract member name and create key using type-safe Cell
-		name := sheets.NewCell(row[0]).String()
+		name := ports.NewCell(row[0]).String()
 		if name == "" {
 			continue
 		}
@@ -87,5 +87,5 @@ func getString(row []interface{}, index int) string {
 	if index >= len(row) {
 		return ""
 	}
-	return sheets.NewCell(row[index]).String()
+	return ports.NewCell(row[index]).String()
 }

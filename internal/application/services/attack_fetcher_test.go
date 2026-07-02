@@ -1,4 +1,4 @@
-package torn
+package services
 
 import (
 	"context"
@@ -270,7 +270,7 @@ func TestGetAllAttacksForWar(t *testing.T) {
 			},
 		},
 	}
-	processor := NewAttackProcessor(mockAPI)
+	processor := NewAttackFetcher(mockAPI)
 
 	war := &domain.War{
 		ID:    123,
@@ -298,7 +298,7 @@ func TestGetAllAttacksForWar(t *testing.T) {
 
 func TestGetAttacksForTimeRangeError(t *testing.T) {
 	mockAPI := &MockTornAPI{shouldError: true}
-	processor := NewAttackProcessor(mockAPI)
+	processor := NewAttackFetcher(mockAPI)
 
 	war := &domain.War{
 		ID:    123,
@@ -317,7 +317,7 @@ func TestGetAttacksForTimeRangeError(t *testing.T) {
 
 func TestGetAttacksForTimeRangeNilWar(t *testing.T) {
 	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
+	processor := NewAttackFetcher(mockAPI)
 
 	_, err := processor.GetAttacksForTimeRange(context.Background(), nil, 1000, nil)
 	if err == nil {
@@ -332,7 +332,7 @@ func TestGetAttacksForTimeRangeNilWar(t *testing.T) {
 
 func TestProcessAttacksPage(t *testing.T) {
 	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
+	processor := NewAttackFetcher(mockAPI)
 
 	war := &domain.War{
 		Factions: []domain.Faction{
@@ -377,7 +377,7 @@ func TestProcessAttacksPage(t *testing.T) {
 
 func TestShouldStopPagination(t *testing.T) {
 	mockAPI := &MockTornAPI{}
-	processor := NewAttackProcessor(mockAPI)
+	processor := NewAttackFetcher(mockAPI)
 
 	testCases := []struct {
 		name       string

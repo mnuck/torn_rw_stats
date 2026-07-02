@@ -12,8 +12,6 @@ import (
 	wardomain "torn_rw_stats/internal/domain/war"
 
 	"torn_rw_stats/internal/application/ports"
-	"torn_rw_stats/internal/sheets"
-	"torn_rw_stats/internal/torn"
 )
 
 // WarProcessor handles war detection and processing, coordinating attack collection,
@@ -51,10 +49,11 @@ func NewWarProcessor(
 	}
 }
 
-// NewOptimizedProcessor creates an OptimizedWarProcessor with concrete implementations.
-// This is the recommended constructor for production use with state-based optimization.
-// bqClient may be nil to disable BigQuery integration.
-func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config, bqClient ports.BigQueryClient) *OptimizedWarProcessor {
+// NewOptimizedProcessor creates an OptimizedWarProcessor with default domain
+// services. This is the recommended constructor for production use with
+// state-based optimization. bqClient may be nil to disable BigQuery
+// integration; deployer may be nil to disable remote JSON deployment.
+func NewOptimizedProcessor(tornClient ports.TornClient, sheetsClient ports.SheetsClient, config *app.Config, bqClient ports.BigQueryClient, deployer ports.Deployer) *OptimizedWarProcessor {
 	// Create the attack processing service
 	attackService := attack.NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)
@@ -68,6 +67,7 @@ func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client,
 		summaryService,
 		config,
 		bqClient,
+		deployer,
 	)
 }
 
@@ -183,7 +183,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *domain.War) error {
 
 	// Fetch attacks based on decision
 	var attacks []domain.Attack
-	processor := torn.NewAttackProcessor(wp.tornClient)
+	processor := NewAttackFetcher(wp.tornClient)
 	if fetchDecision.UseFullMode {
 		attacks, err = processor.GetAllAttacksForWar(ctx, war)
 	} else {

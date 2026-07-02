@@ -7,12 +7,19 @@ package ports
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/domain/war"
 )
+
+// Deployer publishes generated artifacts (e.g. the Status v2 JSON export)
+// to an external destination.
+type Deployer interface {
+	DeployData(data io.Reader, size int64, filename string) error
+}
 
 // TornClient defines the Torn API operations used by the application
 type TornClient interface {

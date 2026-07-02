@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/domain"
 )
 
@@ -417,9 +418,9 @@ func TestParseStringValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).String()
+		result := ports.NewCell(tc.input).String()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).String(): expected '%s', got '%s'", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).String(): expected '%s', got '%s'", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -439,9 +440,9 @@ func TestParseIntValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).Int()
+		result := ports.NewCell(tc.input).Int()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).Int(): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).Int(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -460,25 +461,25 @@ func TestParseInt64Value(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).Int64()
+		result := ports.NewCell(tc.input).Int64()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).Int64(): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).Int64(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
 
 func TestParseInt64PointerValue(t *testing.T) {
-	result := NewCell(nil).Int64Ptr()
+	result := ports.NewCell(nil).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for nil input")
 	}
 
-	result = NewCell("123").Int64Ptr()
+	result = ports.NewCell("123").Int64Ptr()
 	if result == nil || *result != 123 {
 		t.Errorf("Expected *123, got %v", result)
 	}
 
-	result = NewCell(0).Int64Ptr()
+	result = ports.NewCell(0).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for 0 input")
 	}

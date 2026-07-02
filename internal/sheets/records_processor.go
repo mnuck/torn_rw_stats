@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/domain"
 
 	"log/slog"
@@ -50,14 +51,14 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 		}
 
 		// Parse Attack Code (column B) - always a string
-		codeStr := NewCell(row[1]).String()
+		codeStr := ports.NewCell(row[1]).String()
 		if codeStr != "" {
 			info.AttackCodes[codeStr] = true
 			validRows++
 		}
 
 		// Parse Started timestamp (column C) to find latest
-		startedStr := NewCell(row[2]).String()
+		startedStr := ports.NewCell(row[2]).String()
 		if startedTime, err := time.Parse("2006-01-02 15:04:05", startedStr); err == nil {
 			timestamp := startedTime.Unix()
 			if timestamp > info.LatestTimestamp {

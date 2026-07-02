@@ -1,4 +1,4 @@
-package torn
+package services
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"log/slog"
 
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/attack"
 )
@@ -16,15 +17,15 @@ const (
 	TornAPIPageSize = 100
 )
 
-// AttackProcessor handles business logic for processing attacks
-// Separated from infrastructure concerns for better testability
-type AttackProcessor struct {
-	api TornAPI
+// AttackFetcher orchestrates fetching attacks from the Torn API, choosing
+// between simple and paginated strategies based on the time range.
+type AttackFetcher struct {
+	api ports.TornClient
 }
 
-// NewAttackProcessor creates a new attack processor with the given API client
-func NewAttackProcessor(api TornAPI) *AttackProcessor {
-	return &AttackProcessor{
+// NewAttackFetcher creates a new attack fetcher with the given API client
+func NewAttackFetcher(api ports.TornClient) *AttackFetcher {
+	return &AttackFetcher{
 		api: api,
 	}
 }
@@ -38,18 +39,6 @@ type TimeRange struct {
 	UpdateMode string
 }
 
-// FetchStrategy represents the strategy for fetching attacks from the Torn API.
-// StrategySimple uses a single API call, while StrategyPaginated uses backwards
-// pagination for large time ranges.
-type FetchStrategy int
-
-const (
-	// StrategySimple uses a single API call for fetching attacks
-	StrategySimple FetchStrategy = iota
-	// StrategyPaginated uses backwards pagination for large time ranges
-	StrategyPaginated
-)
-
 // PageResult holds the results from fetching a single page of attacks during
 // backwards pagination through the Torn API.
 type PageResult struct {
@@ -59,12 +48,12 @@ type PageResult struct {
 }
 
 // GetAllAttacksForWar fetches all attacks for a specific war timeframe
-func (p *AttackProcessor) GetAllAttacksForWar(ctx context.Context, war *domain.War) ([]domain.Attack, error) {
+func (p *AttackFetcher) GetAllAttacksForWar(ctx context.Context, war *domain.War) ([]domain.Attack, error) {
 	return p.GetAttacksForTimeRange(ctx, war, war.Start, nil)
 }
 
 // GetAttacksForTimeRange fetches attacks for a specific time range within a war
-func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *domain.War, fromTime int64, latestExistingTimestamp *int64) ([]domain.Attack, error) {
+func (p *AttackFetcher) GetAttacksForTimeRange(ctx context.Context, war *domain.War, fromTime int64, latestExistingTimestamp *int64) ([]domain.Attack, error) {
 	if war == nil {
 		return nil, fmt.Errorf("war cannot be nil")
 	}
@@ -99,7 +88,7 @@ func (p *AttackProcessor) GetAttacksForTimeRange(ctx context.Context, war *domai
 }
 
 // fetchAttacksSimple fetches attacks using a single API call (for small time ranges)
-func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *domain.War, timeRange TimeRange) ([]domain.Attack, error) {
+func (p *AttackFetcher) fetchAttacksSimple(ctx context.Context, war *domain.War, timeRange TimeRange) ([]domain.Attack, error) {
 	slog.Debug("Using simple API call for incremental update")
 
 	attackResp, err := p.api.GetFactionAttacks(ctx, timeRange.FromTime, timeRange.ToTime)
@@ -121,7 +110,7 @@ func (p *AttackProcessor) fetchAttacksSimple(ctx context.Context, war *domain.Wa
 }
 
 // fetchAttacksPaginated fetches attacks using backwards pagination (for large time ranges)
-func (p *AttackProcessor) fetchAttacksPaginated(ctx context.Context, war *domain.War, timeRange TimeRange) ([]domain.Attack, error) {
+func (p *AttackFetcher) fetchAttacksPaginated(ctx context.Context, war *domain.War, timeRange TimeRange) ([]domain.Attack, error) {
 	var allAttacks []domain.Attack
 	currentTo := timeRange.ToTime
 
@@ -161,7 +150,7 @@ func (p *AttackProcessor) fetchAttacksPaginated(ctx context.Context, war *domain
 }
 
 // fetchAttacksPage fetches and processes a single page of attacks
-func (p *AttackProcessor) fetchAttacksPage(ctx context.Context, war *domain.War, fromTime, currentTo int64) (*PageResult, error) {
+func (p *AttackFetcher) fetchAttacksPage(ctx context.Context, war *domain.War, fromTime, currentTo int64) (*PageResult, error) {
 	slog.Debug("Fetching attacks page (backwards pagination)",
 		"current_to", currentTo,
 		"current_to_str", time.Unix(currentTo, 0).Format("2006-01-02 15:04:05"))
@@ -180,7 +169,7 @@ func (p *AttackProcessor) fetchAttacksPage(ctx context.Context, war *domain.War,
 }
 
 // processAttacksPage filters attacks and tracks the oldest timestamp
-func (p *AttackProcessor) processAttacksPage(attacks []domain.Attack, war *domain.War, currentTo int64) *PageResult {
+func (p *AttackFetcher) processAttacksPage(attacks []domain.Attack, war *domain.War, currentTo int64) *PageResult {
 	warFactionIDs := attack.BuildFactionIDMap(war)
 	relevantAttacks := attack.FilterRelevantAttacks(attacks, warFactionIDs)
 	oldestAttackTime := attack.FindOldestAttackTime(attacks, currentTo)
@@ -198,7 +187,7 @@ func (p *AttackProcessor) processAttacksPage(attacks []domain.Attack, war *domai
 }
 
 // executeFetchStrategy executes the determined fetch strategy (imperative shell)
-func (p *AttackProcessor) executeFetchStrategy(
+func (p *AttackFetcher) executeFetchStrategy(
 	ctx context.Context,
 	war *domain.War,
 	timeRange TimeRange,
@@ -215,7 +204,7 @@ func (p *AttackProcessor) executeFetchStrategy(
 }
 
 // shouldStopPagination determines if we should stop the pagination loop
-func (p *AttackProcessor) shouldStopPagination(pageResult *PageResult, fromTime int64) bool {
+func (p *AttackFetcher) shouldStopPagination(pageResult *PageResult, fromTime int64) bool {
 	decision := attack.ShouldStopPagination(
 		pageResult.TotalAttacksCount,
 		pageResult.OldestAttackTime,

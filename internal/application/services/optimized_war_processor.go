@@ -36,6 +36,7 @@ func NewOptimizedWarProcessor(
 	warSummaryService ports.WarSummaryService,
 	config *app.Config,
 	bqClient ports.BigQueryClient,
+	deployer ports.Deployer,
 ) *OptimizedWarProcessor {
 
 	// Create war state management
@@ -46,7 +47,7 @@ func NewOptimizedWarProcessor(
 	stateTracker := NewStateTrackingService(tornClient, bqClient)
 
 	// Create Status v2 processor
-	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, config.DeployURL)
+	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, deployer)
 
 	// Create processor with raw client
 	processor := NewWarProcessor(
