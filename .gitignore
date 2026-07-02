@@ -40,8 +40,10 @@ logs/
 ehthumbs.db
 Thumbs.db
 
-# Claude Code local state
-.claude/
+# Agent-harness local state (machine-specific; shared config lives in
+# AGENTS.md and .agents/, which are tracked)
+.claude/settings.local.json
+.claude/worktrees/
 
 # Temporary files
 tmp/
