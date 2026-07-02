@@ -113,7 +113,7 @@ func TestReadExistingRecords(t *testing.T) {
 	t.Run("EmptySheet", func(t *testing.T) {
 		// Test empty sheet logic
 
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     0,
@@ -136,7 +136,7 @@ func TestReadExistingRecords(t *testing.T) {
 		}
 
 		// Simulate parsing logic
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     3,
@@ -183,7 +183,7 @@ func TestReadExistingRecords(t *testing.T) {
 		}
 
 		// Only valid rows should be counted
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     0,
@@ -278,7 +278,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 			{AttackID: 100003, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 10, 0, 0, time.UTC)}, // Duplicate
 		}
 
-		existing := &RecordsInfo{
+		existing := &domain.RecordsInfo{
 			AttackCodes: map[string]bool{
 				"code_1": true, // Already exists
 			},

@@ -9,25 +9,25 @@ import (
 	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/state"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // StateTrackingService handles the complete state tracking workflow, detecting
 // and recording member state changes to BigQuery.
 type StateTrackingService struct {
-	tornClient     processing.TornClientInterface
-	bigqueryClient processing.BigQueryClientInterface // nil = disabled
-	converter      *processing.StateRecordConverter
-	comparator     *processing.StateRecordComparator
+	tornClient     ports.TornClient
+	bigqueryClient ports.BigQueryClient // nil = disabled
+	converter      *state.StateRecordConverter
+	comparator     *state.StateRecordComparator
 }
 
 // NewStateTrackingService creates a new state tracking service. bqClient may be nil to disable BigQuery.
-func NewStateTrackingService(tornClient processing.TornClientInterface, bqClient processing.BigQueryClientInterface) *StateTrackingService {
+func NewStateTrackingService(tornClient ports.TornClient, bqClient ports.BigQueryClient) *StateTrackingService {
 	return &StateTrackingService{
 		tornClient:     tornClient,
 		bigqueryClient: bqClient,
-		converter:      processing.NewStateRecordConverter(),
-		comparator:     processing.NewStateRecordComparator(),
+		converter:      state.NewStateRecordConverter(),
+		comparator:     state.NewStateRecordComparator(),
 	}
 }
 

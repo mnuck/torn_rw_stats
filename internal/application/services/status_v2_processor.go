@@ -11,21 +11,21 @@ import (
 	"torn_rw_stats/internal/deployment"
 	"torn_rw_stats/internal/domain"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // StatusV2Processor handles Status v2 sheet processing, converting faction member
 // states to status sheets and JSON exports for external consumption.
 type StatusV2Processor struct {
-	tornClient   processing.TornClientInterface
-	sheetsClient processing.SheetsClientInterface
+	tornClient   ports.TornClient
+	sheetsClient ports.SheetsClient
 	service      *StatusV2Service
 	ourFactionID int // cached faction ID, fetched via API
 	deployer     *deployment.SSHDeployer
 }
 
 // NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface, bqClient processing.BigQueryClientInterface, deployURL string) *StatusV2Processor {
+func NewStatusV2Processor(tornClient ports.TornClient, sheetsClient ports.SheetsClient, bqClient ports.BigQueryClient, deployURL string) *StatusV2Processor {
 	var deployer *deployment.SSHDeployer
 	if deployURL != "" {
 		deployer = deployment.NewSSHDeployer(deployURL)

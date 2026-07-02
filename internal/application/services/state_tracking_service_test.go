@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"torn_rw_stats/internal/application/ports/mocks"
 	"torn_rw_stats/internal/domain"
-	"torn_rw_stats/internal/processing/mocks"
 )
 
 // factionBasicWithMember builds a minimal FactionBasicResponse for use in tests.

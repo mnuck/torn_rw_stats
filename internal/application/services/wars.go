@@ -11,7 +11,7 @@ import (
 	"torn_rw_stats/internal/domain/travel"
 	wardomain "torn_rw_stats/internal/domain/war"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
 )
@@ -19,24 +19,24 @@ import (
 // WarProcessor handles war detection and processing, coordinating attack collection,
 // travel tracking, and sheet management for faction wars.
 type WarProcessor struct {
-	tornClient        processing.TornClientInterface
-	sheetsClient      processing.SheetsClientInterface
+	tornClient        ports.TornClient
+	sheetsClient      ports.SheetsClient
 	config            *app.Config
 	ourFactionID      int // Cached faction ID from API
-	locationService   processing.LocationServiceInterface
-	travelTimeService processing.TravelTimeServiceInterface
-	attackService     processing.AttackProcessingServiceInterface
-	summaryService    processing.WarSummaryServiceInterface
+	locationService   ports.LocationService
+	travelTimeService ports.TravelTimeService
+	attackService     ports.AttackProcessingService
+	summaryService    ports.WarSummaryService
 }
 
 // NewWarProcessor creates a WarProcessor with interface dependencies for testability
 func NewWarProcessor(
-	tornClient processing.TornClientInterface,
-	sheetsClient processing.SheetsClientInterface,
-	locationService processing.LocationServiceInterface,
-	travelTimeService processing.TravelTimeServiceInterface,
-	attackService processing.AttackProcessingServiceInterface,
-	summaryService processing.WarSummaryServiceInterface,
+	tornClient ports.TornClient,
+	sheetsClient ports.SheetsClient,
+	locationService ports.LocationService,
+	travelTimeService ports.TravelTimeService,
+	attackService ports.AttackProcessingService,
+	summaryService ports.WarSummaryService,
 	config *app.Config,
 ) *WarProcessor {
 	return &WarProcessor{
@@ -54,7 +54,7 @@ func NewWarProcessor(
 // NewOptimizedProcessor creates an OptimizedWarProcessor with concrete implementations.
 // This is the recommended constructor for production use with state-based optimization.
 // bqClient may be nil to disable BigQuery integration.
-func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config, bqClient processing.BigQueryClientInterface) *OptimizedWarProcessor {
+func NewOptimizedProcessor(tornClient *torn.Client, sheetsClient *sheets.Client, config *app.Config, bqClient ports.BigQueryClient) *OptimizedWarProcessor {
 	// Create the attack processing service
 	attackService := attack.NewAttackProcessingService()
 	summaryService := NewWarSummaryService(attackService)

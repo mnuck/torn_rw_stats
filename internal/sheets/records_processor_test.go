@@ -146,7 +146,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			existing := &RecordsInfo{
+			existing := &domain.RecordsInfo{
 				LatestTimestamp: tc.existingTimestamp,
 			}
 
@@ -365,7 +365,7 @@ func TestAttackRecordsProcessorEdgeCases(t *testing.T) {
 		{AttackID: 2, Started: time.Unix(1, 0)},
 	}
 
-	existing := &RecordsInfo{LatestTimestamp: 0}
+	existing := &domain.RecordsInfo{LatestTimestamp: 0}
 	filtered := processor.FilterAndSortRecords(records, existing)
 
 	// Should keep records with timestamp > 0

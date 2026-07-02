@@ -4,13 +4,12 @@ import (
 	"context"
 
 	"torn_rw_stats/internal/domain"
-	"torn_rw_stats/internal/sheets"
 )
 
 // SheetsClient interface defines the methods used by WarProcessor from sheets.Client
 type SheetsClient interface {
 	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *domain.War) (*domain.SheetConfig, error)
-	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
+	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*domain.RecordsInfo, error)
 	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, summary *domain.WarSummary) error
 	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
@@ -32,7 +31,7 @@ type SheetsClient interface {
 type MockSheetsClient struct {
 	// Responses to return
 	EnsureWarSheetsResponse     *domain.SheetConfig
-	ReadExistingRecordsResponse *sheets.RecordsInfo
+	ReadExistingRecordsResponse *domain.RecordsInfo
 	ReadSheetResponse           [][]interface{}
 	SheetExistsResponse         bool
 	EnsureStatusV2SheetResponse string
@@ -96,7 +95,7 @@ func (m *MockSheetsClient) EnsureWarSheets(ctx context.Context, spreadsheetID st
 	return m.EnsureWarSheetsResponse, m.EnsureWarSheetsError
 }
 
-func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error) {
+func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*domain.RecordsInfo, error) {
 	m.ReadExistingRecordsCalled = true
 	m.ReadExistingRecordsCalledWith.SpreadsheetID = spreadsheetID
 	m.ReadExistingRecordsCalledWith.SheetName = sheetName

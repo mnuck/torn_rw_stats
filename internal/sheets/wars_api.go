@@ -22,7 +22,7 @@ func (c *Client) UpdateWarSummary(ctx context.Context, spreadsheetID string, con
 }
 
 // ReadExistingRecords analyzes existing attack records in the sheet
-func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
+func (c *Client) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*domain.RecordsInfo, error) {
 	processor := NewAttackRecordsProcessor(c)
 	return processor.ReadExistingRecords(ctx, spreadsheetID, sheetName)
 }

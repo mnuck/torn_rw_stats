@@ -324,7 +324,7 @@ func TestAttackRecordsProcessorFilterAndSortRecords(t *testing.T) {
 		{AttackID: 4, Code: "existing_code", Started: time.Unix(750, 0)}, // Should be filtered out (duplicate)
 	}
 
-	existing := &RecordsInfo{
+	existing := &domain.RecordsInfo{
 		AttackCodes: map[string]bool{
 			"existing_code": true, // This code already exists
 		},

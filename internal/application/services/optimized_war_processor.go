@@ -10,14 +10,14 @@ import (
 	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/war"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // OptimizedWarProcessor wraps WarProcessor with intelligent war state management,
 // adapting API call frequency based on war phases and Tuesday matchmaking schedules.
 type OptimizedWarProcessor struct {
 	processor         *WarProcessor
-	tornClient        processing.TornClientInterface
+	tornClient        ports.TornClient
 	tracker           *APICallTracker
 	stateManager      *war.WarStateManager
 	stateTracker      *StateTrackingService
@@ -28,14 +28,14 @@ type OptimizedWarProcessor struct {
 
 // NewOptimizedWarProcessor creates a WarProcessor with war state management
 func NewOptimizedWarProcessor(
-	tornClient processing.TornClientInterface,
-	sheetsClient processing.SheetsClientInterface,
-	locationService processing.LocationServiceInterface,
-	travelTimeService processing.TravelTimeServiceInterface,
-	attackService processing.AttackProcessingServiceInterface,
-	warSummaryService processing.WarSummaryServiceInterface,
+	tornClient ports.TornClient,
+	sheetsClient ports.SheetsClient,
+	locationService ports.LocationService,
+	travelTimeService ports.TravelTimeService,
+	attackService ports.AttackProcessingService,
+	warSummaryService ports.WarSummaryService,
 	config *app.Config,
-	bqClient processing.BigQueryClientInterface,
+	bqClient ports.BigQueryClient,
 ) *OptimizedWarProcessor {
 
 	// Create war state management

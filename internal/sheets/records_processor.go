@@ -24,16 +24,8 @@ func NewAttackRecordsProcessor(api SheetsAPI) *AttackRecordsProcessor {
 	}
 }
 
-// RecordsInfo contains information about existing records in a sheet
-type RecordsInfo struct {
-	AttackCodes      map[string]bool
-	LatestTimestamp  int64 // For compatibility with existing usage
-	RecordCount      int
-	LastRowProcessed int
-}
-
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there
-func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
+func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*domain.RecordsInfo, error) {
 	slog.Debug("Reading existing attack records",
 		"sheet_name", sheetName)
 
@@ -44,7 +36,7 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 		return nil, fmt.Errorf("failed to read existing records: %w", err)
 	}
 
-	info := &RecordsInfo{
+	info := &domain.RecordsInfo{
 		AttackCodes:      make(map[string]bool),
 		LatestTimestamp:  0,
 		RecordCount:      len(values),
@@ -177,7 +169,7 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 }
 
 // FilterAndSortRecords filters out existing records and sorts by timestamp
-func (p *AttackRecordsProcessor) FilterAndSortRecords(records []domain.AttackRecord, existing *RecordsInfo) []domain.AttackRecord {
+func (p *AttackRecordsProcessor) FilterAndSortRecords(records []domain.AttackRecord, existing *domain.RecordsInfo) []domain.AttackRecord {
 	var newRecords []domain.AttackRecord
 
 	// Filter out duplicates using attack codes AND records older than existing timestamp

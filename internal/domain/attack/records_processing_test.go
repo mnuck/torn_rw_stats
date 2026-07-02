@@ -1,4 +1,4 @@
-package processing
+package attack_test
 
 import (
 	"testing"

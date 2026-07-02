@@ -9,20 +9,20 @@ import (
 	"torn_rw_stats/internal/domain/status"
 	"torn_rw_stats/internal/domain/travel"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // StatusV2Service handles conversion of StateRecords to StatusV2Records,
 // tracking departure times for traveling players and calculating arrival predictions.
 type StatusV2Service struct {
-	sheetsClient      processing.SheetsClientInterface
-	bigqueryClient    processing.BigQueryClientInterface // nil = disabled
+	sheetsClient      ports.SheetsClient
+	bigqueryClient    ports.BigQueryClient // nil = disabled
 	locationService   *travel.LocationService
 	travelTimeService *travel.TravelTimeService
 }
 
 // NewStatusV2Service creates a new Status v2 service
-func NewStatusV2Service(sheetsClient processing.SheetsClientInterface) *StatusV2Service {
+func NewStatusV2Service(sheetsClient ports.SheetsClient) *StatusV2Service {
 	return &StatusV2Service{
 		sheetsClient:      sheetsClient,
 		locationService:   travel.NewLocationService(),
@@ -31,7 +31,7 @@ func NewStatusV2Service(sheetsClient processing.SheetsClientInterface) *StatusV2
 }
 
 // NewStatusV2ServiceWithBigQuery creates a Status v2 service that uses BigQuery for history lookups.
-func NewStatusV2ServiceWithBigQuery(sheetsClient processing.SheetsClientInterface, bqClient processing.BigQueryClientInterface) *StatusV2Service {
+func NewStatusV2ServiceWithBigQuery(sheetsClient ports.SheetsClient, bqClient ports.BigQueryClient) *StatusV2Service {
 	return &StatusV2Service{
 		sheetsClient:      sheetsClient,
 		bigqueryClient:    bqClient,
