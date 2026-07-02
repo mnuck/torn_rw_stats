@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // TestConvertRecordsToRows tests the record conversion logic directly
 func TestConvertRecordsToRows(t *testing.T) {
 	client := &Client{}
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:            100001,
 			Code:                "test_code_1",
@@ -88,7 +88,7 @@ func TestConvertRecordsToRows(t *testing.T) {
 func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 	client := &Client{}
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:          100001,
 			Code:              "test_code",
@@ -125,14 +125,14 @@ func TestConvertRecordsToRowsWithNilFactionIDs(t *testing.T) {
 func TestFilterAndSortRecords(t *testing.T) {
 	client := &Client{}
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{AttackID: 100003, Code: "code_3", Started: time.Date(2024, 1, 15, 12, 10, 0, 0, time.UTC)},
 		{AttackID: 100001, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)},
 		{AttackID: 100002, Code: "code_2", Started: time.Date(2024, 1, 15, 12, 5, 0, 0, time.UTC)},
 		{AttackID: 100004, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 15, 0, 0, time.UTC)}, // Duplicate code
 	}
 
-	existing := &RecordsInfo{
+	existing := &domain.RecordsInfo{
 		AttackCodes: map[string]bool{
 			"code_1": true, // Already exists
 		},
@@ -172,7 +172,7 @@ func TestEmptyRecordHandling(t *testing.T) {
 	client := &Client{}
 
 	t.Run("empty attack records", func(t *testing.T) {
-		records := []app.AttackRecord{}
+		records := []domain.AttackRecord{}
 		processor := NewAttackRecordsProcessor(client)
 		rows := processor.ConvertRecordsToRows(records)
 		if len(rows) != 0 {

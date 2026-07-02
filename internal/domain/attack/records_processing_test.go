@@ -1,9 +1,9 @@
-package processing
+package attack_test
 
 import (
 	"testing"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/attack"
 )
 
@@ -12,35 +12,35 @@ func TestProcessAttacksIntoRecords(t *testing.T) {
 	attackService := attack.NewAttackProcessingService()
 
 	// Create test war data
-	war := &app.War{
+	war := &domain.War{
 		ID: 1001,
-		Factions: []app.Faction{
+		Factions: []domain.Faction{
 			{ID: 12345, Name: "Our Faction"},
 			{ID: 67890, Name: "Enemy Faction"},
 		},
 	}
 
 	// Create test attacks
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{
 			ID:      100001,
 			Code:    "1234abcd",
 			Started: 1640995200, // 2022-01-01 00:00:00 UTC
 			Ended:   1640995260, // 2022-01-01 00:01:00 UTC
-			Attacker: app.User{
+			Attacker: domain.User{
 				ID:    123,
 				Name:  "TestAttacker",
 				Level: 50,
-				Faction: &app.Faction{
+				Faction: &domain.Faction{
 					ID:   12345,
 					Name: "Our Faction",
 				},
 			},
-			Defender: app.User{
+			Defender: domain.User{
 				ID:    456,
 				Name:  "TestDefender",
 				Level: 45,
-				Faction: &app.Faction{
+				Faction: &domain.Faction{
 					ID:   67890,
 					Name: "Enemy Faction",
 				},

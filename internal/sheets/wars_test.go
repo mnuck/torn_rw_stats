@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // TestEnsureWarSheets tests war sheet creation and initialization
 func TestEnsureWarSheets(t *testing.T) {
-	war := &app.War{
+	war := &domain.War{
 		ID: 12345,
-		Factions: []app.Faction{
+		Factions: []domain.Faction{
 			{ID: 1001, Name: "Our Faction"},
 			{ID: 1002, Name: "Enemy Faction"},
 		},
@@ -25,7 +25,7 @@ func TestEnsureWarSheets(t *testing.T) {
 		recordsTabName := fmt.Sprintf("Records - %d", war.ID)
 
 		// Simulate the expected behavior
-		expectedConfig := &app.SheetConfig{
+		expectedConfig := &domain.SheetConfig{
 			WarID:          war.ID,
 			SummaryTabName: summaryTabName,
 			RecordsTabName: recordsTabName,
@@ -53,13 +53,13 @@ func TestUpdateWarSummary(t *testing.T) {
 	endTime := time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC)
 	lastUpdated := time.Date(2024, 1, 15, 14, 35, 0, 0, time.UTC)
 
-	summary := &app.WarSummary{
+	summary := &domain.WarSummary{
 		WarID:         12345,
 		Status:        "Completed",
 		StartTime:     startTime,
 		EndTime:       &endTime,
-		OurFaction:    app.Faction{ID: 1001, Name: "Our Faction", Score: 150},
-		EnemyFaction:  app.Faction{ID: 1002, Name: "Enemy Faction", Score: 120},
+		OurFaction:    domain.Faction{ID: 1001, Name: "Our Faction", Score: 150},
+		EnemyFaction:  domain.Faction{ID: 1002, Name: "Enemy Faction", Score: 120},
 		TotalAttacks:  50,
 		AttacksWon:    35,
 		AttacksLost:   15,
@@ -113,7 +113,7 @@ func TestReadExistingRecords(t *testing.T) {
 	t.Run("EmptySheet", func(t *testing.T) {
 		// Test empty sheet logic
 
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     0,
@@ -136,7 +136,7 @@ func TestReadExistingRecords(t *testing.T) {
 		}
 
 		// Simulate parsing logic
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     3,
@@ -183,7 +183,7 @@ func TestReadExistingRecords(t *testing.T) {
 		}
 
 		// Only valid rows should be counted
-		info := &RecordsInfo{
+		info := &domain.RecordsInfo{
 			AttackCodes:     make(map[string]bool),
 			LatestTimestamp: 0,
 			RecordCount:     0,
@@ -215,7 +215,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 
 	t.Run("EmptyRecords", func(t *testing.T) {
 		// Test with empty records - should return early
-		records := []app.AttackRecord{}
+		records := []domain.AttackRecord{}
 
 		// This should be a no-op
 		if len(records) != 0 {
@@ -225,7 +225,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 
 	t.Run("NewRecords", func(t *testing.T) {
 		// Test adding new records to empty sheet
-		records := []app.AttackRecord{
+		records := []domain.AttackRecord{
 			{
 				AttackID:     100001,
 				Code:         "attack_code_1",
@@ -272,13 +272,13 @@ func TestUpdateAttackRecords(t *testing.T) {
 
 	t.Run("DeduplicationLogic", func(t *testing.T) {
 		// Test deduplication logic separately
-		records := []app.AttackRecord{
+		records := []domain.AttackRecord{
 			{AttackID: 100001, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)},
 			{AttackID: 100002, Code: "code_2", Started: time.Date(2024, 1, 15, 12, 5, 0, 0, time.UTC)},
 			{AttackID: 100003, Code: "code_1", Started: time.Date(2024, 1, 15, 12, 10, 0, 0, time.UTC)}, // Duplicate
 		}
 
-		existing := &RecordsInfo{
+		existing := &domain.RecordsInfo{
 			AttackCodes: map[string]bool{
 				"code_1": true, // Already exists
 			},
@@ -287,7 +287,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 		}
 
 		// Test filterAndSortRecords logic
-		var newRecords []app.AttackRecord
+		var newRecords []domain.AttackRecord
 		for _, record := range records {
 			if !existing.AttackCodes[record.Code] {
 				newRecords = append(newRecords, record)
@@ -305,7 +305,7 @@ func TestUpdateAttackRecords(t *testing.T) {
 }
 
 // Helper function to convert attack records to rows (for testing)
-func convertRecordsToRows(records []app.AttackRecord) [][]interface{} {
+func convertRecordsToRows(records []domain.AttackRecord) [][]interface{} {
 	var rows [][]interface{}
 
 	for _, record := range records {

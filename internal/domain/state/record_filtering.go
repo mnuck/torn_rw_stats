@@ -3,14 +3,14 @@ package state
 import (
 	"sort"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // FilterRecordsByMember filters state records to only include those for a specific member.
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func FilterRecordsByMember(records []app.StateRecord, memberID string) []app.StateRecord {
-	var filtered []app.StateRecord
+func FilterRecordsByMember(records []domain.StateRecord, memberID string) []domain.StateRecord {
+	var filtered []domain.StateRecord
 	for _, record := range records {
 		if record.MemberID == memberID {
 			filtered = append(filtered, record)
@@ -22,8 +22,8 @@ func FilterRecordsByMember(records []app.StateRecord, memberID string) []app.Sta
 // SortRecordsByTimestamp sorts state records chronologically by timestamp.
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func SortRecordsByTimestamp(records []app.StateRecord) []app.StateRecord {
-	sorted := make([]app.StateRecord, len(records))
+func SortRecordsByTimestamp(records []domain.StateRecord) []domain.StateRecord {
+	sorted := make([]domain.StateRecord, len(records))
 	copy(sorted, records)
 
 	sort.Slice(sorted, func(i, j int) bool {
@@ -37,7 +37,7 @@ func SortRecordsByTimestamp(records []app.StateRecord) []app.StateRecord {
 // This is a convenience function combining filtering and sorting operations.
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func GetMemberRecordsChronologically(allRecords []app.StateRecord, memberID string) []app.StateRecord {
+func GetMemberRecordsChronologically(allRecords []domain.StateRecord, memberID string) []domain.StateRecord {
 	filtered := FilterRecordsByMember(allRecords, memberID)
 	return SortRecordsByTimestamp(filtered)
 }

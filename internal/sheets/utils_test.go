@@ -2,6 +2,8 @@ package sheets
 
 import (
 	"testing"
+
+	"torn_rw_stats/internal/application/ports"
 )
 
 // TestCellString tests Cell.String() with various inputs
@@ -24,7 +26,7 @@ func TestCellString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewCell(tc.input).String()
+			result := ports.NewCell(tc.input).String()
 			if result != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, result)
 			}
@@ -54,7 +56,7 @@ func TestCellInt(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewCell(tc.input).Int()
+			result := ports.NewCell(tc.input).Int()
 			if result != tc.expected {
 				t.Errorf("Expected %d, got %d", tc.expected, result)
 			}
@@ -84,7 +86,7 @@ func TestCellInt64(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewCell(tc.input).Int64()
+			result := ports.NewCell(tc.input).Int64()
 			if result != tc.expected {
 				t.Errorf("Expected %d, got %d", tc.expected, result)
 			}
@@ -113,7 +115,7 @@ func TestCellInt64Ptr(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := NewCell(tc.input).Int64Ptr()
+			result := ports.NewCell(tc.input).Int64Ptr()
 
 			if tc.expected == nil {
 				if result != nil {
@@ -140,7 +142,7 @@ func TestUtilsEdgeCases(t *testing.T) {
 	t.Run("Cell.String with complex types", func(t *testing.T) {
 		// Test with more complex types
 		testMap := map[string]int{"key": 42}
-		result := NewCell(testMap).String()
+		result := ports.NewCell(testMap).String()
 		expected := "map[key:42]"
 		if result != expected {
 			t.Errorf("Expected %q, got %q", expected, result)
@@ -149,7 +151,7 @@ func TestUtilsEdgeCases(t *testing.T) {
 
 	t.Run("Cell.Int with edge values", func(t *testing.T) {
 		// Test with very large float that might overflow
-		result := NewCell(float64(999999999999999999999)).Int()
+		result := ports.NewCell(float64(999999999999999999999)).Int()
 		// Should handle overflow gracefully
 		if result == 0 {
 			t.Error("Expected non-zero result for large float, but got 0")
@@ -158,7 +160,7 @@ func TestUtilsEdgeCases(t *testing.T) {
 
 	t.Run("Cell.Int64 with boundary values", func(t *testing.T) {
 		// Test with string that's too large for int64
-		result := NewCell("99999999999999999999999999999").Int64()
+		result := ports.NewCell("99999999999999999999999999999").Int64()
 		if result != 0 {
 			t.Errorf("Expected 0 for overflow string, got %d", result)
 		}
@@ -166,13 +168,13 @@ func TestUtilsEdgeCases(t *testing.T) {
 
 	t.Run("Cell.Int64Ptr with edge cases", func(t *testing.T) {
 		// Test with float64 zero
-		result := NewCell(float64(0)).Int64Ptr()
+		result := ports.NewCell(float64(0)).Int64Ptr()
 		if result != nil {
 			t.Error("Expected nil for float64 zero")
 		}
 
 		// Test with string that converts to zero
-		result = NewCell("0.0").Int64Ptr()
+		result = ports.NewCell("0.0").Int64Ptr()
 		if result != nil {
 			t.Error("Expected nil for string that converts to zero")
 		}
@@ -225,7 +227,7 @@ func TestStringConversion(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			result := NewCell(tc.input).Int()
+			result := ports.NewCell(tc.input).Int()
 			if result != tc.expected {
 				t.Errorf("For input %q, expected %d, got %d", tc.input, tc.expected, result)
 			}
@@ -243,7 +245,7 @@ func TestStringConversion(t *testing.T) {
 		}
 
 		for _, input := range invalidStrings {
-			result := NewCell(input).Int()
+			result := ports.NewCell(input).Int()
 			if result != 0 {
 				t.Errorf("For invalid input %q, expected 0, got %d", input, result)
 			}

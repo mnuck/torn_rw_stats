@@ -1,6 +1,6 @@
 package attack
 
-import "torn_rw_stats/internal/app"
+import "torn_rw_stats/internal/domain"
 
 // AttackStatistics holds calculated attack statistics including total attacks,
 // win/loss counts, and respect gained/lost for a faction.
@@ -17,7 +17,7 @@ type AttackStatistics struct {
 // faction's perspective, and accumulates wins, losses, and respect changes.
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func CalculateAttackStatistics(attacks []app.Attack, ourFactionID int) AttackStatistics {
+func CalculateAttackStatistics(attacks []domain.Attack, ourFactionID int) AttackStatistics {
 	var stats AttackStatistics
 
 	for _, attack := range attacks {
@@ -32,17 +32,17 @@ func CalculateAttackStatistics(attacks []app.Attack, ourFactionID int) AttackSta
 }
 
 // IsOurAttack determines if an attack was performed by our faction
-func IsOurAttack(attack app.Attack, ourFactionID int) bool {
+func IsOurAttack(attack domain.Attack, ourFactionID int) bool {
 	return attack.Attacker.Faction != nil && attack.Attacker.Faction.ID == ourFactionID
 }
 
 // IsAttackAgainstUs determines if an attack was performed against our faction
-func IsAttackAgainstUs(attack app.Attack, ourFactionID int) bool {
+func IsAttackAgainstUs(attack domain.Attack, ourFactionID int) bool {
 	return attack.Defender.Faction != nil && attack.Defender.Faction.ID == ourFactionID
 }
 
 // processOffensiveAttack processes statistics for an attack we performed
-func processOffensiveAttack(stats AttackStatistics, attack app.Attack) AttackStatistics {
+func processOffensiveAttack(stats AttackStatistics, attack domain.Attack) AttackStatistics {
 	stats.TotalAttacks++
 	stats.RespectGained += attack.RespectGain
 	stats.RespectLost += attack.RespectLoss
@@ -57,7 +57,7 @@ func processOffensiveAttack(stats AttackStatistics, attack app.Attack) AttackSta
 }
 
 // processDefensiveAttack processes statistics for an attack against us
-func processDefensiveAttack(stats AttackStatistics, attack app.Attack) AttackStatistics {
+func processDefensiveAttack(stats AttackStatistics, attack domain.Attack) AttackStatistics {
 	stats.TotalAttacks++
 
 	// For defensive stats, respect gain/loss is inverted from attacker's perspective

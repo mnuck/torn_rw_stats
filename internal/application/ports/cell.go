@@ -1,18 +1,18 @@
-package sheets
+package ports
 
 import (
 	"fmt"
 	"strconv"
 )
 
-// Cell provides type-safe access to Google Sheets cell values.
-// The Google Sheets API returns [][]interface{}, which we cannot change.
+// Cell provides type-safe access to spreadsheet cell values crossing the SheetsClient port.
+// The spreadsheet API returns [][]interface{}, which we cannot change.
 // This type wraps interface{} to provide type-safe accessors throughout our codebase.
 type Cell struct {
 	raw interface{}
 }
 
-// NewCell creates a Cell from a raw interface{} value from Google Sheets API
+// NewCell creates a Cell from a raw interface{} value from the spreadsheet API
 func NewCell(raw interface{}) Cell {
 	return Cell{raw: raw}
 }
@@ -85,7 +85,7 @@ func (c Cell) IsEmpty() bool {
 	return c.raw == nil || c.raw == ""
 }
 
-// Raw returns the underlying interface{} value for Google Sheets API calls.
+// Raw returns the underlying interface{} value for spreadsheet API calls.
 // This should only be used at the API boundary.
 func (c Cell) Raw() interface{} {
 	return c.raw

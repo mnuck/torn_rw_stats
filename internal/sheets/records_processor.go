@@ -6,7 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/application/ports"
+	"torn_rw_stats/internal/domain"
 
 	"log/slog"
 )
@@ -24,16 +25,8 @@ func NewAttackRecordsProcessor(api SheetsAPI) *AttackRecordsProcessor {
 	}
 }
 
-// RecordsInfo contains information about existing records in a sheet
-type RecordsInfo struct {
-	AttackCodes      map[string]bool
-	LatestTimestamp  int64 // For compatibility with existing usage
-	RecordCount      int
-	LastRowProcessed int
-}
-
 // ReadExistingRecords reads existing attack records from a sheet to determine what's already there
-func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*RecordsInfo, error) {
+func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*domain.RecordsInfo, error) {
 	slog.Debug("Reading existing attack records",
 		"sheet_name", sheetName)
 
@@ -44,7 +37,7 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 		return nil, fmt.Errorf("failed to read existing records: %w", err)
 	}
 
-	info := &RecordsInfo{
+	info := &domain.RecordsInfo{
 		AttackCodes:      make(map[string]bool),
 		LatestTimestamp:  0,
 		RecordCount:      len(values),
@@ -58,14 +51,14 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 		}
 
 		// Parse Attack Code (column B) - always a string
-		codeStr := NewCell(row[1]).String()
+		codeStr := ports.NewCell(row[1]).String()
 		if codeStr != "" {
 			info.AttackCodes[codeStr] = true
 			validRows++
 		}
 
 		// Parse Started timestamp (column C) to find latest
-		startedStr := NewCell(row[2]).String()
+		startedStr := ports.NewCell(row[2]).String()
 		if startedTime, err := time.Parse("2006-01-02 15:04:05", startedStr); err == nil {
 			timestamp := startedTime.Unix()
 			if timestamp > info.LatestTimestamp {
@@ -95,7 +88,7 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 }
 
 // UpdateAttackRecords updates the attack records sheet with new records
-func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error {
+func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -177,8 +170,8 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 }
 
 // FilterAndSortRecords filters out existing records and sorts by timestamp
-func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord, existing *RecordsInfo) []app.AttackRecord {
-	var newRecords []app.AttackRecord
+func (p *AttackRecordsProcessor) FilterAndSortRecords(records []domain.AttackRecord, existing *domain.RecordsInfo) []domain.AttackRecord {
+	var newRecords []domain.AttackRecord
 
 	// Filter out duplicates using attack codes AND records older than existing timestamp
 	duplicates := 0
@@ -234,7 +227,7 @@ func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord
 }
 
 // ConvertRecordsToRows converts attack records into spreadsheet row format
-func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []app.AttackRecord) [][]interface{} {
+func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []domain.AttackRecord) [][]interface{} {
 	var rows [][]interface{}
 
 	for _, record := range records {

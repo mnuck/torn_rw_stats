@@ -1,6 +1,6 @@
 package attack
 
-import "torn_rw_stats/internal/app"
+import "torn_rw_stats/internal/domain"
 
 // TimeRangeResult holds the calculated time range and update mode for fetching attacks
 type TimeRangeResult struct {
@@ -18,7 +18,7 @@ const (
 // CalculateTimeRange determines the time range and update mode for fetching attacks
 // Pure function: Takes currentTime as parameter to enable deterministic testing
 func CalculateTimeRange(
-	war *app.War,
+	war *domain.War,
 	latestExistingTimestamp *int64,
 	currentTime int64,
 ) TimeRangeResult {

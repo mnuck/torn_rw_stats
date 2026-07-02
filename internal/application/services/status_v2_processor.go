@@ -7,30 +7,25 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/deployment"
 	"log/slog"
+	"torn_rw_stats/internal/domain"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // StatusV2Processor handles Status v2 sheet processing, converting faction member
 // states to status sheets and JSON exports for external consumption.
 type StatusV2Processor struct {
-	tornClient   processing.TornClientInterface
-	sheetsClient processing.SheetsClientInterface
+	tornClient   ports.TornClient
+	sheetsClient ports.SheetsClient
 	service      *StatusV2Service
 	ourFactionID int // cached faction ID, fetched via API
-	deployer     *deployment.SSHDeployer
+	deployer     ports.Deployer
 }
 
-// NewStatusV2Processor creates a new Status v2 processor
-func NewStatusV2Processor(tornClient processing.TornClientInterface, sheetsClient processing.SheetsClientInterface, bqClient processing.BigQueryClientInterface, deployURL string) *StatusV2Processor {
-	var deployer *deployment.SSHDeployer
-	if deployURL != "" {
-		deployer = deployment.NewSSHDeployer(deployURL)
-	}
-
+// NewStatusV2Processor creates a new Status v2 processor.
+// deployer may be nil to disable remote JSON deployment.
+func NewStatusV2Processor(tornClient ports.TornClient, sheetsClient ports.SheetsClient, bqClient ports.BigQueryClient, deployer ports.Deployer) *StatusV2Processor {
 	var svc *StatusV2Service
 	if bqClient != nil {
 		svc = NewStatusV2ServiceWithBigQuery(sheetsClient, bqClient)
@@ -176,7 +171,7 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 }
 
 // exportAndDeployJSON converts StatusV2Records to JSON format and deploys it
-func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
+func (p *StatusV2Processor) exportAndDeployJSON(records []domain.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
 	currentTime := time.Now().UTC()
 
 	// Convert to JSON format using the service

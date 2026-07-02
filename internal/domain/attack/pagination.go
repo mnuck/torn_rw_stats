@@ -1,6 +1,6 @@
 package attack
 
-import "torn_rw_stats/internal/app"
+import "torn_rw_stats/internal/domain"
 
 // PaginationDecision contains the result of analyzing a page of attacks
 type PaginationDecision struct {
@@ -59,7 +59,7 @@ func ShouldStopPagination(
 
 // FindOldestAttackTime finds the oldest (minimum) timestamp in a list of attacks
 // Pure function: Simple reduction operation
-func FindOldestAttackTime(attacks []app.Attack, defaultTime int64) int64 {
+func FindOldestAttackTime(attacks []domain.Attack, defaultTime int64) int64 {
 	if len(attacks) == 0 {
 		return defaultTime
 	}

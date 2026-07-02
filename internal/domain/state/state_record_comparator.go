@@ -1,10 +1,10 @@
-package processing
+package state
 
 import (
 	"regexp"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // StateRecordComparator handles comparison logic for StateRecords, detecting changes
@@ -29,14 +29,14 @@ func NewStateRecordComparator() *StateRecordComparator {
 }
 
 // FindChangedStates compares current states with previous states and returns only changed states
-func (c *StateRecordComparator) FindChangedStates(currentStates []app.StateRecord, previousStates []app.StateRecord) []app.StateRecord {
+func (c *StateRecordComparator) FindChangedStates(currentStates []domain.StateRecord, previousStates []domain.StateRecord) []domain.StateRecord {
 	// Create map of previous states by member ID for quick lookup
-	previousByID := make(map[string]app.StateRecord)
+	previousByID := make(map[string]domain.StateRecord)
 	for _, prev := range previousStates {
 		previousByID[prev.MemberID] = prev
 	}
 
-	var changedStates []app.StateRecord
+	var changedStates []domain.StateRecord
 
 	// Compare each current state with its previous state
 	for _, current := range currentStates {
@@ -58,7 +58,7 @@ func (c *StateRecordComparator) FindChangedStates(currentStates []app.StateRecor
 }
 
 // HasStateChanged compares two StateRecords to determine if a meaningful change occurred
-func (c *StateRecordComparator) HasStateChanged(previous, current app.StateRecord) bool {
+func (c *StateRecordComparator) HasStateChanged(previous, current domain.StateRecord) bool {
 	// Check comparable fields for changes
 	if previous.MemberName != current.MemberName ||
 		previous.FactionName != current.FactionName ||
@@ -85,8 +85,8 @@ func (c *StateRecordComparator) HasStateChanged(previous, current app.StateRecor
 }
 
 // GetLatestStateByMember finds the most recent StateRecord for each member from a collection
-func (c *StateRecordComparator) GetLatestStateByMember(records []app.StateRecord) map[string]app.StateRecord {
-	latestByMember := make(map[string]app.StateRecord)
+func (c *StateRecordComparator) GetLatestStateByMember(records []domain.StateRecord) map[string]domain.StateRecord {
+	latestByMember := make(map[string]domain.StateRecord)
 
 	for _, record := range records {
 		existing, exists := latestByMember[record.MemberID]
@@ -101,12 +101,12 @@ func (c *StateRecordComparator) GetLatestStateByMember(records []app.StateRecord
 }
 
 // CreatePreviousStateCollection creates a map of the most recent StateRecord for each current member
-func (c *StateRecordComparator) CreatePreviousStateCollection(currentStates []app.StateRecord, allPreviousStates []app.StateRecord) map[string]app.StateRecord {
+func (c *StateRecordComparator) CreatePreviousStateCollection(currentStates []domain.StateRecord, allPreviousStates []domain.StateRecord) map[string]domain.StateRecord {
 	// Get latest state for each member from all previous records
 	latestByMember := c.GetLatestStateByMember(allPreviousStates)
 
 	// Create result map with only members that exist in current states
-	result := make(map[string]app.StateRecord)
+	result := make(map[string]domain.StateRecord)
 	for _, current := range currentStates {
 		if previous, exists := latestByMember[current.MemberID]; exists {
 			result[current.MemberID] = previous

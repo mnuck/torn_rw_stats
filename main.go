@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/application/ports"
 	"torn_rw_stats/internal/application/services"
 	bqclient "torn_rw_stats/internal/bigquery"
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/deployment"
 	"torn_rw_stats/internal/sheets"
 	"torn_rw_stats/internal/torn"
 )
@@ -66,7 +67,7 @@ func main() {
 	}
 
 	// Optionally initialize BigQuery client (disabled if BIGQUERY_PROJECT_ID is unset)
-	var bqClient processing.BigQueryClientInterface
+	var bqClient ports.BigQueryClient
 	if config.BigQueryProjectID != "" {
 		var bqErr error
 		bqClient, bqErr = bqclient.NewClient(ctx, config.CredentialsFile,
@@ -82,8 +83,14 @@ func main() {
 		}
 	}
 
+	// Optionally initialize the SSH deployer for the Status v2 JSON export
+	var deployer ports.Deployer
+	if config.DeployURL != "" {
+		deployer = deployment.NewSSHDeployer(config.DeployURL)
+	}
+
 	// Initialize optimized war processor with state-based optimization
-	warProcessor := services.NewOptimizedProcessor(tornClient, sheetsClient, config, bqClient)
+	warProcessor := services.NewOptimizedProcessor(tornClient, sheetsClient, config, bqClient, deployer)
 
 	// Define the main processing function that returns next check time
 	processWars := func() time.Duration {

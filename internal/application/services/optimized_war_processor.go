@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/domain/war"
 	"log/slog"
+	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
+	"torn_rw_stats/internal/domain/war"
 
-	"torn_rw_stats/internal/processing"
+	"torn_rw_stats/internal/application/ports"
 )
 
 // OptimizedWarProcessor wraps WarProcessor with intelligent war state management,
 // adapting API call frequency based on war phases and Tuesday matchmaking schedules.
 type OptimizedWarProcessor struct {
 	processor         *WarProcessor
-	tornClient        processing.TornClientInterface
+	tornClient        ports.TornClient
 	tracker           *APICallTracker
 	stateManager      *war.WarStateManager
 	stateTracker      *StateTrackingService
@@ -27,14 +28,15 @@ type OptimizedWarProcessor struct {
 
 // NewOptimizedWarProcessor creates a WarProcessor with war state management
 func NewOptimizedWarProcessor(
-	tornClient processing.TornClientInterface,
-	sheetsClient processing.SheetsClientInterface,
-	locationService processing.LocationServiceInterface,
-	travelTimeService processing.TravelTimeServiceInterface,
-	attackService processing.AttackProcessingServiceInterface,
-	warSummaryService processing.WarSummaryServiceInterface,
+	tornClient ports.TornClient,
+	sheetsClient ports.SheetsClient,
+	locationService ports.LocationService,
+	travelTimeService ports.TravelTimeService,
+	attackService ports.AttackProcessingService,
+	warSummaryService ports.WarSummaryService,
 	config *app.Config,
-	bqClient processing.BigQueryClientInterface,
+	bqClient ports.BigQueryClient,
+	deployer ports.Deployer,
 ) *OptimizedWarProcessor {
 
 	// Create war state management
@@ -45,7 +47,7 @@ func NewOptimizedWarProcessor(
 	stateTracker := NewStateTrackingService(tornClient, bqClient)
 
 	// Create Status v2 processor
-	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, config.DeployURL)
+	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, deployer)
 
 	// Create processor with raw client
 	processor := NewWarProcessor(
@@ -206,7 +208,7 @@ func (owp *OptimizedWarProcessor) processOurFactionOnly(ctx context.Context) err
 }
 
 // processStateChanges handles state tracking for all observed factions
-func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *app.WarResponse, stateInfo war.WarStateInfo) {
+func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warResponse *domain.FactionWars, stateInfo war.WarStateInfo) {
 	// Determine which factions to track based on current wars
 	var factionIDs []int
 
@@ -216,21 +218,21 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 	}
 
 	// Add faction IDs from active wars
-	if warResponse.Wars.Ranked != nil {
-		for _, faction := range warResponse.Wars.Ranked.Factions {
+	if warResponse.Ranked != nil {
+		for _, faction := range warResponse.Ranked.Factions {
 			factionIDs = append(factionIDs, faction.ID)
 		}
 	}
 
 	// Add faction IDs from raid wars
-	for _, war := range warResponse.Wars.Raids {
+	for _, war := range warResponse.Raids {
 		for _, faction := range war.Factions {
 			factionIDs = append(factionIDs, faction.ID)
 		}
 	}
 
 	// Add faction IDs from territory wars
-	for _, war := range warResponse.Wars.Territory {
+	for _, war := range warResponse.Territory {
 		for _, faction := range war.Factions {
 			factionIDs = append(factionIDs, faction.ID)
 		}
@@ -265,8 +267,8 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 	if owp.processor.ourFactionID != 0 {
 		dashboardFactionIDs = append(dashboardFactionIDs, owp.processor.ourFactionID)
 	}
-	if warResponse.Wars.Ranked != nil {
-		for _, faction := range warResponse.Wars.Ranked.Factions {
+	if warResponse.Ranked != nil {
+		for _, faction := range warResponse.Ranked.Factions {
 			dashboardFactionIDs = append(dashboardFactionIDs, faction.ID)
 		}
 	}

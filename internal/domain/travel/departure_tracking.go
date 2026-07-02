@@ -3,7 +3,7 @@ package travel
 import (
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // LocationParser is a function type that parses location from status description
@@ -13,7 +13,7 @@ type LocationParser func(string) string
 // by scanning through chronologically sorted records and detecting new journeys.
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func FindLastDepartureToDestination(records []app.StateRecord, destination string, locationParser LocationParser) time.Time {
+func FindLastDepartureToDestination(records []domain.StateRecord, destination string, locationParser LocationParser) time.Time {
 	var lastDeparture time.Time
 
 	for i := 0; i < len(records); i++ {

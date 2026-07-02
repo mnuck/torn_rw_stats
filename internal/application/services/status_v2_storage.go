@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/sheets"
+	"torn_rw_stats/internal/application/ports"
+	"torn_rw_stats/internal/domain"
 )
 
 // getExistingStatusV2Data reads existing Status v2 data to preserve manual adjustments
-func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadsheetID string, factionID int) (map[string]app.StatusV2Record, error) {
+func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadsheetID string, factionID int) (map[string]domain.StatusV2Record, error) {
 	sheetName := fmt.Sprintf("Status v2 - %d", factionID)
 	rangeSpec := fmt.Sprintf("%s!A2:J", sheetName)
 
@@ -20,7 +20,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 		return nil, fmt.Errorf("failed to read existing Status v2 data: %w", err)
 	}
 
-	data := make(map[string]app.StatusV2Record)
+	data := make(map[string]domain.StatusV2Record)
 	factionIDStr := strconv.Itoa(factionID)
 
 	for _, row := range values {
@@ -29,7 +29,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 		}
 
 		// Extract member name and create key using type-safe Cell
-		name := sheets.NewCell(row[0]).String()
+		name := ports.NewCell(row[0]).String()
 		if name == "" {
 			continue
 		}
@@ -54,7 +54,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 			}
 		}
 
-		record := app.StatusV2Record{
+		record := domain.StatusV2Record{
 			Name:            name,
 			MemberID:        "", // MemberID not stored in spreadsheet, populated from StateRecord
 			Level:           level,
@@ -75,7 +75,7 @@ func (s *StatusV2Service) getExistingStatusV2Data(ctx context.Context, spreadshe
 }
 
 // readCurrentStateRecords returns the latest state record per member for a faction via BigQuery.
-func (s *StatusV2Service) readCurrentStateRecords(ctx context.Context, _ string, factionID string) ([]app.StateRecord, error) {
+func (s *StatusV2Service) readCurrentStateRecords(ctx context.Context, _ string, factionID string) ([]domain.StateRecord, error) {
 	if s.bigqueryClient == nil {
 		return nil, nil
 	}
@@ -87,5 +87,5 @@ func getString(row []interface{}, index int) string {
 	if index >= len(row) {
 		return ""
 	}
-	return sheets.NewCell(row[index]).String()
+	return ports.NewCell(row[index]).String()
 }

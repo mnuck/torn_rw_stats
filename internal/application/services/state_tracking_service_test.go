@@ -5,23 +5,23 @@ import (
 	"errors"
 	"testing"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/processing/mocks"
+	"torn_rw_stats/internal/application/ports/mocks"
+	"torn_rw_stats/internal/domain"
 )
 
 // factionBasicWithMember builds a minimal FactionBasicResponse for use in tests.
-func factionBasicWithMember(factionID int, memberID, memberName, statusState, statusDescription string) *app.FactionBasicResponse {
-	return &app.FactionBasicResponse{
+func factionBasicWithMember(factionID int, memberID, memberName, statusState, statusDescription string) *domain.FactionInfo {
+	return &domain.FactionInfo{
 		ID:   factionID,
 		Name: "TestFaction",
-		Members: map[string]app.FactionMember{
+		Members: map[string]domain.FactionMember{
 			memberID: {
 				Name: memberName,
-				Status: app.MemberStatus{
+				Status: domain.MemberStatus{
 					State:       statusState,
 					Description: statusDescription,
 				},
-				LastAction: app.LastAction{Status: "Online"},
+				LastAction: domain.LastAction{Status: "Online"},
 			},
 		},
 	}
@@ -72,7 +72,7 @@ func TestStateTrackingService_BigQueryNotCalledWhenNoChanges(t *testing.T) {
 
 	bqMock := mocks.NewMockBigQueryClient()
 	// Return a previous record for the same member with the same state → no change
-	bqMock.QueryLatestStatePerMemberResponse = []app.StateRecord{
+	bqMock.QueryLatestStatePerMemberResponse = []domain.StateRecord{
 		{MemberID: "42", MemberName: "Player1", FactionID: "100", FactionName: "TestFaction",
 			LastActionStatus: "Online", StatusDescription: "Okay", StatusState: "okay"},
 	}

@@ -2,12 +2,12 @@ package attack
 
 import (
 	"testing"
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestBuildFactionIDMap(t *testing.T) {
-	war := &app.War{
-		Factions: []app.Faction{
+	war := &domain.War{
+		Factions: []domain.Faction{
 			{ID: 100},
 			{ID: 200},
 		},
@@ -26,10 +26,10 @@ func TestBuildFactionIDMap(t *testing.T) {
 func TestFilterRelevantAttacks(t *testing.T) {
 	warFactionIDs := map[int]bool{100: true, 200: true}
 
-	attacks := []app.Attack{
-		{Attacker: app.User{Faction: &app.Faction{ID: 100}}}, // Relevant
-		{Attacker: app.User{Faction: &app.Faction{ID: 300}}}, // Not relevant
-		{Defender: app.User{Faction: &app.Faction{ID: 200}}}, // Relevant
+	attacks := []domain.Attack{
+		{Attacker: domain.User{Faction: &domain.Faction{ID: 100}}}, // Relevant
+		{Attacker: domain.User{Faction: &domain.Faction{ID: 300}}}, // Not relevant
+		{Defender: domain.User{Faction: &domain.Faction{ID: 200}}}, // Relevant
 	}
 
 	result := FilterRelevantAttacks(attacks, warFactionIDs)
@@ -44,27 +44,27 @@ func TestIsAttackRelevantToWar(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		attack   app.Attack
+		attack   domain.Attack
 		expected bool
 	}{
 		{
 			name:     "attacker in war",
-			attack:   app.Attack{Attacker: app.User{Faction: &app.Faction{ID: 100}}},
+			attack:   domain.Attack{Attacker: domain.User{Faction: &domain.Faction{ID: 100}}},
 			expected: true,
 		},
 		{
 			name:     "defender in war",
-			attack:   app.Attack{Defender: app.User{Faction: &app.Faction{ID: 100}}},
+			attack:   domain.Attack{Defender: domain.User{Faction: &domain.Faction{ID: 100}}},
 			expected: true,
 		},
 		{
 			name:     "neither in war",
-			attack:   app.Attack{Attacker: app.User{Faction: &app.Faction{ID: 999}}},
+			attack:   domain.Attack{Attacker: domain.User{Faction: &domain.Faction{ID: 999}}},
 			expected: false,
 		},
 		{
 			name:     "no factions",
-			attack:   app.Attack{},
+			attack:   domain.Attack{},
 			expected: false,
 		},
 	}

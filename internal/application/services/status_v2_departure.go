@@ -7,15 +7,15 @@ import (
 
 	"log/slog"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // buildDepartureMap builds a map of member departure times from BigQuery state changes.
-func (s *StatusV2Service) buildDepartureMap(ctx context.Context, _ string, currentStateRecords []app.StateRecord) (map[string]time.Time, error) {
+func (s *StatusV2Service) buildDepartureMap(ctx context.Context, _ string, currentStateRecords []domain.StateRecord) (map[string]time.Time, error) {
 	departureMap := make(map[string]time.Time)
 
 	var travelingIDs []string
-	travelingRecords := make(map[string]app.StateRecord)
+	travelingRecords := make(map[string]domain.StateRecord)
 	for _, r := range currentStateRecords {
 		if r.StatusState == "Traveling" {
 			travelingIDs = append(travelingIDs, r.MemberID)

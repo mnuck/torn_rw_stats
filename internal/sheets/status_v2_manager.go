@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 
 	"log/slog"
 )
@@ -90,7 +90,7 @@ func (m *StatusV2Manager) GenerateStatusV2Headers() [][]interface{} {
 }
 
 // UpdateStatusV2 updates the Status v2 sheet with current state record data
-func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
+func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []domain.StatusV2Record) error {
 	if len(records) == 0 {
 		slog.Debug("No Status v2 records to update",
 			"sheet_name", sheetName)
@@ -140,7 +140,7 @@ func (m *StatusV2Manager) UpdateStatusV2(ctx context.Context, spreadsheetID, she
 }
 
 // ConvertStatusV2RecordsToRows converts Status v2 records into spreadsheet row format
-func (m *StatusV2Manager) ConvertStatusV2RecordsToRows(records []app.StatusV2Record) [][]interface{} {
+func (m *StatusV2Manager) ConvertStatusV2RecordsToRows(records []domain.StatusV2Record) [][]interface{} {
 	rows := make([][]interface{}, len(records))
 
 	for i, record := range records {

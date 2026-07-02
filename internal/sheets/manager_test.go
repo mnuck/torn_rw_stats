@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/application/ports"
+	"torn_rw_stats/internal/domain"
 )
 
 // MockSheetsAPI implements SheetsAPI for testing
@@ -156,7 +157,7 @@ func TestWarSheetsManagerEnsureWarSheets(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	manager := NewWarSheetsManager(mockAPI)
 
-	war := &app.War{
+	war := &domain.War{
 		ID: 123,
 	}
 
@@ -268,7 +269,7 @@ func TestWarSheetsManagerWithAPIError(t *testing.T) {
 	mockAPI.SetError(true)
 	manager := NewWarSheetsManager(mockAPI)
 
-	war := &app.War{ID: 123}
+	war := &domain.War{ID: 123}
 
 	_, err := manager.EnsureWarSheets(context.Background(), "test_spreadsheet", war)
 	if err == nil {
@@ -317,14 +318,14 @@ func TestAttackRecordsProcessorFilterAndSortRecords(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{AttackID: 1, Code: "new_code_1", Started: time.Unix(1000, 0)},
 		{AttackID: 2, Code: "existing_code", Started: time.Unix(500, 0)}, // Should be filtered out (duplicate)
 		{AttackID: 3, Code: "new_code_2", Started: time.Unix(1500, 0)},
 		{AttackID: 4, Code: "existing_code", Started: time.Unix(750, 0)}, // Should be filtered out (duplicate)
 	}
 
-	existing := &RecordsInfo{
+	existing := &domain.RecordsInfo{
 		AttackCodes: map[string]bool{
 			"existing_code": true, // This code already exists
 		},
@@ -360,7 +361,7 @@ func TestAttackRecordsProcessorConvertRecordsToRows(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:            123,
 			Started:             time.Unix(1000, 0),
@@ -417,9 +418,9 @@ func TestParseStringValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).String()
+		result := ports.NewCell(tc.input).String()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).String(): expected '%s', got '%s'", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).String(): expected '%s', got '%s'", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -439,9 +440,9 @@ func TestParseIntValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).Int()
+		result := ports.NewCell(tc.input).Int()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).Int(): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).Int(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
@@ -460,25 +461,25 @@ func TestParseInt64Value(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := NewCell(tc.input).Int64()
+		result := ports.NewCell(tc.input).Int64()
 		if result != tc.expected {
-			t.Errorf("NewCell(%v).Int64(): expected %d, got %d", tc.input, tc.expected, result)
+			t.Errorf("ports.NewCell(%v).Int64(): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
 
 func TestParseInt64PointerValue(t *testing.T) {
-	result := NewCell(nil).Int64Ptr()
+	result := ports.NewCell(nil).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for nil input")
 	}
 
-	result = NewCell("123").Int64Ptr()
+	result = ports.NewCell("123").Int64Ptr()
 	if result == nil || *result != 123 {
 		t.Errorf("Expected *123, got %v", result)
 	}
 
-	result = NewCell(0).Int64Ptr()
+	result = ports.NewCell(0).Int64Ptr()
 	if result != nil {
 		t.Error("Expected nil for 0 input")
 	}

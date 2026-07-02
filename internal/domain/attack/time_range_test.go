@@ -2,7 +2,7 @@ package attack
 
 import (
 	"testing"
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestCalculateTimeRange(t *testing.T) {
@@ -12,7 +12,7 @@ func TestCalculateTimeRange(t *testing.T) {
 
 	tests := []struct {
 		name                    string
-		war                     *app.War
+		war                     *domain.War
 		latestExistingTimestamp *int64
 		currentTime             int64
 		expectedFromTime        int64
@@ -21,7 +21,7 @@ func TestCalculateTimeRange(t *testing.T) {
 	}{
 		{
 			name: "FullModeWithEndedWar",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   ptr(warEnd),
 			},
@@ -33,7 +33,7 @@ func TestCalculateTimeRange(t *testing.T) {
 		},
 		{
 			name: "FullModeWithOngoingWar",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   nil, // Ongoing
 			},
@@ -45,7 +45,7 @@ func TestCalculateTimeRange(t *testing.T) {
 		},
 		{
 			name: "IncrementalModeWithBuffer",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   ptr(warEnd),
 			},
@@ -57,7 +57,7 @@ func TestCalculateTimeRange(t *testing.T) {
 		},
 		{
 			name: "IncrementalModeBufferClampedToWarStart",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   ptr(warEnd),
 			},
@@ -69,7 +69,7 @@ func TestCalculateTimeRange(t *testing.T) {
 		},
 		{
 			name: "IncrementalModeOngoingWar",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   nil,
 			},
@@ -81,7 +81,7 @@ func TestCalculateTimeRange(t *testing.T) {
 		},
 		{
 			name: "IncrementalModeZeroTimestamp",
-			war: &app.War{
+			war: &domain.War{
 				Start: warStart,
 				End:   ptr(warEnd),
 			},

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/domain/attack"
 	"log/slog"
+	"torn_rw_stats/internal/domain"
+	"torn_rw_stats/internal/domain/attack"
 
 	wardomain "torn_rw_stats/internal/domain/war"
 )
@@ -25,9 +25,9 @@ func NewWarSummaryService(attackService *attack.AttackProcessingService) *WarSum
 }
 
 // GenerateWarSummary creates a comprehensive summary of war statistics
-func (wss *WarSummaryService) GenerateWarSummary(war *app.War, attacks []app.Attack, ourFactionID int) *app.WarSummary {
+func (wss *WarSummaryService) GenerateWarSummary(war *domain.War, attacks []domain.Attack, ourFactionID int) *domain.WarSummary {
 
-	summary := &app.WarSummary{
+	summary := &domain.WarSummary{
 		WarID:       war.ID,
 		StartTime:   time.Unix(war.Start, 0),
 		Status:      "Active",

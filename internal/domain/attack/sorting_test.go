@@ -2,11 +2,11 @@ package attack
 
 import (
 	"testing"
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestSortAttacksChronologically(t *testing.T) {
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{Started: 300},
 		{Started: 100},
 		{Started: 200},
@@ -26,7 +26,7 @@ func TestSortAttacksChronologically(t *testing.T) {
 }
 
 func TestSortAttacksChronologically_EmptySlice(t *testing.T) {
-	attacks := []app.Attack{}
+	attacks := []domain.Attack{}
 	sorted := SortAttacksChronologically(attacks)
 
 	if len(sorted) != 0 {
@@ -35,7 +35,7 @@ func TestSortAttacksChronologically_EmptySlice(t *testing.T) {
 }
 
 func TestSortAttacksChronologically_SingleItem(t *testing.T) {
-	attacks := []app.Attack{{Started: 100}}
+	attacks := []domain.Attack{{Started: 100}}
 	sorted := SortAttacksChronologically(attacks)
 
 	if len(sorted) != 1 || sorted[0].Started != 100 {

@@ -1,10 +1,10 @@
 package attack
 
-import "torn_rw_stats/internal/app"
+import "torn_rw_stats/internal/domain"
 
 // BuildFactionIDMap creates a map of faction IDs from a war for O(1) lookup
 // Pure function: No I/O, deterministic output from input
-func BuildFactionIDMap(war *app.War) map[int]bool {
+func BuildFactionIDMap(war *domain.War) map[int]bool {
 	factionIDs := make(map[int]bool)
 	for _, faction := range war.Factions {
 		factionIDs[faction.ID] = true
@@ -14,8 +14,8 @@ func BuildFactionIDMap(war *app.War) map[int]bool {
 
 // FilterRelevantAttacks returns attacks where attacker or defender is in warFactionIDs
 // Pure function: No I/O, returns new slice without modifying input
-func FilterRelevantAttacks(attacks []app.Attack, warFactionIDs map[int]bool) []app.Attack {
-	var relevantAttacks []app.Attack
+func FilterRelevantAttacks(attacks []domain.Attack, warFactionIDs map[int]bool) []domain.Attack {
+	var relevantAttacks []domain.Attack
 	for _, attack := range attacks {
 		if IsAttackRelevantToWar(attack, warFactionIDs) {
 			relevantAttacks = append(relevantAttacks, attack)
@@ -26,7 +26,7 @@ func FilterRelevantAttacks(attacks []app.Attack, warFactionIDs map[int]bool) []a
 
 // IsAttackRelevantToWar checks if an attack involves any faction from the war
 // Pure function: No I/O, simple boolean logic
-func IsAttackRelevantToWar(attack app.Attack, warFactionIDs map[int]bool) bool {
+func IsAttackRelevantToWar(attack domain.Attack, warFactionIDs map[int]bool) bool {
 	if attack.Attacker.Faction != nil && warFactionIDs[attack.Attacker.Faction.ID] {
 		return true
 	}

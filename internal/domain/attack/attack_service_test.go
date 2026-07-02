@@ -3,42 +3,42 @@ package attack
 import (
 	"testing"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestAttackProcessingServiceProcessAttacksIntoRecords(t *testing.T) {
 	service := NewAttackProcessingService()
 
 	// Create test war data
-	war := &app.War{
+	war := &domain.War{
 		ID: 1001,
-		Factions: []app.Faction{
+		Factions: []domain.Faction{
 			{ID: 12345, Name: "Our Faction"},
 			{ID: 67890, Name: "Enemy Faction"},
 		},
 	}
 
 	// Create test attacks
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{
 			ID:      100001,
 			Code:    "1234abcd",
 			Started: 1640995200, // 2022-01-01 00:00:00 UTC
 			Ended:   1640995260, // 2022-01-01 00:01:00 UTC
-			Attacker: app.User{
+			Attacker: domain.User{
 				ID:    123,
 				Name:  "TestAttacker",
 				Level: 50,
-				Faction: &app.Faction{
+				Faction: &domain.Faction{
 					ID:   12345,
 					Name: "Our Faction",
 				},
 			},
-			Defender: app.User{
+			Defender: domain.User{
 				ID:    456,
 				Name:  "TestDefender",
 				Level: 45,
-				Faction: &app.Faction{
+				Faction: &domain.Faction{
 					ID:   67890,
 					Name: "Enemy Faction",
 				},
@@ -47,11 +47,11 @@ func TestAttackProcessingServiceProcessAttacksIntoRecords(t *testing.T) {
 			RespectGain: 2.5,
 			RespectLoss: 0.0,
 			Chain:       10,
-			Modifiers: app.AttackModifiers{
+			Modifiers: domain.AttackModifiers{
 				FairFight: 1.0,
 				War:       2.0,
 			},
-			FinishingHitEffects: []app.FinishingHitEffect{
+			FinishingHitEffects: []domain.FinishingHitEffect{
 				{Name: "Critical Hit", Value: 1.5},
 			},
 		},
@@ -95,18 +95,18 @@ func TestAttackProcessingServiceDetermineAttackDirection(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		attack       app.Attack
+		attack       domain.Attack
 		ourFactionID int
 		expected     string
 	}{
 		{
 			name: "Outgoing attack",
-			attack: app.Attack{
-				Attacker: app.User{
-					Faction: &app.Faction{ID: 12345},
+			attack: domain.Attack{
+				Attacker: domain.User{
+					Faction: &domain.Faction{ID: 12345},
 				},
-				Defender: app.User{
-					Faction: &app.Faction{ID: 67890},
+				Defender: domain.User{
+					Faction: &domain.Faction{ID: 67890},
 				},
 			},
 			ourFactionID: 12345,
@@ -114,12 +114,12 @@ func TestAttackProcessingServiceDetermineAttackDirection(t *testing.T) {
 		},
 		{
 			name: "Incoming attack",
-			attack: app.Attack{
-				Attacker: app.User{
-					Faction: &app.Faction{ID: 67890},
+			attack: domain.Attack{
+				Attacker: domain.User{
+					Faction: &domain.Faction{ID: 67890},
 				},
-				Defender: app.User{
-					Faction: &app.Faction{ID: 12345},
+				Defender: domain.User{
+					Faction: &domain.Faction{ID: 12345},
 				},
 			},
 			ourFactionID: 12345,
@@ -127,12 +127,12 @@ func TestAttackProcessingServiceDetermineAttackDirection(t *testing.T) {
 		},
 		{
 			name: "Unknown attack",
-			attack: app.Attack{
-				Attacker: app.User{
-					Faction: &app.Faction{ID: 99999},
+			attack: domain.Attack{
+				Attacker: domain.User{
+					Faction: &domain.Faction{ID: 99999},
 				},
-				Defender: app.User{
-					Faction: &app.Faction{ID: 88888},
+				Defender: domain.User{
+					Faction: &domain.Faction{ID: 88888},
 				},
 			},
 			ourFactionID: 12345,

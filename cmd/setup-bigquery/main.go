@@ -24,9 +24,9 @@ import (
 	"os"
 
 	bq "cloud.google.com/go/bigquery"
-	"torn_rw_stats/internal/app"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"torn_rw_stats/internal/app"
 )
 
 func main() {
