@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // TravelInfo holds travel-related data for a member including departure time,
@@ -19,7 +19,7 @@ type TravelInfo struct {
 }
 
 // calculateTravelInfo handles all travel-related calculations and preserves manual adjustments
-func (s *StatusV2Service) calculateTravelInfo(ctx context.Context, stateRecord app.StateRecord, existing *app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time, location string) TravelInfo {
+func (s *StatusV2Service) calculateTravelInfo(ctx context.Context, stateRecord domain.StateRecord, existing *domain.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time, location string) TravelInfo {
 	if stateRecord.StatusState != "Traveling" {
 		return TravelInfo{} // Clear travel data for non-traveling members
 	}
@@ -40,7 +40,7 @@ func (s *StatusV2Service) calculateTravelInfo(ctx context.Context, stateRecord a
 }
 
 // calculateDeparture determines the departure time for a traveling member
-func (s *StatusV2Service) calculateDeparture(memberKey string, existing *app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) string {
+func (s *StatusV2Service) calculateDeparture(memberKey string, existing *domain.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) string {
 	if departureTime, hasDeparture := departureMap[memberKey]; hasDeparture {
 		return departureTime.Format("2006-01-02 15:04:05")
 	}
@@ -51,7 +51,7 @@ func (s *StatusV2Service) calculateDeparture(memberKey string, existing *app.Sta
 }
 
 // calculateArrivalTimes uses TravelTimeService to calculate arrival times and countdown
-func (s *StatusV2Service) calculateArrivalTimes(ctx context.Context, stateRecord app.StateRecord, existing *app.StatusV2Record, departure, location string, currentTime time.Time) (string, string, string) {
+func (s *StatusV2Service) calculateArrivalTimes(ctx context.Context, stateRecord domain.StateRecord, existing *domain.StatusV2Record, departure, location string, currentTime time.Time) (string, string, string) {
 	if departure == "" {
 		return "", "", ""
 	}
@@ -85,7 +85,7 @@ func (s *StatusV2Service) calculateArrivalTimes(ctx context.Context, stateRecord
 }
 
 // applyManualAdjustments preserves any manual adjustments from existing data
-func (s *StatusV2Service) applyManualAdjustments(existing *app.StatusV2Record, calculated TravelInfo) TravelInfo {
+func (s *StatusV2Service) applyManualAdjustments(existing *domain.StatusV2Record, calculated TravelInfo) TravelInfo {
 	if existing == nil {
 		return calculated
 	}

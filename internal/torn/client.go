@@ -11,7 +11,7 @@ import (
 
 	"log/slog"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 const (
@@ -97,7 +97,7 @@ func (c *Client) handleAPIResponse(resp *http.Response) ([]byte, error) {
 }
 
 // GetFactionWars fetches faction wars from the API
-func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
+func (c *Client) GetFactionWars(ctx context.Context) (*domain.FactionWars, error) {
 	url := fmt.Sprintf("https://api.torn.com/v2/faction/wars?key=%s", c.apiKey)
 
 	slog.Debug("Fetching faction wars", "url", url)
@@ -112,7 +112,7 @@ func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
 		return nil, err
 	}
 
-	var warResponse app.WarResponse
+	var warResponse warsResponseDTO
 	if err := json.Unmarshal(body, &warResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode war response: %w", err)
 	}
@@ -122,11 +122,11 @@ func (c *Client) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
 		"raid_wars", len(warResponse.Wars.Raids),
 		"territory_wars", len(warResponse.Wars.Territory))
 
-	return &warResponse, nil
+	return warResponse.toDomain(), nil
 }
 
 // GetFactionAttacks fetches faction attacks from the API using timestamp pagination
-func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error) {
+func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) ([]domain.Attack, error) {
 	url := fmt.Sprintf("https://api.torn.com/v2/faction/attacks?key=%s&from=%d&to=%d", c.apiKey, from, to)
 
 	slog.Debug("Fetching faction attacks",
@@ -146,7 +146,7 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 		return nil, err
 	}
 
-	var attackResponse app.AttackResponse
+	var attackResponse attacksResponseDTO
 	if err := json.Unmarshal(body, &attackResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode attack response: %w", err)
 	}
@@ -156,11 +156,11 @@ func (c *Client) GetFactionAttacks(ctx context.Context, from, to int64) (*app.At
 		"from", from,
 		"to", to)
 
-	return &attackResponse, nil
+	return attackResponse.toDomain(), nil
 }
 
 // GetFactionBasic fetches faction basic data from the API
-func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
+func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*domain.FactionInfo, error) {
 	url := fmt.Sprintf("https://api.torn.com/faction/%d?selections=basic&key=%s", factionID, c.apiKey)
 
 	slog.Debug("Fetching faction basic data",
@@ -177,7 +177,7 @@ func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.Facti
 		return nil, err
 	}
 
-	var factionResponse app.FactionBasicResponse
+	var factionResponse factionInfoDTO
 	if err := json.Unmarshal(body, &factionResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode faction response: %w", err)
 	}
@@ -186,11 +186,11 @@ func (c *Client) GetFactionBasic(ctx context.Context, factionID int) (*app.Facti
 		"faction_id", factionID,
 		"members_count", len(factionResponse.Members))
 
-	return &factionResponse, nil
+	return factionResponse.toDomain(), nil
 }
 
 // GetOwnFaction gets the current user's faction information
-func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {
+func (c *Client) GetOwnFaction(ctx context.Context) (*domain.FactionInfo, error) {
 	url := fmt.Sprintf("https://api.torn.com/faction/?selections=basic&key=%s", c.apiKey)
 
 	slog.Debug("Fetching own faction data", "url", url)
@@ -205,7 +205,7 @@ func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, e
 		return nil, err
 	}
 
-	var factionResponse app.FactionInfoResponse
+	var factionResponse factionInfoDTO
 	if err := json.Unmarshal(body, &factionResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode faction response: %w", err)
 	}
@@ -215,5 +215,5 @@ func (c *Client) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, e
 		"faction_name", factionResponse.Name,
 		"faction_tag", factionResponse.Tag)
 
-	return &factionResponse, nil
+	return factionResponse.toDomain(), nil
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestAttackRecordsProcessorReadExistingRecordsDetailed(t *testing.T) {
@@ -96,7 +96,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		records           []app.AttackRecord
+		records           []domain.AttackRecord
 		existingTimestamp int64
 		expectedCount     int
 		expectedFirst     int64
@@ -104,7 +104,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 	}{
 		{
 			name: "basic filtering and sorting",
-			records: []app.AttackRecord{
+			records: []domain.AttackRecord{
 				{AttackID: 1, Started: time.Unix(1000, 0)},
 				{AttackID: 2, Started: time.Unix(500, 0)}, // Should be filtered out
 				{AttackID: 3, Started: time.Unix(1500, 0)},
@@ -118,7 +118,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 		},
 		{
 			name: "all records filtered out",
-			records: []app.AttackRecord{
+			records: []domain.AttackRecord{
 				{AttackID: 1, Started: time.Unix(100, 0)},
 				{AttackID: 2, Started: time.Unix(200, 0)},
 			},
@@ -127,7 +127,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 		},
 		{
 			name: "no filtering needed",
-			records: []app.AttackRecord{
+			records: []domain.AttackRecord{
 				{AttackID: 1, Started: time.Unix(1000, 0)},
 				{AttackID: 2, Started: time.Unix(1500, 0)},
 			},
@@ -138,7 +138,7 @@ func TestAttackRecordsProcessorFilterAndSortRecordsComprehensive(t *testing.T) {
 		},
 		{
 			name:              "empty records",
-			records:           []app.AttackRecord{},
+			records:           []domain.AttackRecord{},
 			existingTimestamp: 500,
 			expectedCount:     0,
 		},
@@ -175,7 +175,7 @@ func TestAttackRecordsProcessorConvertRecordsToRowsComprehensive(t *testing.T) {
 
 	testTime := time.Unix(1640995200, 0) // 2022-01-01 00:00:00 UTC
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:            123456,
 			Started:             testTime,
@@ -269,12 +269,12 @@ func TestAttackRecordsProcessorUpdateAttackRecords(t *testing.T) {
 	processor := NewAttackRecordsProcessor(mockAPI)
 
 	testTime := time.Unix(1640995200, 0)
-	config := &app.SheetConfig{
+	config := &domain.SheetConfig{
 		WarID:          123,
 		RecordsTabName: "Records - 123",
 	}
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:     111,
 			Started:      testTime,
@@ -317,11 +317,11 @@ func TestAttackRecordsProcessorUpdateAttackRecordsEmpty(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	config := &app.SheetConfig{
+	config := &domain.SheetConfig{
 		WarID:          123,
 		RecordsTabName: "Records - 123",
 	}
-	records := []app.AttackRecord{}
+	records := []domain.AttackRecord{}
 
 	err := processor.UpdateAttackRecords(context.Background(), "test_spreadsheet", config, records)
 	if err != nil {
@@ -347,8 +347,8 @@ func TestAttackRecordsProcessorWithAPIError(t *testing.T) {
 	}
 
 	// Test UpdateAttackRecords with error
-	config := &app.SheetConfig{WarID: 123, RecordsTabName: "Records - 123"}
-	records := []app.AttackRecord{{AttackID: 1, Started: time.Now()}}
+	config := &domain.SheetConfig{WarID: 123, RecordsTabName: "Records - 123"}
+	records := []domain.AttackRecord{{AttackID: 1, Started: time.Now()}}
 	err = processor.UpdateAttackRecords(context.Background(), "test_spreadsheet", config, records)
 	if err == nil {
 		t.Fatal("Expected error due to mock API failure, got nil")
@@ -360,7 +360,7 @@ func TestAttackRecordsProcessorEdgeCases(t *testing.T) {
 	processor := NewAttackRecordsProcessor(mockAPI)
 
 	// Test with records that have zero timestamps
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{AttackID: 1, Started: time.Unix(0, 0)},
 		{AttackID: 2, Started: time.Unix(1, 0)},
 	}
@@ -395,12 +395,12 @@ func TestAttackRecordsProcessorTimeFormatting(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		record := app.AttackRecord{
+		record := domain.AttackRecord{
 			AttackID: 1,
 			Started:  time.Unix(tc.timestamp, 0),
 		}
 
-		rows := processor.ConvertRecordsToRows([]app.AttackRecord{record})
+		rows := processor.ConvertRecordsToRows([]domain.AttackRecord{record})
 		if len(rows) != 1 {
 			t.Fatalf("Expected 1 row, got %d", len(rows))
 		}

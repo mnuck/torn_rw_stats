@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // StateRecordConverter handles conversion between Torn API responses (faction data)
@@ -17,8 +17,8 @@ func NewStateRecordConverter() *StateRecordConverter {
 }
 
 // ConvertFromFactionBasic converts FactionBasicResponse to StateRecords
-func (c *StateRecordConverter) ConvertFromFactionBasic(response *app.FactionBasicResponse, currentTime time.Time) []app.StateRecord {
-	var records []app.StateRecord
+func (c *StateRecordConverter) ConvertFromFactionBasic(response *domain.FactionInfo, currentTime time.Time) []domain.StateRecord {
+	var records []domain.StateRecord
 
 	factionIDStr := strconv.Itoa(response.ID)
 	factionName := response.Name
@@ -32,8 +32,8 @@ func (c *StateRecordConverter) ConvertFromFactionBasic(response *app.FactionBasi
 }
 
 // ConvertFromFactionInfo converts FactionInfoResponse to StateRecords
-func (c *StateRecordConverter) ConvertFromFactionInfo(response *app.FactionInfoResponse, currentTime time.Time) []app.StateRecord {
-	var records []app.StateRecord
+func (c *StateRecordConverter) ConvertFromFactionInfo(response *domain.FactionInfo, currentTime time.Time) []domain.StateRecord {
+	var records []domain.StateRecord
 
 	factionIDStr := strconv.Itoa(response.ID)
 	factionName := response.Name
@@ -51,14 +51,14 @@ func (c *StateRecordConverter) ConvertFromFactionInfo(response *app.FactionInfoR
 // separate faction API calls (/faction/{id}?selections=basic)
 
 // convertMemberToStateRecord converts a FactionMember to a StateRecord
-func (c *StateRecordConverter) convertMemberToStateRecord(memberIDStr string, member app.FactionMember, factionIDStr, factionName string, currentTime time.Time) app.StateRecord {
+func (c *StateRecordConverter) convertMemberToStateRecord(memberIDStr string, member domain.FactionMember, factionIDStr, factionName string, currentTime time.Time) domain.StateRecord {
 	// Convert StatusUntil from *int64 to time.Time - only if it's a meaningful timestamp
 	var statusUntil time.Time
 	if member.Status.Until != nil && *member.Status.Until > 0 {
 		statusUntil = time.Unix(*member.Status.Until, 0).UTC()
 	}
 
-	return app.StateRecord{
+	return domain.StateRecord{
 		Timestamp:         currentTime,
 		MemberID:          memberIDStr,
 		MemberName:        member.Name,

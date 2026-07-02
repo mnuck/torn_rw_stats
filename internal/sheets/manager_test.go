@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // MockSheetsAPI implements SheetsAPI for testing
@@ -156,7 +156,7 @@ func TestWarSheetsManagerEnsureWarSheets(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	manager := NewWarSheetsManager(mockAPI)
 
-	war := &app.War{
+	war := &domain.War{
 		ID: 123,
 	}
 
@@ -268,7 +268,7 @@ func TestWarSheetsManagerWithAPIError(t *testing.T) {
 	mockAPI.SetError(true)
 	manager := NewWarSheetsManager(mockAPI)
 
-	war := &app.War{ID: 123}
+	war := &domain.War{ID: 123}
 
 	_, err := manager.EnsureWarSheets(context.Background(), "test_spreadsheet", war)
 	if err == nil {
@@ -317,7 +317,7 @@ func TestAttackRecordsProcessorFilterAndSortRecords(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{AttackID: 1, Code: "new_code_1", Started: time.Unix(1000, 0)},
 		{AttackID: 2, Code: "existing_code", Started: time.Unix(500, 0)}, // Should be filtered out (duplicate)
 		{AttackID: 3, Code: "new_code_2", Started: time.Unix(1500, 0)},
@@ -360,7 +360,7 @@ func TestAttackRecordsProcessorConvertRecordsToRows(t *testing.T) {
 	mockAPI := NewMockSheetsAPI()
 	processor := NewAttackRecordsProcessor(mockAPI)
 
-	records := []app.AttackRecord{
+	records := []domain.AttackRecord{
 		{
 			AttackID:            123,
 			Started:             time.Unix(1000, 0),

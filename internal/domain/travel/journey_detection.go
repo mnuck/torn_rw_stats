@@ -1,6 +1,6 @@
 package travel
 
-import "torn_rw_stats/internal/app"
+import "torn_rw_stats/internal/domain"
 
 // IsNewJourneyToDestination checks if a record represents a new journey to the destination.
 // A journey is new if:
@@ -9,7 +9,7 @@ import "torn_rw_stats/internal/app"
 // - Previous destination was different
 //
 // Pure function: No I/O operations, fully testable with direct inputs.
-func IsNewJourneyToDestination(records []app.StateRecord, currentIndex int, destination string, locationParser LocationParser) bool {
+func IsNewJourneyToDestination(records []domain.StateRecord, currentIndex int, destination string, locationParser LocationParser) bool {
 	if currentIndex == 0 {
 		return true // First record is always a new journey
 	}

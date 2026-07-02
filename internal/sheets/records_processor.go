@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 
 	"log/slog"
 )
@@ -95,7 +95,7 @@ func (p *AttackRecordsProcessor) ReadExistingRecords(ctx context.Context, spread
 }
 
 // UpdateAttackRecords updates the attack records sheet with new records
-func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error {
+func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -177,8 +177,8 @@ func (p *AttackRecordsProcessor) UpdateAttackRecords(ctx context.Context, spread
 }
 
 // FilterAndSortRecords filters out existing records and sorts by timestamp
-func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord, existing *RecordsInfo) []app.AttackRecord {
-	var newRecords []app.AttackRecord
+func (p *AttackRecordsProcessor) FilterAndSortRecords(records []domain.AttackRecord, existing *RecordsInfo) []domain.AttackRecord {
+	var newRecords []domain.AttackRecord
 
 	// Filter out duplicates using attack codes AND records older than existing timestamp
 	duplicates := 0
@@ -234,7 +234,7 @@ func (p *AttackRecordsProcessor) FilterAndSortRecords(records []app.AttackRecord
 }
 
 // ConvertRecordsToRows converts attack records into spreadsheet row format
-func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []app.AttackRecord) [][]interface{} {
+func (p *AttackRecordsProcessor) ConvertRecordsToRows(records []domain.AttackRecord) [][]interface{} {
 	var rows [][]interface{}
 
 	for _, record := range records {

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // Client wraps the BigQuery streaming insert and query APIs for state records.
@@ -40,10 +40,10 @@ func NewClient(ctx context.Context, credentialsFile, projectID, datasetID, table
 	}, nil
 }
 
-// stateRecordRow is the BigQuery-insertable representation of app.StateRecord.
+// stateRecordRow is the BigQuery-insertable representation of domain.StateRecord.
 // It implements bq.ValueSaver.
 type stateRecordRow struct {
-	record app.StateRecord
+	record domain.StateRecord
 }
 
 func (r *stateRecordRow) Save() (map[string]bq.Value, string, error) {
@@ -68,7 +68,7 @@ func (r *stateRecordRow) Save() (map[string]bq.Value, string, error) {
 
 // QueryLatestStatePerMember returns the most recent StateRecord for each of the
 // given member IDs. Members with no history are omitted from the result.
-func (c *Client) QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]app.StateRecord, error) {
+func (c *Client) QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]domain.StateRecord, error) {
 	if len(memberIDs) == 0 {
 		return nil, nil
 	}
@@ -97,7 +97,7 @@ WHERE rn = 1`,
 		return nil, fmt.Errorf("bigquery query failed: %w", err)
 	}
 
-	var records []app.StateRecord
+	var records []domain.StateRecord
 	for {
 		var row struct {
 			MemberID          string           `bigquery:"member_id"`
@@ -119,7 +119,7 @@ WHERE rn = 1`,
 			return nil, fmt.Errorf("bigquery row iteration failed: %w", err)
 		}
 
-		r := app.StateRecord{
+		r := domain.StateRecord{
 			Timestamp:         row.Timestamp.UTC(),
 			MemberID:          row.MemberID,
 			MemberName:        row.MemberName,
@@ -146,7 +146,7 @@ WHERE rn = 1`,
 
 // QueryLatestStatePerFaction returns the most recent StateRecord for each member
 // of the given faction. Members with no history are omitted from the result.
-func (c *Client) QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]app.StateRecord, error) {
+func (c *Client) QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]domain.StateRecord, error) {
 	sql := fmt.Sprintf(`
 SELECT member_id, member_name, faction_id, faction_name,
        last_action_status, status_description, status_state,
@@ -171,7 +171,7 @@ WHERE rn = 1`,
 		return nil, fmt.Errorf("bigquery faction query failed: %w", err)
 	}
 
-	var records []app.StateRecord
+	var records []domain.StateRecord
 	for {
 		var row struct {
 			MemberID          string           `bigquery:"member_id"`
@@ -193,7 +193,7 @@ WHERE rn = 1`,
 			return nil, fmt.Errorf("bigquery row iteration failed: %w", err)
 		}
 
-		r := app.StateRecord{
+		r := domain.StateRecord{
 			Timestamp:         row.Timestamp.UTC(),
 			MemberID:          row.MemberID,
 			MemberName:        row.MemberName,
@@ -277,7 +277,7 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY timestamp DESC) = 1`,
 }
 
 // InsertStateRecords streams the provided records into BigQuery.
-func (c *Client) InsertStateRecords(ctx context.Context, records []app.StateRecord) error {
+func (c *Client) InsertStateRecords(ctx context.Context, records []domain.StateRecord) error {
 	if len(records) == 0 {
 		return nil
 	}

@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"log/slog"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/status"
 	"torn_rw_stats/internal/domain/travel"
-	"log/slog"
 
 	"torn_rw_stats/internal/processing"
 )
@@ -42,19 +42,19 @@ func NewStatusV2ServiceWithBigQuery(sheetsClient processing.SheetsClientInterfac
 
 // ConvertStateRecordsToStatusV2 converts StateRecords to StatusV2Records
 // incorporating departure time tracking and countdown calculations
-func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spreadsheetID string, stateRecords []app.StateRecord, factionMembers map[string]app.FactionMember, factionID int) ([]app.StatusV2Record, error) {
+func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spreadsheetID string, stateRecords []domain.StateRecord, factionMembers map[string]domain.FactionMember, factionID int) ([]domain.StatusV2Record, error) {
 	slog.Info("Starting StateRecord to StatusV2 conversion",
 		"faction_id", factionID,
 		"input_state_records", len(stateRecords),
 		"faction_members", len(factionMembers))
 
-	var records []app.StatusV2Record
+	var records []domain.StatusV2Record
 
 	// Get existing departure data to preserve manual adjustments
 	existingData, err := s.getExistingStatusV2Data(ctx, spreadsheetID, factionID)
 	if err != nil {
 		slog.Warn("Failed to get existing Status v2 data, will use defaults", "err", err, "faction_id", factionID)
-		existingData = make(map[string]app.StatusV2Record)
+		existingData = make(map[string]domain.StatusV2Record)
 	}
 
 	slog.Debug("Retrieved existing Status v2 data",
@@ -99,7 +99,7 @@ func (s *StatusV2Service) ConvertStateRecordsToStatusV2(ctx context.Context, spr
 }
 
 // convertSingleStateRecord converts a single StateRecord to StatusV2Record
-func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRecord app.StateRecord, factionMembers map[string]app.FactionMember, existingData map[string]app.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) app.StatusV2Record {
+func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRecord domain.StateRecord, factionMembers map[string]domain.FactionMember, existingData map[string]domain.StatusV2Record, departureMap map[string]time.Time, currentTime time.Time) domain.StatusV2Record {
 	// Use domain functions for pure calculations
 	existing := status.GetExistingRecord(stateRecord.FactionID, stateRecord.MemberID, stateRecord.MemberName, existingData)
 	level := status.ResolveLevel(stateRecord.MemberID, factionMembers, existing)
@@ -111,8 +111,8 @@ func (s *StatusV2Service) convertSingleStateRecord(ctx context.Context, stateRec
 }
 
 // buildStatusV2Record constructs the final StatusV2Record
-func (s *StatusV2Service) buildStatusV2Record(stateRecord app.StateRecord, level int, location string, travelInfo TravelInfo) app.StatusV2Record {
-	return app.StatusV2Record{
+func (s *StatusV2Service) buildStatusV2Record(stateRecord domain.StateRecord, level int, location string, travelInfo TravelInfo) domain.StatusV2Record {
+	return domain.StatusV2Record{
 		Name:            stateRecord.MemberName,
 		MemberID:        stateRecord.MemberID,
 		Level:           level,
@@ -128,7 +128,7 @@ func (s *StatusV2Service) buildStatusV2Record(stateRecord app.StateRecord, level
 }
 
 // calculateLocation determines the location based on member state using LocationService
-func (s *StatusV2Service) calculateLocation(stateRecord app.StateRecord) string {
+func (s *StatusV2Service) calculateLocation(stateRecord domain.StateRecord) string {
 	// Use the LocationService to parse location from status description
 	// This handles all patterns: hospitals, travel, locations, etc.
 	return s.locationService.ParseLocation(stateRecord.StatusDescription)

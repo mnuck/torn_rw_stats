@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"log/slog"
 	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/attack"
 	"torn_rw_stats/internal/domain/travel"
 	wardomain "torn_rw_stats/internal/domain/war"
-	"log/slog"
 
 	"torn_rw_stats/internal/processing"
 	"torn_rw_stats/internal/sheets"
@@ -106,21 +107,21 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 	var processedWars int
 
 	// Process ranked war if it exists
-	if warResponse.Wars.Ranked != nil {
+	if warResponse.Ranked != nil {
 		slog.Info("Processing ranked war",
-			"war_id", warResponse.Wars.Ranked.ID)
+			"war_id", warResponse.Ranked.ID)
 
-		if err := wp.processWar(ctx, warResponse.Wars.Ranked); err != nil {
+		if err := wp.processWar(ctx, warResponse.Ranked); err != nil {
 			slog.Error("Failed to process ranked war",
 				"err", err,
-				"war_id", warResponse.Wars.Ranked.ID)
+				"war_id", warResponse.Ranked.ID)
 		} else {
 			processedWars++
 		}
 	}
 
 	// Process raid wars
-	for _, war := range warResponse.Wars.Raids {
+	for _, war := range warResponse.Raids {
 		slog.Info("Processing raid war",
 			"war_id", war.ID)
 
@@ -134,7 +135,7 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 	}
 
 	// Process territory wars
-	for _, war := range warResponse.Wars.Territory {
+	for _, war := range warResponse.Territory {
 		slog.Info("Processing territory war",
 			"war_id", war.ID)
 
@@ -154,7 +155,7 @@ func (wp *WarProcessor) ProcessActiveWars(ctx context.Context) error {
 }
 
 // processWar handles processing a single war
-func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
+func (wp *WarProcessor) processWar(ctx context.Context, war *domain.War) error {
 	slog.Info("=== ENTERING processWar ===",
 		"war_id", war.ID,
 		"factions_count", len(war.Factions),
@@ -181,7 +182,7 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 		"reason", fetchDecision.Reason)
 
 	// Fetch attacks based on decision
-	var attacks []app.Attack
+	var attacks []domain.Attack
 	processor := torn.NewAttackProcessor(wp.tornClient)
 	if fetchDecision.UseFullMode {
 		attacks, err = processor.GetAllAttacksForWar(ctx, war)
@@ -241,6 +242,6 @@ func (wp *WarProcessor) processWar(ctx context.Context, war *app.War) error {
 }
 
 // getOurFactionID determines which faction is "ours" in the war
-func (wp *WarProcessor) getOurFactionID(war *app.War) int {
+func (wp *WarProcessor) getOurFactionID(war *domain.War) int {
 	return wp.ourFactionID
 }

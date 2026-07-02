@@ -2,7 +2,7 @@ package attack
 
 import (
 	"testing"
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestShouldStopPagination(t *testing.T) {
@@ -90,19 +90,19 @@ func TestShouldStopPagination(t *testing.T) {
 func TestFindOldestAttackTime(t *testing.T) {
 	tests := []struct {
 		name         string
-		attacks      []app.Attack
+		attacks      []domain.Attack
 		defaultTime  int64
 		expectedTime int64
 	}{
 		{
 			name:         "EmptySlice",
-			attacks:      []app.Attack{},
+			attacks:      []domain.Attack{},
 			defaultTime:  1000,
 			expectedTime: 1000,
 		},
 		{
 			name: "SingleAttack",
-			attacks: []app.Attack{
+			attacks: []domain.Attack{
 				{Started: 500},
 			},
 			defaultTime:  1000,
@@ -110,7 +110,7 @@ func TestFindOldestAttackTime(t *testing.T) {
 		},
 		{
 			name: "MultipleAttacks",
-			attacks: []app.Attack{
+			attacks: []domain.Attack{
 				{Started: 1000},
 				{Started: 500},
 				{Started: 1500},
@@ -121,7 +121,7 @@ func TestFindOldestAttackTime(t *testing.T) {
 		},
 		{
 			name: "AllAttacksNewerThanDefault",
-			attacks: []app.Attack{
+			attacks: []domain.Attack{
 				{Started: 2000},
 				{Started: 2500},
 			},

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // MockBigQueryClient is a test double for bigquery.Client
@@ -16,13 +16,13 @@ type MockBigQueryClient struct {
 	QueryDepartureTimesError        error
 
 	// Responses to return
-	QueryLatestStatePerMemberResponse  []app.StateRecord
-	QueryLatestStatePerFactionResponse []app.StateRecord
+	QueryLatestStatePerMemberResponse  []domain.StateRecord
+	QueryLatestStatePerFactionResponse []domain.StateRecord
 	QueryDepartureTimesResponse        map[string]time.Time
 
 	// Call tracking
 	InsertStateRecordsCalled             bool
-	InsertStateRecordsCalledWith         []app.StateRecord
+	InsertStateRecordsCalledWith         []domain.StateRecord
 	QueryLatestStatePerMemberCalled      bool
 	QueryLatestStatePerMemberCalledWith  []string
 	QueryLatestStatePerFactionCalled     bool
@@ -36,19 +36,19 @@ func NewMockBigQueryClient() *MockBigQueryClient {
 	return &MockBigQueryClient{}
 }
 
-func (m *MockBigQueryClient) InsertStateRecords(_ context.Context, records []app.StateRecord) error {
+func (m *MockBigQueryClient) InsertStateRecords(_ context.Context, records []domain.StateRecord) error {
 	m.InsertStateRecordsCalled = true
 	m.InsertStateRecordsCalledWith = records
 	return m.InsertStateRecordsError
 }
 
-func (m *MockBigQueryClient) QueryLatestStatePerMember(_ context.Context, memberIDs []string) ([]app.StateRecord, error) {
+func (m *MockBigQueryClient) QueryLatestStatePerMember(_ context.Context, memberIDs []string) ([]domain.StateRecord, error) {
 	m.QueryLatestStatePerMemberCalled = true
 	m.QueryLatestStatePerMemberCalledWith = memberIDs
 	return m.QueryLatestStatePerMemberResponse, m.QueryLatestStatePerMemberError
 }
 
-func (m *MockBigQueryClient) QueryLatestStatePerFaction(_ context.Context, factionID string) ([]app.StateRecord, error) {
+func (m *MockBigQueryClient) QueryLatestStatePerFaction(_ context.Context, factionID string) ([]domain.StateRecord, error) {
 	m.QueryLatestStatePerFactionCalled = true
 	m.QueryLatestStatePerFactionCalledWith = factionID
 	return m.QueryLatestStatePerFactionResponse, m.QueryLatestStatePerFactionError

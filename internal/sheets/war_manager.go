@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 
 	"log/slog"
 )
@@ -23,7 +23,7 @@ func NewWarSheetsManager(api SheetsAPI) *WarSheetsManager {
 }
 
 // EnsureWarSheets creates summary and records sheets for a war if they don't exist
-func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error) {
+func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID string, war *domain.War) (*domain.SheetConfig, error) {
 	summaryTabName := m.GenerateSummaryTabName(war.ID)
 	recordsTabName := m.GenerateRecordsTabName(war.ID)
 
@@ -72,7 +72,7 @@ func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID st
 		}
 	}
 
-	return &app.SheetConfig{
+	return &domain.SheetConfig{
 		WarID:          war.ID,
 		SummaryTabName: summaryTabName,
 		RecordsTabName: recordsTabName,
@@ -193,7 +193,7 @@ func (m *WarSheetsManager) GenerateRecordsSheetHeaders() [][]interface{} {
 }
 
 // UpdateWarSummary updates the summary sheet with current war statistics
-func (m *WarSheetsManager) UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error {
+func (m *WarSheetsManager) UpdateWarSummary(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, summary *domain.WarSummary) error {
 	// Generate summary data rows
 	summaryData := m.ConvertSummaryToRows(summary)
 
@@ -219,7 +219,7 @@ func (m *WarSheetsManager) UpdateWarSummary(ctx context.Context, spreadsheetID s
 }
 
 // ConvertSummaryToRows converts a WarSummary into spreadsheet row format
-func (m *WarSheetsManager) ConvertSummaryToRows(summary *app.WarSummary) []interface{} {
+func (m *WarSheetsManager) ConvertSummaryToRows(summary *domain.WarSummary) []interface{} {
 	endTimeStr := "Ongoing"
 	if summary.EndTime != nil {
 		endTimeStr = summary.EndTime.UTC().Format("2006-01-02 15:04:05")

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // TestWarStateDetection tests the logic for determining war states
@@ -13,13 +13,7 @@ func TestWarStateDetection(t *testing.T) {
 	now := time.Now()
 
 	t.Run("NoWars", func(t *testing.T) {
-		emptyResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{},
-		}
+		emptyResponse := &domain.FactionWars{}
 
 		state := wsm.UpdateState(emptyResponse)
 		if state != NoWars {
@@ -29,20 +23,14 @@ func TestWarStateDetection(t *testing.T) {
 
 	t.Run("ActiveWar", func(t *testing.T) {
 		// War that started 30 minutes ago
-		activeWarResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12345,
-					Start: now.Add(-30 * time.Minute).Unix(),
-					End:   nil, // Still active
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1002, Name: "Enemy Faction"},
-					},
+		activeWarResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12345,
+				Start: now.Add(-30 * time.Minute).Unix(),
+				End:   nil, // Still active
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1002, Name: "Enemy Faction"},
 				},
 			},
 		}
@@ -59,22 +47,16 @@ func TestWarStateDetection(t *testing.T) {
 
 	t.Run("PreWar", func(t *testing.T) {
 		// War scheduled to start in 2 hours
-		preWarResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Raids: []app.War{{
-					ID:    12346,
-					Start: now.Add(2 * time.Hour).Unix(),
-					End:   nil,
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1003, Name: "Enemy Faction"},
-					},
-				}},
-			},
+		preWarResponse := &domain.FactionWars{
+			Raids: []domain.War{{
+				ID:    12346,
+				Start: now.Add(2 * time.Hour).Unix(),
+				End:   nil,
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1003, Name: "Enemy Faction"},
+				},
+			}},
 		}
 
 		state := wsm.UpdateState(preWarResponse)
@@ -86,20 +68,14 @@ func TestWarStateDetection(t *testing.T) {
 	t.Run("PostWar", func(t *testing.T) {
 		// War that ended 30 minutes ago
 		endTime := now.Add(-30 * time.Minute).Unix()
-		postWarResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12347,
-					Start: now.Add(-2 * time.Hour).Unix(),
-					End:   &endTime,
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1004, Name: "Enemy Faction"},
-					},
+		postWarResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12347,
+				Start: now.Add(-2 * time.Hour).Unix(),
+				End:   &endTime,
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1004, Name: "Enemy Faction"},
 				},
 			},
 		}
@@ -174,13 +150,7 @@ func TestStateTransitions(t *testing.T) {
 	now := time.Now()
 
 	// Start with no wars
-	emptyResponse := &app.WarResponse{
-		Wars: struct {
-			Ranked    *app.War  `json:"ranked"`
-			Raids     []app.War `json:"raids"`
-			Territory []app.War `json:"territory"`
-		}{},
-	}
+	emptyResponse := &domain.FactionWars{}
 
 	state := wsm.UpdateState(emptyResponse)
 	if state != NoWars {
@@ -188,19 +158,13 @@ func TestStateTransitions(t *testing.T) {
 	}
 
 	// Transition to PreWar
-	preWarResponse := &app.WarResponse{
-		Wars: struct {
-			Ranked    *app.War  `json:"ranked"`
-			Raids     []app.War `json:"raids"`
-			Territory []app.War `json:"territory"`
-		}{
-			Ranked: &app.War{
-				ID:    12345,
-				Start: now.Add(1 * time.Hour).Unix(),
-				Factions: []app.Faction{
-					{ID: 1001, Name: "Our Faction"},
-					{ID: 1002, Name: "Enemy Faction"},
-				},
+	preWarResponse := &domain.FactionWars{
+		Ranked: &domain.War{
+			ID:    12345,
+			Start: now.Add(1 * time.Hour).Unix(),
+			Factions: []domain.Faction{
+				{ID: 1001, Name: "Our Faction"},
+				{ID: 1002, Name: "Enemy Faction"},
 			},
 		},
 	}
@@ -211,19 +175,13 @@ func TestStateTransitions(t *testing.T) {
 	}
 
 	// Simulate time passing - war starts
-	activeWarResponse := &app.WarResponse{
-		Wars: struct {
-			Ranked    *app.War  `json:"ranked"`
-			Raids     []app.War `json:"raids"`
-			Territory []app.War `json:"territory"`
-		}{
-			Ranked: &app.War{
-				ID:    12345,
-				Start: now.Add(-5 * time.Minute).Unix(), // Started 5 minutes ago
-				Factions: []app.Faction{
-					{ID: 1001, Name: "Our Faction"},
-					{ID: 1002, Name: "Enemy Faction"},
-				},
+	activeWarResponse := &domain.FactionWars{
+		Ranked: &domain.War{
+			ID:    12345,
+			Start: now.Add(-5 * time.Minute).Unix(), // Started 5 minutes ago
+			Factions: []domain.Faction{
+				{ID: 1001, Name: "Our Faction"},
+				{ID: 1002, Name: "Enemy Faction"},
 			},
 		},
 	}
@@ -235,20 +193,14 @@ func TestStateTransitions(t *testing.T) {
 
 	// War ends
 	endTime := now.Add(-1 * time.Minute).Unix()
-	postWarResponse := &app.WarResponse{
-		Wars: struct {
-			Ranked    *app.War  `json:"ranked"`
-			Raids     []app.War `json:"raids"`
-			Territory []app.War `json:"territory"`
-		}{
-			Ranked: &app.War{
-				ID:    12345,
-				Start: now.Add(-2 * time.Hour).Unix(),
-				End:   &endTime,
-				Factions: []app.Faction{
-					{ID: 1001, Name: "Our Faction"},
-					{ID: 1002, Name: "Enemy Faction"},
-				},
+	postWarResponse := &domain.FactionWars{
+		Ranked: &domain.War{
+			ID:    12345,
+			Start: now.Add(-2 * time.Hour).Unix(),
+			End:   &endTime,
+			Factions: []domain.Faction{
+				{ID: 1001, Name: "Our Faction"},
+				{ID: 1002, Name: "Enemy Faction"},
 			},
 		},
 	}
@@ -298,29 +250,23 @@ func TestEdgeCases(t *testing.T) {
 		wsm := NewWarStateManager()
 		// Test case where new matchmaking happens during active war
 		// Should prioritize active war over potential new war
-		overlappingResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12345,
-					Start: now.Add(-1 * time.Hour).Unix(), // Active war
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1002, Name: "Enemy A"},
-					},
+		overlappingResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12345,
+				Start: now.Add(-1 * time.Hour).Unix(), // Active war
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1002, Name: "Enemy A"},
 				},
-				Raids: []app.War{{
-					ID:    12346,
-					Start: now.Add(30 * time.Minute).Unix(), // Future war
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1003, Name: "Enemy B"},
-					},
-				}},
 			},
+			Raids: []domain.War{{
+				ID:    12346,
+				Start: now.Add(30 * time.Minute).Unix(), // Future war
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1003, Name: "Enemy B"},
+				},
+			}},
 		}
 
 		state := wsm.UpdateState(overlappingResponse)
@@ -337,29 +283,23 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("MultipleActiveWars", func(t *testing.T) {
 		wsm := NewWarStateManager()
 		// Test case with multiple active wars - should choose most recent
-		multiActiveResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12345,
-					Start: now.Add(-2 * time.Hour).Unix(), // Older active war
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1002, Name: "Enemy A"},
-					},
+		multiActiveResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12345,
+				Start: now.Add(-2 * time.Hour).Unix(), // Older active war
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1002, Name: "Enemy A"},
 				},
-				Raids: []app.War{{
-					ID:    12346,
-					Start: now.Add(-1 * time.Hour).Unix(), // More recent active war
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1003, Name: "Enemy B"},
-					},
-				}},
 			},
+			Raids: []domain.War{{
+				ID:    12346,
+				Start: now.Add(-1 * time.Hour).Unix(), // More recent active war
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1003, Name: "Enemy B"},
+				},
+			}},
 		}
 
 		state := wsm.UpdateState(multiActiveResponse)
@@ -376,28 +316,22 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("MultiplePreWars", func(t *testing.T) {
 		wsm := NewWarStateManager()
 		// Test case with multiple pre-wars - should choose soonest
-		multiPreResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Raids: []app.War{
-					{
-						ID:    12345,
-						Start: now.Add(3 * time.Hour).Unix(), // Later pre-war
-						Factions: []app.Faction{
-							{ID: 1001, Name: "Our Faction"},
-							{ID: 1002, Name: "Enemy A"},
-						},
+		multiPreResponse := &domain.FactionWars{
+			Raids: []domain.War{
+				{
+					ID:    12345,
+					Start: now.Add(3 * time.Hour).Unix(), // Later pre-war
+					Factions: []domain.Faction{
+						{ID: 1001, Name: "Our Faction"},
+						{ID: 1002, Name: "Enemy A"},
 					},
-					{
-						ID:    12346,
-						Start: now.Add(1 * time.Hour).Unix(), // Sooner pre-war
-						Factions: []app.Faction{
-							{ID: 1001, Name: "Our Faction"},
-							{ID: 1003, Name: "Enemy B"},
-						},
+				},
+				{
+					ID:    12346,
+					Start: now.Add(1 * time.Hour).Unix(), // Sooner pre-war
+					Factions: []domain.Faction{
+						{ID: 1001, Name: "Our Faction"},
+						{ID: 1003, Name: "Enemy B"},
 					},
 				},
 			},
@@ -418,20 +352,14 @@ func TestEdgeCases(t *testing.T) {
 		wsm := NewWarStateManager()
 		// War that ended hours ago should not be considered PostWar
 		veryOldEndTime := now.Add(-3 * time.Hour).Unix()
-		oldWarResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12345,
-					Start: now.Add(-5 * time.Hour).Unix(),
-					End:   &veryOldEndTime,
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1002, Name: "Enemy Faction"},
-					},
+		oldWarResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12345,
+				Start: now.Add(-5 * time.Hour).Unix(),
+				End:   &veryOldEndTime,
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1002, Name: "Enemy Faction"},
 				},
 			},
 		}
@@ -445,19 +373,13 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("FarFutureWar", func(t *testing.T) {
 		wsm := NewWarStateManager()
 		// War scheduled way in the future should not be considered PreWar
-		farFutureResponse := &app.WarResponse{
-			Wars: struct {
-				Ranked    *app.War  `json:"ranked"`
-				Raids     []app.War `json:"raids"`
-				Territory []app.War `json:"territory"`
-			}{
-				Ranked: &app.War{
-					ID:    12345,
-					Start: now.Add(10 * 24 * time.Hour).Unix(), // 10 days from now
-					Factions: []app.Faction{
-						{ID: 1001, Name: "Our Faction"},
-						{ID: 1002, Name: "Enemy Faction"},
-					},
+		farFutureResponse := &domain.FactionWars{
+			Ranked: &domain.War{
+				ID:    12345,
+				Start: now.Add(10 * 24 * time.Hour).Unix(), // 10 days from now
+				Factions: []domain.Faction{
+					{ID: 1001, Name: "Our Faction"},
+					{ID: 1002, Name: "Enemy Faction"},
 				},
 			},
 		}

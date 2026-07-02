@@ -3,16 +3,16 @@ package mocks
 import (
 	"context"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/sheets"
 )
 
 // SheetsClient interface defines the methods used by WarProcessor from sheets.Client
 type SheetsClient interface {
-	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error)
+	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *domain.War) (*domain.SheetConfig, error)
 	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
-	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
-	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
+	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, summary *domain.WarSummary) error
+	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
 
 	// Additional methods for state tracking
@@ -25,13 +25,13 @@ type SheetsClient interface {
 
 	// Status v2 methods
 	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error
+	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []domain.StatusV2Record) error
 }
 
 // MockSheetsClient is a test double for the sheets.Client
 type MockSheetsClient struct {
 	// Responses to return
-	EnsureWarSheetsResponse     *app.SheetConfig
+	EnsureWarSheetsResponse     *domain.SheetConfig
 	ReadExistingRecordsResponse *sheets.RecordsInfo
 	ReadSheetResponse           [][]interface{}
 	SheetExistsResponse         bool
@@ -62,7 +62,7 @@ type MockSheetsClient struct {
 	// Call parameters tracking
 	EnsureWarSheetsCalledWith struct {
 		SpreadsheetID string
-		War           *app.War
+		War           *domain.War
 	}
 	ReadExistingRecordsCalledWith struct {
 		SpreadsheetID string
@@ -70,13 +70,13 @@ type MockSheetsClient struct {
 	}
 	UpdateWarSummaryCalledWith struct {
 		SpreadsheetID string
-		Config        *app.SheetConfig
-		Summary       *app.WarSummary
+		Config        *domain.SheetConfig
+		Summary       *domain.WarSummary
 	}
 	UpdateAttackRecordsCalledWith struct {
 		SpreadsheetID string
-		Config        *app.SheetConfig
-		Records       []app.AttackRecord
+		Config        *domain.SheetConfig
+		Records       []domain.AttackRecord
 	}
 	ReadSheetCalledWith struct {
 		SpreadsheetID string
@@ -89,7 +89,7 @@ func NewMockSheetsClient() *MockSheetsClient {
 	return &MockSheetsClient{}
 }
 
-func (m *MockSheetsClient) EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error) {
+func (m *MockSheetsClient) EnsureWarSheets(ctx context.Context, spreadsheetID string, war *domain.War) (*domain.SheetConfig, error) {
 	m.EnsureWarSheetsCalled = true
 	m.EnsureWarSheetsCalledWith.SpreadsheetID = spreadsheetID
 	m.EnsureWarSheetsCalledWith.War = war
@@ -103,7 +103,7 @@ func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetI
 	return m.ReadExistingRecordsResponse, m.ReadExistingRecordsError
 }
 
-func (m *MockSheetsClient) UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error {
+func (m *MockSheetsClient) UpdateWarSummary(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, summary *domain.WarSummary) error {
 	m.UpdateWarSummaryCalled = true
 	m.UpdateWarSummaryCalledWith.SpreadsheetID = spreadsheetID
 	m.UpdateWarSummaryCalledWith.Config = config
@@ -111,7 +111,7 @@ func (m *MockSheetsClient) UpdateWarSummary(ctx context.Context, spreadsheetID s
 	return m.UpdateWarSummaryError
 }
 
-func (m *MockSheetsClient) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error {
+func (m *MockSheetsClient) UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error {
 	m.UpdateAttackRecordsCalled = true
 	m.UpdateAttackRecordsCalledWith.SpreadsheetID = spreadsheetID
 	m.UpdateAttackRecordsCalledWith.Config = config
@@ -150,7 +150,7 @@ func (m *MockSheetsClient) Reset() {
 	// Clear parameter tracking
 	m.EnsureWarSheetsCalledWith = struct {
 		SpreadsheetID string
-		War           *app.War
+		War           *domain.War
 	}{}
 	m.ReadExistingRecordsCalledWith = struct {
 		SpreadsheetID string
@@ -158,13 +158,13 @@ func (m *MockSheetsClient) Reset() {
 	}{}
 	m.UpdateWarSummaryCalledWith = struct {
 		SpreadsheetID string
-		Config        *app.SheetConfig
-		Summary       *app.WarSummary
+		Config        *domain.SheetConfig
+		Summary       *domain.WarSummary
 	}{}
 	m.UpdateAttackRecordsCalledWith = struct {
 		SpreadsheetID string
-		Config        *app.SheetConfig
-		Records       []app.AttackRecord
+		Config        *domain.SheetConfig
+		Records       []domain.AttackRecord
 	}{}
 	m.ReadSheetCalledWith = struct {
 		SpreadsheetID string
@@ -202,6 +202,6 @@ func (m *MockSheetsClient) EnsureStatusV2Sheet(ctx context.Context, spreadsheetI
 	return m.EnsureStatusV2SheetResponse, m.EnsureStatusV2SheetError
 }
 
-func (m *MockSheetsClient) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error {
+func (m *MockSheetsClient) UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []domain.StatusV2Record) error {
 	return m.UpdateStatusV2Error
 }

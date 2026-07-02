@@ -5,7 +5,7 @@ import (
 
 	"log/slog"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // Configuration constants for war state management
@@ -97,7 +97,7 @@ const (
 type WarStateManager struct {
 	currentState       WarState
 	lastStateChange    time.Time
-	currentWar         *app.War
+	currentWar         *domain.War
 	currentWarIsRanked bool
 	stateConfigs       map[WarState]WarStateConfig
 }
@@ -133,7 +133,7 @@ func NewWarStateManager() *WarStateManager {
 }
 
 // UpdateState analyzes current war data and updates the state
-func (wsm *WarStateManager) UpdateState(warResponse *app.WarResponse) WarState {
+func (wsm *WarStateManager) UpdateState(warResponse *domain.FactionWars) WarState {
 	newState := wsm.determineState(warResponse)
 
 	// Validate state transition to prevent oscillation
@@ -204,7 +204,7 @@ func (wsm *WarStateManager) isValidStateTransition(from, to WarState) bool {
 }
 
 // determineState analyzes war response and determines current state
-func (wsm *WarStateManager) determineState(warResponse *app.WarResponse) WarState {
+func (wsm *WarStateManager) determineState(warResponse *domain.FactionWars) WarState {
 	now := time.Now()
 	wars := wsm.getAllWars(warResponse)
 
@@ -214,8 +214,8 @@ func (wsm *WarStateManager) determineState(warResponse *app.WarResponse) WarStat
 	if selectedWar != nil {
 		wsm.currentWar = selectedWar
 		// Track whether the selected war is the ranked war (by start time)
-		wsm.currentWarIsRanked = warResponse.Wars.Ranked != nil &&
-			selectedWar.Start == warResponse.Wars.Ranked.Start
+		wsm.currentWarIsRanked = warResponse.Ranked != nil &&
+			selectedWar.Start == warResponse.Ranked.Start
 		return state
 	}
 
@@ -226,8 +226,8 @@ func (wsm *WarStateManager) determineState(warResponse *app.WarResponse) WarStat
 }
 
 // selectMostRelevantWar chooses the most important war and its corresponding state
-func (wsm *WarStateManager) selectMostRelevantWar(wars []app.War, now time.Time) (*app.War, WarState) {
-	var activeWars, preWars, recentlyEndedWars []app.War
+func (wsm *WarStateManager) selectMostRelevantWar(wars []domain.War, now time.Time) (*domain.War, WarState) {
+	var activeWars, preWars, recentlyEndedWars []domain.War
 
 	// Categorize all wars
 	for _, war := range wars {
@@ -276,9 +276,9 @@ func (wsm *WarStateManager) selectMostRelevantWar(wars []app.War, now time.Time)
 }
 
 // selectMostRecentWar finds the war with the latest start time
-func (wsm *WarStateManager) selectMostRecentWar(wars []app.War) app.War {
+func (wsm *WarStateManager) selectMostRecentWar(wars []domain.War) domain.War {
 	if len(wars) == 0 {
-		return app.War{}
+		return domain.War{}
 	}
 
 	mostRecent := wars[0]
@@ -291,9 +291,9 @@ func (wsm *WarStateManager) selectMostRecentWar(wars []app.War) app.War {
 }
 
 // selectSoonestWar finds the war with the earliest start time
-func (wsm *WarStateManager) selectSoonestWar(wars []app.War) app.War {
+func (wsm *WarStateManager) selectSoonestWar(wars []domain.War) domain.War {
 	if len(wars) == 0 {
-		return app.War{}
+		return domain.War{}
 	}
 
 	soonest := wars[0]
@@ -306,9 +306,9 @@ func (wsm *WarStateManager) selectSoonestWar(wars []app.War) app.War {
 }
 
 // selectMostRecentEndedWar finds the war with the latest end time
-func (wsm *WarStateManager) selectMostRecentEndedWar(wars []app.War) app.War {
+func (wsm *WarStateManager) selectMostRecentEndedWar(wars []domain.War) domain.War {
 	if len(wars) == 0 {
-		return app.War{}
+		return domain.War{}
 	}
 
 	mostRecent := wars[0]
@@ -321,15 +321,15 @@ func (wsm *WarStateManager) selectMostRecentEndedWar(wars []app.War) app.War {
 }
 
 // getAllWars extracts all wars from the response
-func (wsm *WarStateManager) getAllWars(warResponse *app.WarResponse) []app.War {
-	var wars []app.War
+func (wsm *WarStateManager) getAllWars(warResponse *domain.FactionWars) []domain.War {
+	var wars []domain.War
 
-	if warResponse.Wars.Ranked != nil {
-		wars = append(wars, *warResponse.Wars.Ranked)
+	if warResponse.Ranked != nil {
+		wars = append(wars, *warResponse.Ranked)
 	}
 
-	wars = append(wars, warResponse.Wars.Raids...)
-	wars = append(wars, warResponse.Wars.Territory...)
+	wars = append(wars, warResponse.Raids...)
+	wars = append(wars, warResponse.Territory...)
 
 	return wars
 }
@@ -438,7 +438,7 @@ func (wsm *WarStateManager) GetStateConfig() WarStateConfig {
 }
 
 // GetCurrentWar returns the current war if any
-func (wsm *WarStateManager) GetCurrentWar() *app.War {
+func (wsm *WarStateManager) GetCurrentWar() *domain.War {
 	return wsm.currentWar
 }
 
@@ -467,5 +467,5 @@ type WarStateInfo struct {
 	NextCheckTime  time.Time
 	TimeUntilCheck time.Duration
 	UpdateInterval time.Duration
-	CurrentWar     *app.War
+	CurrentWar     *domain.War
 }

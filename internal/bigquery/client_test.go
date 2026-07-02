@@ -6,14 +6,14 @@ import (
 
 	bq "cloud.google.com/go/bigquery"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestStateRecordRowSave_FieldMapping(t *testing.T) {
 	ts := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 	until := time.Date(2026, 1, 15, 14, 0, 0, 0, time.UTC)
 
-	record := app.StateRecord{
+	record := domain.StateRecord{
 		Timestamp:         ts,
 		MemberID:          "12345",
 		MemberName:        "Tester",
@@ -68,7 +68,7 @@ func TestStateRecordRowSave_FieldMapping(t *testing.T) {
 }
 
 func TestStateRecordRowSave_ZeroStatusUntilOmitted(t *testing.T) {
-	record := app.StateRecord{
+	record := domain.StateRecord{
 		Timestamp: time.Now().UTC(),
 		MemberID:  "1",
 		// StatusUntil is zero value
@@ -87,7 +87,7 @@ func TestStateRecordRowSave_ZeroStatusUntilOmitted(t *testing.T) {
 
 func TestStateRecordRowSave_NonZeroStatusUntilIncluded(t *testing.T) {
 	until := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
-	record := app.StateRecord{
+	record := domain.StateRecord{
 		Timestamp:   time.Now().UTC(),
 		MemberID:    "2",
 		StatusUntil: until,

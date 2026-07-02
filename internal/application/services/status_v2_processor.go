@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/deployment"
 	"log/slog"
+	"torn_rw_stats/internal/deployment"
+	"torn_rw_stats/internal/domain"
 
 	"torn_rw_stats/internal/processing"
 )
@@ -176,7 +176,7 @@ func (p *StatusV2Processor) ProcessStatusV2ForFaction(ctx context.Context, sprea
 }
 
 // exportAndDeployJSON converts StatusV2Records to JSON format and deploys it
-func (p *StatusV2Processor) exportAndDeployJSON(records []app.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
+func (p *StatusV2Processor) exportAndDeployJSON(records []domain.StatusV2Record, factionName string, factionID int, updateInterval time.Duration) error {
 	currentTime := time.Now().UTC()
 
 	// Convert to JSON format using the service

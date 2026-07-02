@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/travel"
 	"torn_rw_stats/internal/domain/war"
 	"torn_rw_stats/internal/sheets"
@@ -12,10 +12,10 @@ import (
 
 // TornClientInterface defines the torn API client methods used by WarProcessor
 type TornClientInterface interface {
-	GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error)
-	GetFactionWars(ctx context.Context) (*app.WarResponse, error)
-	GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error)
-	GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error)
+	GetOwnFaction(ctx context.Context) (*domain.FactionInfo, error)
+	GetFactionWars(ctx context.Context) (*domain.FactionWars, error)
+	GetFactionAttacks(ctx context.Context, from, to int64) ([]domain.Attack, error)
+	GetFactionBasic(ctx context.Context, factionID int) (*domain.FactionInfo, error)
 	GetAPICallCount() int64
 	IncrementAPICall()
 	ResetAPICallCount()
@@ -23,10 +23,10 @@ type TornClientInterface interface {
 
 // SheetsClientInterface defines the sheets API client methods used by WarProcessor
 type SheetsClientInterface interface {
-	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *app.War) (*app.SheetConfig, error)
+	EnsureWarSheets(ctx context.Context, spreadsheetID string, war *domain.War) (*domain.SheetConfig, error)
 	ReadExistingRecords(ctx context.Context, spreadsheetID, sheetName string) (*sheets.RecordsInfo, error)
-	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *app.SheetConfig, summary *app.WarSummary) error
-	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *app.SheetConfig, records []app.AttackRecord) error
+	UpdateWarSummary(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, summary *domain.WarSummary) error
+	UpdateAttackRecords(ctx context.Context, spreadsheetID string, config *domain.SheetConfig, records []domain.AttackRecord) error
 	ReadSheet(ctx context.Context, spreadsheetID, range_ string) ([][]interface{}, error)
 
 	// Additional methods for state tracking
@@ -39,7 +39,7 @@ type SheetsClientInterface interface {
 
 	// Status v2 methods
 	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
-	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []app.StatusV2Record) error
+	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []domain.StatusV2Record) error
 }
 
 // LocationServiceInterface defines the location service methods used by WarProcessor
@@ -58,24 +58,24 @@ type TravelTimeServiceInterface interface {
 
 // AttackProcessingServiceInterface defines the interface for attack processing
 type AttackProcessingServiceInterface interface {
-	ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War, ourFactionID int) []app.AttackRecord
+	ProcessAttacksIntoRecords(attacks []domain.Attack, war *domain.War, ourFactionID int) []domain.AttackRecord
 }
 
 // WarSummaryServiceInterface defines the interface for war summary generation
 type WarSummaryServiceInterface interface {
-	GenerateWarSummary(war *app.War, attacks []app.Attack, ourFactionID int) *app.WarSummary
+	GenerateWarSummary(war *domain.War, attacks []domain.Attack, ourFactionID int) *domain.WarSummary
 }
 
 // WarStateManagerInterface defines the interface for war state management
 type WarStateManagerInterface interface {
 	GetCurrentState() war.WarState
-	GetCurrentWar() *app.War
+	GetCurrentWar() *domain.War
 }
 
 // BigQueryClientInterface defines the BigQuery client methods used for state record insertion and querying
 type BigQueryClientInterface interface {
-	InsertStateRecords(ctx context.Context, records []app.StateRecord) error
-	QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]app.StateRecord, error)
-	QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]app.StateRecord, error)
+	InsertStateRecords(ctx context.Context, records []domain.StateRecord) error
+	QueryLatestStatePerMember(ctx context.Context, memberIDs []string) ([]domain.StateRecord, error)
+	QueryLatestStatePerFaction(ctx context.Context, factionID string) ([]domain.StateRecord, error)
 	QueryDepartureTimes(ctx context.Context, memberIDs []string) (map[string]time.Time, error)
 }

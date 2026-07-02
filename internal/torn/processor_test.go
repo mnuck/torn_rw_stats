@@ -5,21 +5,21 @@ import (
 	"testing"
 	"time"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 	"torn_rw_stats/internal/domain/attack"
 )
 
 // MockTornAPI implements TornAPI for testing
 type MockTornAPI struct {
-	warResponse         *app.WarResponse
-	attackResponse      *app.AttackResponse
-	factionResponse     *app.FactionBasicResponse
-	factionInfoResponse *app.FactionInfoResponse
+	warResponse         *domain.FactionWars
+	attackResponse      []domain.Attack
+	factionResponse     *domain.FactionInfo
+	factionInfoResponse *domain.FactionInfo
 	apiCallCount        int64
 	shouldError         bool
 }
 
-func (m *MockTornAPI) GetFactionWars(ctx context.Context) (*app.WarResponse, error) {
+func (m *MockTornAPI) GetFactionWars(ctx context.Context) (*domain.FactionWars, error) {
 	if m.shouldError {
 		return nil, &mockError{msg: "mock error"}
 	}
@@ -27,7 +27,7 @@ func (m *MockTornAPI) GetFactionWars(ctx context.Context) (*app.WarResponse, err
 	return m.warResponse, nil
 }
 
-func (m *MockTornAPI) GetFactionAttacks(ctx context.Context, from, to int64) (*app.AttackResponse, error) {
+func (m *MockTornAPI) GetFactionAttacks(ctx context.Context, from, to int64) ([]domain.Attack, error) {
 	if m.shouldError {
 		return nil, &mockError{msg: "mock error"}
 	}
@@ -35,7 +35,7 @@ func (m *MockTornAPI) GetFactionAttacks(ctx context.Context, from, to int64) (*a
 	return m.attackResponse, nil
 }
 
-func (m *MockTornAPI) GetFactionBasic(ctx context.Context, factionID int) (*app.FactionBasicResponse, error) {
+func (m *MockTornAPI) GetFactionBasic(ctx context.Context, factionID int) (*domain.FactionInfo, error) {
 	if m.shouldError {
 		return nil, &mockError{msg: "mock error"}
 	}
@@ -43,7 +43,7 @@ func (m *MockTornAPI) GetFactionBasic(ctx context.Context, factionID int) (*app.
 	return m.factionResponse, nil
 }
 
-func (m *MockTornAPI) GetOwnFaction(ctx context.Context) (*app.FactionInfoResponse, error) {
+func (m *MockTornAPI) GetOwnFaction(ctx context.Context) (*domain.FactionInfo, error) {
 	if m.shouldError {
 		return nil, &mockError{msg: "mock error"}
 	}
@@ -76,7 +76,7 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 	const warStart = 5000
 	const warEnd = 8000
 
-	war := &app.War{
+	war := &domain.War{
 		ID:    123,
 		Start: warStart,
 		End:   &[]int64{warEnd}[0],
@@ -122,7 +122,7 @@ func TestProcessorCalculateTimeRange(t *testing.T) {
 	})
 
 	t.Run("OngoingWar", func(t *testing.T) {
-		ongoingWar := &app.War{
+		ongoingWar := &domain.War{
 			ID:    456,
 			Start: warStart,
 			End:   nil, // Ongoing war
@@ -174,37 +174,37 @@ func TestProcessorShouldUseSimpleApproach(t *testing.T) {
 }
 
 func TestFilterRelevantAttacks(t *testing.T) {
-	war := &app.War{
-		Factions: []app.Faction{
+	war := &domain.War{
+		Factions: []domain.Faction{
 			{ID: 1001, Name: "Faction A"},
 			{ID: 1002, Name: "Faction B"},
 		},
 	}
 
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{
 			ID:       1,
 			Started:  1000,
-			Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-			Defender: app.User{Faction: &app.Faction{ID: 1002}},
+			Attacker: domain.User{Faction: &domain.Faction{ID: 1001}},
+			Defender: domain.User{Faction: &domain.Faction{ID: 1002}},
 		},
 		{
 			ID:       2,
 			Started:  1100,
-			Attacker: app.User{Faction: &app.Faction{ID: 9999}},
-			Defender: app.User{Faction: &app.Faction{ID: 8888}},
+			Attacker: domain.User{Faction: &domain.Faction{ID: 9999}},
+			Defender: domain.User{Faction: &domain.Faction{ID: 8888}},
 		},
 		{
 			ID:       3,
 			Started:  1200,
-			Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-			Defender: app.User{Faction: &app.Faction{ID: 9999}},
+			Attacker: domain.User{Faction: &domain.Faction{ID: 1001}},
+			Defender: domain.User{Faction: &domain.Faction{ID: 9999}},
 		},
 		{
 			ID:       4,
 			Started:  1300,
-			Attacker: app.User{Faction: nil},
-			Defender: app.User{Faction: &app.Faction{ID: 1002}},
+			Attacker: domain.User{Faction: nil},
+			Defender: domain.User{Faction: &domain.Faction{ID: 1002}},
 		},
 	}
 
@@ -236,7 +236,7 @@ func TestFilterRelevantAttacks(t *testing.T) {
 }
 
 func TestProcessorSortAttacksChronologically(t *testing.T) {
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{ID: 1, Started: 1000},
 		{ID: 2, Started: 500},
 		{ID: 3, Started: 1500},
@@ -261,24 +261,22 @@ func TestProcessorSortAttacksChronologically(t *testing.T) {
 
 func TestGetAllAttacksForWar(t *testing.T) {
 	mockAPI := &MockTornAPI{
-		attackResponse: &app.AttackResponse{
-			Attacks: []app.Attack{
-				{
-					ID:       1,
-					Started:  1000,
-					Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-					Defender: app.User{Faction: &app.Faction{ID: 1002}},
-				},
+		attackResponse: []domain.Attack{
+			{
+				ID:       1,
+				Started:  1000,
+				Attacker: domain.User{Faction: &domain.Faction{ID: 1001}},
+				Defender: domain.User{Faction: &domain.Faction{ID: 1002}},
 			},
 		},
 	}
 	processor := NewAttackProcessor(mockAPI)
 
-	war := &app.War{
+	war := &domain.War{
 		ID:    123,
 		Start: 900,
 		End:   &[]int64{1100}[0],
-		Factions: []app.Faction{
+		Factions: []domain.Faction{
 			{ID: 1001, Name: "Faction A"},
 			{ID: 1002, Name: "Faction B"},
 		},
@@ -302,11 +300,11 @@ func TestGetAttacksForTimeRangeError(t *testing.T) {
 	mockAPI := &MockTornAPI{shouldError: true}
 	processor := NewAttackProcessor(mockAPI)
 
-	war := &app.War{
+	war := &domain.War{
 		ID:    123,
 		Start: 900,
 		End:   &[]int64{1100}[0],
-		Factions: []app.Faction{
+		Factions: []domain.Faction{
 			{ID: 1001, Name: "Faction A"},
 		},
 	}
@@ -336,25 +334,25 @@ func TestProcessAttacksPage(t *testing.T) {
 	mockAPI := &MockTornAPI{}
 	processor := NewAttackProcessor(mockAPI)
 
-	war := &app.War{
-		Factions: []app.Faction{
+	war := &domain.War{
+		Factions: []domain.Faction{
 			{ID: 1001, Name: "Faction A"},
 			{ID: 1002, Name: "Faction B"},
 		},
 	}
 
-	attacks := []app.Attack{
+	attacks := []domain.Attack{
 		{
 			ID:       1,
 			Started:  1000,
-			Attacker: app.User{Faction: &app.Faction{ID: 1001}},
-			Defender: app.User{Faction: &app.Faction{ID: 1002}},
+			Attacker: domain.User{Faction: &domain.Faction{ID: 1001}},
+			Defender: domain.User{Faction: &domain.Faction{ID: 1002}},
 		},
 		{
 			ID:       2,
 			Started:  500, // Older timestamp
-			Attacker: app.User{Faction: &app.Faction{ID: 9999}},
-			Defender: app.User{Faction: &app.Faction{ID: 8888}},
+			Attacker: domain.User{Faction: &domain.Faction{ID: 9999}},
+			Defender: domain.User{Faction: &domain.Faction{ID: 8888}},
 		},
 	}
 

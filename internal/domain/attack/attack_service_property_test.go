@@ -4,7 +4,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 func TestAttackProcessingServiceProperties(t *testing.T) {
@@ -44,9 +44,9 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 
 	t.Run("attack direction deterministic", func(t *testing.T) {
 		if err := quick.Check(func(attackerFactionID, defenderFactionID, ourFactionID int) bool {
-			attack := app.Attack{}
-			attack.Attacker.Faction = &app.Faction{ID: attackerFactionID}
-			attack.Defender.Faction = &app.Faction{ID: defenderFactionID}
+			attack := domain.Attack{}
+			attack.Attacker.Faction = &domain.Faction{ID: attackerFactionID}
+			attack.Defender.Faction = &domain.Faction{ID: defenderFactionID}
 			d1 := service.determineAttackDirection(attack, ourFactionID)
 			d2 := service.determineAttackDirection(attack, ourFactionID)
 			return d1 == d2
@@ -58,9 +58,9 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 	t.Run("outgoing when attacker is ours", func(t *testing.T) {
 		if err := quick.Check(func(ourID uint32) bool {
 			ours := int(ourID) + 1
-			attack := app.Attack{}
-			attack.Attacker.Faction = &app.Faction{ID: ours}
-			attack.Defender.Faction = &app.Faction{ID: ours + 1}
+			attack := domain.Attack{}
+			attack.Attacker.Faction = &domain.Faction{ID: ours}
+			attack.Defender.Faction = &domain.Faction{ID: ours + 1}
 			return service.determineAttackDirection(attack, ours) == "Outgoing"
 		}, nil); err != nil {
 			t.Error(err)
@@ -70,9 +70,9 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 	t.Run("incoming when defender is ours", func(t *testing.T) {
 		if err := quick.Check(func(ourID uint32) bool {
 			ours := int(ourID) + 1
-			attack := app.Attack{}
-			attack.Attacker.Faction = &app.Faction{ID: ours + 1}
-			attack.Defender.Faction = &app.Faction{ID: ours}
+			attack := domain.Attack{}
+			attack.Attacker.Faction = &domain.Faction{ID: ours + 1}
+			attack.Defender.Faction = &domain.Faction{ID: ours}
 			return service.determineAttackDirection(attack, ours) == "Incoming"
 		}, nil); err != nil {
 			t.Error(err)
@@ -100,18 +100,18 @@ func TestAttackProcessingServiceProperties(t *testing.T) {
 	})
 }
 
-func makeTestAttacks(n int) []app.Attack {
-	attacks := make([]app.Attack, n)
+func makeTestAttacks(n int) []domain.Attack {
+	attacks := make([]domain.Attack, n)
 	for i := range attacks {
-		attacks[i] = app.Attack{ID: int64(i + 1)}
+		attacks[i] = domain.Attack{ID: int64(i + 1)}
 	}
 	return attacks
 }
 
-func makeTestAttacksWithRespect(n int) []app.Attack {
-	attacks := make([]app.Attack, n)
+func makeTestAttacksWithRespect(n int) []domain.Attack {
+	attacks := make([]domain.Attack, n)
 	for i := range attacks {
-		attacks[i] = app.Attack{
+		attacks[i] = domain.Attack{
 			ID:          int64(i + 1),
 			RespectGain: float64(i % 50),
 			RespectLoss: float64(i % 25),
@@ -120,9 +120,9 @@ func makeTestAttacksWithRespect(n int) []app.Attack {
 	return attacks
 }
 
-func makeTestWar() *app.War {
-	return &app.War{
+func makeTestWar() *domain.War {
+	return &domain.War{
 		ID:       1,
-		Factions: []app.Faction{{ID: 1, Name: "F1"}, {ID: 2, Name: "F2"}},
+		Factions: []domain.Faction{{ID: 1, Name: "F1"}, {ID: 2, Name: "F2"}},
 	}
 }

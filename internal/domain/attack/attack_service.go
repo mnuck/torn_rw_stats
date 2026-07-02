@@ -5,7 +5,7 @@ import (
 
 	"log/slog"
 
-	"torn_rw_stats/internal/app"
+	"torn_rw_stats/internal/domain"
 )
 
 // AttackProcessingService handles attack data processing and analysis, converting
@@ -19,11 +19,11 @@ func NewAttackProcessingService() *AttackProcessingService {
 }
 
 // ProcessAttacksIntoRecords converts attack data into detailed attack records
-func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []app.Attack, war *app.War, ourFactionID int) []app.AttackRecord {
-	var records []app.AttackRecord
+func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []domain.Attack, war *domain.War, ourFactionID int) []domain.AttackRecord {
+	var records []domain.AttackRecord
 
 	for _, attack := range attacks {
-		record := app.AttackRecord{
+		record := domain.AttackRecord{
 			AttackID:            attack.ID,
 			Code:                attack.Code,
 			Started:             time.Unix(attack.Started, 0),
@@ -84,7 +84,7 @@ func (aps *AttackProcessingService) ProcessAttacksIntoRecords(attacks []app.Atta
 }
 
 // determineAttackDirection determines if an attack is outgoing, incoming, or unknown
-func (aps *AttackProcessingService) determineAttackDirection(attack app.Attack, ourFactionID int) string {
+func (aps *AttackProcessingService) determineAttackDirection(attack domain.Attack, ourFactionID int) string {
 	if attack.Attacker.Faction != nil && attack.Attacker.Faction.ID == ourFactionID {
 		return "Outgoing"
 	} else if attack.Defender.Faction != nil && attack.Defender.Faction.ID == ourFactionID {

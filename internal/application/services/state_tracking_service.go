@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"torn_rw_stats/internal/app"
-	"torn_rw_stats/internal/domain/state"
 	"log/slog"
+	"torn_rw_stats/internal/domain"
+	"torn_rw_stats/internal/domain/state"
 
 	"torn_rw_stats/internal/processing"
 )
@@ -48,7 +48,7 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 		"current_records", len(currentStateRecords))
 
 	// Step 2: Read previous states from BigQuery
-	var allPreviousStates []app.StateRecord
+	var allPreviousStates []domain.StateRecord
 	if s.bigqueryClient != nil {
 		memberIDs := make([]string, 0, len(currentStateRecords))
 		for _, r := range currentStateRecords {
@@ -96,8 +96,8 @@ func (s *StateTrackingService) ProcessStateChanges(ctx context.Context, spreadsh
 }
 
 // getCurrentStateRecords retrieves current state for all specified factions
-func (s *StateTrackingService) getCurrentStateRecords(ctx context.Context, factionIDs []int, currentTime time.Time) ([]app.StateRecord, error) {
-	var allRecords []app.StateRecord
+func (s *StateTrackingService) getCurrentStateRecords(ctx context.Context, factionIDs []int, currentTime time.Time) ([]domain.StateRecord, error) {
+	var allRecords []domain.StateRecord
 
 	for _, factionID := range factionIDs {
 		factionData, err := s.tornClient.GetFactionBasic(ctx, factionID)
@@ -120,8 +120,8 @@ func (s *StateTrackingService) getCurrentStateRecords(ctx context.Context, facti
 }
 
 // mapToSlice converts a map of StateRecords to a slice
-func (s *StateTrackingService) mapToSlice(recordMap map[string]app.StateRecord) []app.StateRecord {
-	var slice []app.StateRecord
+func (s *StateTrackingService) mapToSlice(recordMap map[string]domain.StateRecord) []domain.StateRecord {
+	var slice []domain.StateRecord
 	for _, record := range recordMap {
 		slice = append(slice, record)
 	}
@@ -129,7 +129,7 @@ func (s *StateTrackingService) mapToSlice(recordMap map[string]app.StateRecord) 
 }
 
 // addStateRecords streams state records to BigQuery.
-func (s *StateTrackingService) addStateRecords(ctx context.Context, records []app.StateRecord) error {
+func (s *StateTrackingService) addStateRecords(ctx context.Context, records []domain.StateRecord) error {
 	if len(records) == 0 || s.bigqueryClient == nil {
 		return nil
 	}
