@@ -26,7 +26,7 @@ go build -o torn_rw_stats
 go test ./...
 
 # Run a specific test
-go test ./internal/processing -v
+go test ./internal/domain/war -v
 
 # Check for formatting issues
 go fmt ./...
@@ -58,29 +58,33 @@ go mod tidy
 
 ### Core Components
 
-The application follows a clean architecture pattern with distinct layers:
+The application follows a hexagonal (ports and adapters) architecture. Dependencies point inward: adapters depend on ports and domain; the application core never imports an adapter.
 
-**main.go**: Entry point that orchestrates the application flow, handles CLI flags, and sets up the processing loop with configurable intervals.
+**main.go** (+ `compliance.go`): Composition root. Parses CLI flags, constructs the concrete adapters (Torn client, Sheets client, optional BigQuery client and SSH deployer), wires them into the application services, and runs the processing loop. `compliance.go` holds the compile-time checks that each adapter satisfies its port.
 
-**internal/app/**: Application layer containing configuration management and core data types
-- `config.go`: Environment setup, configuration loading from .env files
-- `types.go`: Complete type definitions for Torn API responses (wars, attacks, factions, users)
+**internal/domain/**: The domain model and pure domain logic. The root `domain` package defines the model types (War, Attack, Faction, StateRecord, StatusV2Record, etc.) and imports nothing. Subpackages hold domain services and functional cores:
+- `war/`: 4-state war lifecycle management (NoWars, PreWar, ActiveWar, PostWar), Tuesday matchmaking calculations
+- `attack/`: attack filtering, sorting, statistics, fetch-strategy decisions
+- `travel/`: location parsing and travel time calculation
+- `state/`: state record comparison, normalization, and conversion
+- `status/`: Status v2 resolution and JSON conversion
 
-**internal/torn/**: Torn API client layer
-- `client.go`: HTTP client for Torn API with rate limiting, retry logic, and API call counting
-- Handles `/v2/faction/wars` and `/v2/faction/attacks` endpoints
+**internal/application/ports/**: The port interfaces (`TornClient`, `SheetsClient`, `BigQueryClient`, `Deployer`, plus injectable domain-service interfaces). Only domain types cross these boundaries. Includes the `Cell` helper for type-safe access to spreadsheet values crossing the `SheetsClient` port, and `mocks/` with test doubles for the ports.
 
-**internal/sheets/**: Google Sheets integration layer
-- `client.go`: Google Sheets API client initialization
-- `wars.go`: Sheet management, creation, and data writing for war summaries and attack records
+**internal/application/services/**: Use-case orchestration, depending only on ports and domain
+- `wars.go` / `optimized_war_processor.go`: war processing with state-based optimization and intelligent scheduling
+- `attack_fetcher.go`: attack fetching orchestration (simple vs. paginated strategies)
+- `state_tracking_service.go`, `status_v2_*.go`: member state tracking and Status v2 sheet/JSON pipeline
 
-**internal/processing/**: Business logic layer
-- `wars.go`: Core war processing logic that orchestrates data flow from Torn API to Google Sheets
-- `optimized_war_processor.go`: State-based optimization wrapper with intelligent scheduling
-- `war_state_manager.go`: Sophisticated 4-state war lifecycle management (NoWars, PreWar, ActiveWar, PostWar)
-- `cached_torn_client.go`: API call caching reducing usage by 45%
-- `api_optimizer.go`: Smart frequency optimization based on war activity patterns
-- Various service layers: attack processing, travel tracking, state change detection
+**internal/torn/**: Torn API adapter. `client.go` is the HTTP client with API call counting; `wire.go` holds the wire-format DTOs that mirror the Torn API JSON exactly plus mappers to domain types (anti-corruption layer). Handles `/v2/faction/wars` and `/v2/faction/attacks` endpoints.
+
+**internal/sheets/**: Google Sheets adapter — sheet management, creation, and data writing for war summaries, attack records, and status sheets.
+
+**internal/bigquery/**: BigQuery adapter for state record storage and querying.
+
+**internal/deployment/**: SSH/SCP adapter implementing the `Deployer` port for publishing the JSON export.
+
+**internal/app/**: Configuration only — environment setup and `.env` loading.
 
 **internal/config/**: Utility configurations
 - `resilience.go`: Retry and resilience patterns
@@ -137,7 +141,7 @@ OUR_FACTION_ID=your_faction_id  # Optional
 - The application is designed to run as a long-running service
 - All external dependencies (Torn API, Google Sheets) have error handling and retry logic
 - The `internal/` directory structure prevents external imports, keeping the API surface clean
-- Types in `internal/app/types.go` mirror the Torn API structure exactly for reliable JSON unmarshaling
+- Domain types in `internal/domain/` are adapter-agnostic; the wire DTOs in `internal/torn/wire.go` mirror the Torn API structure exactly for reliable JSON unmarshaling and are mapped to domain types at the adapter boundary
 - Sheet formatting and structure is managed in `internal/sheets/wars.go` with consistent headers and data types
 
 ## Testing Strategy
@@ -157,12 +161,12 @@ OUR_FACTION_ID=your_faction_id  # Optional
 ### War State Testing
 ```bash
 # Test specific war state scenarios
-go test ./internal/processing -v -run TestWarState
-go test ./internal/processing -v -run TestTuesday
-go test ./internal/processing -v -run TestEdgeCases
+go test ./internal/domain/war -v -run TestWarState
+go test ./internal/domain/war -v -run TestTuesday
+go test ./internal/domain/war -v -run TestEdgeCases
 
 # Test API optimization effectiveness
-go test ./internal/processing -v -run TestAPICallEfficiency
+go test ./internal/domain/war -v -run TestAPICallEfficiency
 ```
 
 ### Key Test Areas
