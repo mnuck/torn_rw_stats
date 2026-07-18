@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"torn_rw_stats/internal/domain"
+	wardomain "torn_rw_stats/internal/domain/war"
 
 	"log/slog"
 )
@@ -82,12 +83,12 @@ func (m *WarSheetsManager) EnsureWarSheets(ctx context.Context, spreadsheetID st
 
 // GenerateSummaryTabName creates a standardized summary tab name for a war
 func (m *WarSheetsManager) GenerateSummaryTabName(warID int) string {
-	return fmt.Sprintf("Summary - %d", warID)
+	return wardomain.SummarySheetTitle(warID)
 }
 
 // GenerateRecordsTabName creates a standardized records tab name for a war
 func (m *WarSheetsManager) GenerateRecordsTabName(warID int) string {
-	return fmt.Sprintf("Records - %d", warID)
+	return wardomain.RecordsSheetTitle(warID)
 }
 
 // InitializeSummarySheet sets up headers and initial content for a summary sheet

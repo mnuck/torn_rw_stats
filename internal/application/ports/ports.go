@@ -48,6 +48,10 @@ type SheetsClient interface {
 	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
 	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
 
+	// Sheet lifecycle management (used by concluded-war pruning)
+	ListSheetTitles(ctx context.Context, spreadsheetID string) ([]string, error)
+	DeleteSheet(ctx context.Context, spreadsheetID, sheetName string) error
+
 	// Status v2 methods
 	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
 	UpdateStatusV2(ctx context.Context, spreadsheetID, sheetName string, records []domain.StatusV2Record) error

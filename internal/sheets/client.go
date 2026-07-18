@@ -122,6 +122,63 @@ func (c *Client) CreateSheet(ctx context.Context, spreadsheetID, sheetName strin
 	return nil
 }
 
+// ListSheetTitles returns the titles of every sheet in the spreadsheet.
+func (c *Client) ListSheetTitles(ctx context.Context, spreadsheetID string) ([]string, error) {
+	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spreadsheet: %w", err)
+	}
+
+	titles := make([]string, 0, len(spreadsheet.Sheets))
+	for _, sheet := range spreadsheet.Sheets {
+		titles = append(titles, sheet.Properties.Title)
+	}
+
+	return titles, nil
+}
+
+// DeleteSheet removes the sheet with the given name from the spreadsheet.
+// Deleting a sheet that does not exist is a no-op so the operation is
+// idempotent.
+func (c *Client) DeleteSheet(ctx context.Context, spreadsheetID, sheetName string) error {
+	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get spreadsheet: %w", err)
+	}
+
+	var sheetID int64 = -1
+	for _, sheet := range spreadsheet.Sheets {
+		if sheet.Properties.Title == sheetName {
+			sheetID = sheet.Properties.SheetId
+			break
+		}
+	}
+
+	if sheetID == -1 {
+		slog.Debug("Sheet not found, nothing to delete", "sheet_name", sheetName)
+		return nil
+	}
+
+	req := &sheets.Request{
+		DeleteSheet: &sheets.DeleteSheetRequest{
+			SheetId: sheetID,
+		},
+	}
+
+	batchUpdate := &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: []*sheets.Request{req},
+	}
+
+	_, err = c.service.Spreadsheets.BatchUpdate(spreadsheetID, batchUpdate).
+		Context(ctx).
+		Do()
+	if err != nil {
+		return fmt.Errorf("failed to delete sheet %s: %w", sheetName, err)
+	}
+
+	return nil
+}
+
 // SheetExists checks if a sheet with the given name exists in the spreadsheet
 func (c *Client) SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error) {
 	spreadsheet, err := c.service.Spreadsheets.Get(spreadsheetID).Context(ctx).Do()

@@ -134,7 +134,20 @@ TORN_API_KEY=your_torn_api_key
 SPREADSHEET_ID=google_sheets_id
 GOOGLE_CREDENTIALS_FILE=credentials.json
 OUR_FACTION_ID=your_faction_id  # Optional
+SHEET_RETENTION_DAYS=30         # Optional; days to keep concluded wars' sheets (default 30, 0 disables pruning)
 ```
+
+### Concluded-War Sheet Pruning
+
+Google Sheets enforces a hard 10,000,000-cell limit per workbook. Each war
+leaves behind `Summary - <id>` and `Records - <id>` sheets, so without cleanup
+the workbook eventually fills and no new war (or Status v2) sheets can be
+created. The `SheetPruner` (`internal/application/services/sheet_pruner.go`)
+runs at most once every 24h from the processing loop: it lists all sheets,
+excludes wars still present in the current Torn API response, and deletes the
+sheets of any war whose most recent recorded attack (read from its `Records`
+sheet) is older than `SHEET_RETENTION_DAYS`. Wars with no datable activity are
+never pruned.
 
 ## Development Notes
 
