@@ -22,6 +22,7 @@ type OptimizedWarProcessor struct {
 	stateManager      *war.WarStateManager
 	stateTracker      *StateTrackingService
 	statusV2Processor *StatusV2Processor
+	pruner            *SheetPruner
 	spreadsheetID     string
 	config            *app.Config
 }
@@ -49,6 +50,9 @@ func NewOptimizedWarProcessor(
 	// Create Status v2 processor
 	statusV2Processor := NewStatusV2Processor(tornClient, sheetsClient, bqClient, deployer)
 
+	// Create the concluded-war sheet pruner
+	pruner := NewSheetPruner(sheetsClient, config.SpreadsheetID, config.SheetRetention)
+
 	// Create processor with raw client
 	processor := NewWarProcessor(
 		tornClient,
@@ -67,6 +71,7 @@ func NewOptimizedWarProcessor(
 		stateManager:      stateManager,
 		stateTracker:      stateTracker,
 		statusV2Processor: statusV2Processor,
+		pruner:            pruner,
 		spreadsheetID:     config.SpreadsheetID,
 		config:            config,
 	}
@@ -119,6 +124,10 @@ func (owp *OptimizedWarProcessor) ProcessActiveWars(ctx context.Context) error {
 
 	// Process state changes for all observed factions
 	owp.processStateChanges(ctx, warResponse, stateInfo)
+
+	// Housekeeping: prune sheets from long-concluded wars (rate-limited
+	// internally, and never touches wars still present in this response).
+	owp.pruner.MaybePrune(ctx, activeWarIDs(warResponse))
 
 	// Handle different states
 	switch currentState {
@@ -290,6 +299,22 @@ func (owp *OptimizedWarProcessor) processStateChanges(ctx context.Context, warRe
 		slog.Debug("Successfully processed Status v2",
 			"faction_ids", dashboardFactionIDs)
 	}
+}
+
+// activeWarIDs collects the IDs of all wars present in a war response. These
+// wars are still being monitored and must never be pruned.
+func activeWarIDs(warResponse *domain.FactionWars) []int {
+	var ids []int
+	if warResponse.Ranked != nil {
+		ids = append(ids, warResponse.Ranked.ID)
+	}
+	for _, w := range warResponse.Raids {
+		ids = append(ids, w.ID)
+	}
+	for _, w := range warResponse.Territory {
+		ids = append(ids, w.ID)
+	}
+	return ids
 }
 
 // removeDuplicateFactionIDs removes duplicate faction IDs from a slice

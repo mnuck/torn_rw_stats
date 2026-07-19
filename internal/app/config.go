@@ -5,8 +5,11 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	"torn_rw_stats/internal/domain/war"
 )
 
 // Config holds application configuration
@@ -16,6 +19,10 @@ type Config struct {
 	CredentialsFile string
 	UpdateInterval  time.Duration
 	DeployURL       string
+
+	// SheetRetention is how long a concluded war's sheets are kept before they
+	// are pruned. Zero disables pruning.
+	SheetRetention time.Duration
 
 	// BigQuery integration (all optional; empty ProjectID disables BigQuery)
 	BigQueryProjectID string
@@ -104,6 +111,15 @@ func LoadConfig() (*Config, error) {
 		bigQueryTableID = "state_changes"
 	}
 
+	sheetRetention := war.DefaultSheetRetention
+	if v := os.Getenv("SHEET_RETENTION_DAYS"); v != "" {
+		days, err := strconv.Atoi(v)
+		if err != nil || days < 0 {
+			return nil, fmt.Errorf("SHEET_RETENTION_DAYS must be a non-negative integer, got %q", v)
+		}
+		sheetRetention = time.Duration(days) * 24 * time.Hour
+	}
+
 	return &Config{
 		TornAPIKey:        apiKey,
 		SpreadsheetID:     spreadsheetID,
@@ -112,6 +128,7 @@ func LoadConfig() (*Config, error) {
 		BigQueryProjectID: bigQueryProjectID,
 		BigQueryDatasetID: bigQueryDatasetID,
 		BigQueryTableID:   bigQueryTableID,
+		SheetRetention:    sheetRetention,
 	}, nil
 }
 

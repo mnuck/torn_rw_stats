@@ -21,6 +21,8 @@ type SheetsClient interface {
 	CreateSheet(ctx context.Context, spreadsheetID, sheetName string) error
 	SheetExists(ctx context.Context, spreadsheetID, sheetName string) (bool, error)
 	EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error
+	ListSheetTitles(ctx context.Context, spreadsheetID string) ([]string, error)
+	DeleteSheet(ctx context.Context, spreadsheetID, sheetName string) error
 
 	// Status v2 methods
 	EnsureStatusV2Sheet(ctx context.Context, spreadsheetID string, factionID int) (string, error)
@@ -35,6 +37,11 @@ type MockSheetsClient struct {
 	ReadSheetResponse           [][]interface{}
 	SheetExistsResponse         bool
 	EnsureStatusV2SheetResponse string
+	ListSheetTitlesResponse     []string
+
+	// ReadExistingRecordsFunc, when set, overrides ReadExistingRecordsResponse
+	// and lets a test return a different result per sheet name.
+	ReadExistingRecordsFunc func(sheetName string) (*domain.RecordsInfo, error)
 
 	// Errors to return
 	EnsureWarSheetsError     error
@@ -50,6 +57,11 @@ type MockSheetsClient struct {
 	EnsureSheetCapacityError error
 	EnsureStatusV2SheetError error
 	UpdateStatusV2Error      error
+	ListSheetTitlesError     error
+	DeleteSheetError         error
+
+	// DeletedSheets records the names passed to DeleteSheet, in call order.
+	DeletedSheets []string
 
 	// Call tracking
 	EnsureWarSheetsCalled     bool
@@ -99,6 +111,9 @@ func (m *MockSheetsClient) ReadExistingRecords(ctx context.Context, spreadsheetI
 	m.ReadExistingRecordsCalled = true
 	m.ReadExistingRecordsCalledWith.SpreadsheetID = spreadsheetID
 	m.ReadExistingRecordsCalledWith.SheetName = sheetName
+	if m.ReadExistingRecordsFunc != nil {
+		return m.ReadExistingRecordsFunc(sheetName)
+	}
 	return m.ReadExistingRecordsResponse, m.ReadExistingRecordsError
 }
 
@@ -194,6 +209,18 @@ func (m *MockSheetsClient) SheetExists(ctx context.Context, spreadsheetID, sheet
 
 func (m *MockSheetsClient) EnsureSheetCapacity(ctx context.Context, spreadsheetID, sheetName string, requiredRows, requiredCols int) error {
 	return m.EnsureSheetCapacityError
+}
+
+func (m *MockSheetsClient) ListSheetTitles(ctx context.Context, spreadsheetID string) ([]string, error) {
+	return m.ListSheetTitlesResponse, m.ListSheetTitlesError
+}
+
+func (m *MockSheetsClient) DeleteSheet(ctx context.Context, spreadsheetID, sheetName string) error {
+	if m.DeleteSheetError != nil {
+		return m.DeleteSheetError
+	}
+	m.DeletedSheets = append(m.DeletedSheets, sheetName)
+	return nil
 }
 
 // Status v2 methods
