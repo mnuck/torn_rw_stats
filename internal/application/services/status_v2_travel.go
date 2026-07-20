@@ -62,7 +62,7 @@ func (s *StatusV2Service) calculateArrivalTimes(ctx context.Context, stateRecord
 	}
 
 	existingArrival := ""
-	if existing != nil {
+	if existing != nil && existing.Departure == departure {
 		existingArrival = existing.Arrival
 	}
 
@@ -90,10 +90,11 @@ func (s *StatusV2Service) applyManualAdjustments(existing *domain.StatusV2Record
 		return calculated
 	}
 
-	result := calculated
-	if existing.Departure != "" {
-		result.Departure = existing.Departure
+	if existing.Departure != calculated.Departure {
+		return calculated
 	}
+
+	result := calculated
 	if existing.Arrival != "" {
 		result.Arrival = existing.Arrival
 	}
