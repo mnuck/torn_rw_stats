@@ -83,10 +83,27 @@ func main() {
 		}
 	}
 
-	// Optionally initialize the SSH deployer for the Status v2 JSON export
-	var deployer ports.Deployer
+	// Optionally initialize the SSH and/or R2 deployers for the Status v2 JSON
+	// export; with both configured, every export goes to both
+	var sshDeployer *deployment.SSHDeployer
 	if config.DeployURL != "" {
-		deployer = deployment.NewSSHDeployer(config.DeployURL)
+		sshDeployer = deployment.NewSSHDeployer(config.DeployURL)
+	}
+	var r2Deployer *deployment.R2Deployer
+	if config.R2AccountID != "" {
+		r2Deployer = deployment.NewR2Deployer(
+			config.R2AccountID, config.R2AccessKeyID, config.R2SecretAccessKey, config.R2Bucket)
+		slog.Info("R2 deployment enabled", "bucket", config.R2Bucket)
+	}
+
+	var deployer ports.Deployer
+	switch {
+	case sshDeployer != nil && r2Deployer != nil:
+		deployer = deployment.NewMultiDeployer(sshDeployer, r2Deployer)
+	case sshDeployer != nil:
+		deployer = sshDeployer
+	case r2Deployer != nil:
+		deployer = r2Deployer
 	}
 
 	// Initialize optimized war processor with state-based optimization
