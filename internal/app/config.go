@@ -20,6 +20,13 @@ type Config struct {
 	UpdateInterval  time.Duration
 	DeployURL       string
 
+	// Cloudflare R2 deployment for the Status v2 JSON (all optional; empty
+	// R2AccountID disables R2). Can run alongside DeployURL during migration.
+	R2AccountID       string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2Bucket          string
+
 	// SheetRetention is how long a concluded war's sheets are kept before they
 	// are pruned. Zero disables pruning.
 	SheetRetention time.Duration
@@ -104,6 +111,16 @@ func LoadConfig() (*Config, error) {
 
 	deployURL := os.Getenv("DEPLOY_URL")
 
+	r2AccountID := os.Getenv("R2_ACCOUNT_ID")
+	r2AccessKeyID := os.Getenv("R2_ACCESS_KEY_ID")
+	r2SecretAccessKey := os.Getenv("R2_SECRET_ACCESS_KEY")
+	r2Bucket := os.Getenv("R2_BUCKET")
+	if r2AccountID != "" || r2AccessKeyID != "" || r2SecretAccessKey != "" || r2Bucket != "" {
+		if r2AccountID == "" || r2AccessKeyID == "" || r2SecretAccessKey == "" || r2Bucket == "" {
+			return nil, fmt.Errorf("R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET must all be set to enable R2 deployment")
+		}
+	}
+
 	bigQueryProjectID := os.Getenv("BIGQUERY_PROJECT_ID")
 	bigQueryDatasetID := os.Getenv("BIGQUERY_DATASET_ID")
 	bigQueryTableID := os.Getenv("BIGQUERY_TABLE_ID")
@@ -125,6 +142,10 @@ func LoadConfig() (*Config, error) {
 		SpreadsheetID:     spreadsheetID,
 		CredentialsFile:   credentialsFile,
 		DeployURL:         deployURL,
+		R2AccountID:       r2AccountID,
+		R2AccessKeyID:     r2AccessKeyID,
+		R2SecretAccessKey: r2SecretAccessKey,
+		R2Bucket:          r2Bucket,
 		BigQueryProjectID: bigQueryProjectID,
 		BigQueryDatasetID: bigQueryDatasetID,
 		BigQueryTableID:   bigQueryTableID,

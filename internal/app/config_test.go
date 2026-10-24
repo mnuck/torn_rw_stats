@@ -91,6 +91,76 @@ func TestLoadConfig(t *testing.T) {
 	})
 }
 
+func TestLoadConfigR2(t *testing.T) {
+	r2Vars := map[string]string{
+		"R2_ACCOUNT_ID":        "test_account",
+		"R2_ACCESS_KEY_ID":     "test_key_id",
+		"R2_SECRET_ACCESS_KEY": "test_secret",
+		"R2_BUCKET":            "test-bucket",
+	}
+
+	// setR2Env sets the required base vars and the given R2 vars; t.Setenv
+	// restores everything after each subtest, and "" counts as unset
+	setR2Env := func(t *testing.T, vars map[string]string) {
+		t.Setenv("TORN_API_KEY", "test_api_key")
+		t.Setenv("SPREADSHEET_ID", "test_spreadsheet_id")
+		for key := range r2Vars {
+			t.Setenv(key, vars[key])
+		}
+	}
+
+	t.Run("AllSet", func(t *testing.T) {
+		setR2Env(t, r2Vars)
+
+		config, err := LoadConfig()
+
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+
+		if config.R2AccountID != "test_account" || config.R2AccessKeyID != "test_key_id" ||
+			config.R2SecretAccessKey != "test_secret" || config.R2Bucket != "test-bucket" {
+			t.Errorf("Expected R2 settings to be loaded, got %+v", config)
+		}
+	})
+
+	t.Run("NoneSet", func(t *testing.T) {
+		setR2Env(t, nil)
+
+		config, err := LoadConfig()
+
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+
+		if config.R2AccountID != "" {
+			t.Errorf("Expected R2AccountID to be empty, got '%s'", config.R2AccountID)
+		}
+	})
+
+	for missing := range r2Vars {
+		t.Run("Missing_"+missing, func(t *testing.T) {
+			partial := map[string]string{}
+			for key, value := range r2Vars {
+				if key != missing {
+					partial[key] = value
+				}
+			}
+			setR2Env(t, partial)
+
+			_, err := LoadConfig()
+
+			if err == nil {
+				t.Fatalf("Expected error when %s is missing, got nil", missing)
+			}
+
+			if !strings.Contains(err.Error(), missing) {
+				t.Errorf("Expected error message to contain '%s', got '%s'", missing, err.Error())
+			}
+		})
+	}
+}
+
 func TestSetupEnvironment(t *testing.T) {
 	// Save original environment
 	originalENV := os.Getenv("ENV")
