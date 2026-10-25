@@ -34,22 +34,18 @@ builds:
     env:
       - CGO_ENABLED=0
 
-    flags:
-      - -a
-      - -installsuffix=cgo
-
     ldflags:
       - -s -w
       - -extldflags "-static"
 
 archives:
   - id: torn_rw_stats
-    format: tar.gz
+    formats: [tar.gz]
 
     # Use zip for Windows
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
     name_template: >-
       {{ .ProjectName }}_
