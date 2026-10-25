@@ -1,59 +1,68 @@
 #!/bin/bash
 
 # Deploy tactical dashboard script
-# Deploys tactical_dashboard.html using SCP with configuration from .env file
+# Uploads tactical_dashboard.html to the Cloudflare R2 bucket that serves
+# gefunkt.dev, as the object "travel" (served at https://gefunkt.dev/travel).
+# Authenticates with your Cloudflare login (run "npx wrangler login" once)
+# or CLOUDFLARE_API_TOKEN; no R2 keys are needed.
 
 set -e  # Exit on any error
 
-# Function to load environment variables from .env file
+# Pinned past the 30-day supply-chain soak window
+WRANGLER="npx --yes wrangler@4.137.0"
+
+OBJECT_KEY="travel"
+
+# Function to load optional settings from .env file
 load_env() {
+    # Only R2_BUCKET and R2_ACCOUNT_ID are read; other secrets stay out of the
+    # environment
     if [[ -f .env ]]; then
-        echo "Loading environment variables from .env file..."
-        # Export variables from .env file, ignoring comments and empty lines
-        export $(grep -v '^#' .env | grep -v '^$' | xargs)
-    else
-        echo "Error: .env file not found in current directory"
-        exit 1
+        echo "Loading R2_BUCKET and R2_ACCOUNT_ID from .env file..."
+        R2_BUCKET=${R2_BUCKET:-$(grep -E '^R2_BUCKET=' .env | cut -d= -f2-)}
+        R2_ACCOUNT_ID=${R2_ACCOUNT_ID:-$(grep -E '^R2_ACCOUNT_ID=' .env | cut -d= -f2-)}
+    fi
+
+    R2_BUCKET=${R2_BUCKET:-gefunkt-data}
+    echo "Using bucket: $R2_BUCKET"
+
+    # Lets wrangler skip the account picker when your login has several accounts
+    if [[ -n "$R2_ACCOUNT_ID" ]]; then
+        export CLOUDFLARE_ACCOUNT_ID="$R2_ACCOUNT_ID"
     fi
 }
 
-# Function to validate required variables
-validate_env() {
-    if [[ -z "$DEPLOY_URL" ]]; then
-        echo "Error: DEPLOY_URL not found in .env file"
-        echo "Please ensure DEPLOY_URL is set in .env file (format: user@host:path)"
-        exit 1
-    fi
-
-    echo "Using DEPLOY_URL: $DEPLOY_URL"
-}
-
-# Function to check if required files exist
+# Function to check if required files and tools exist
 check_files() {
     if [[ ! -f "tactical_dashboard.html" ]]; then
         echo "Error: tactical_dashboard.html not found in current directory"
         exit 1
     fi
 
-    if [[ ! -f "deploy.pem" ]]; then
-        echo "Error: deploy.pem not found in current directory"
-        echo "Please ensure the SSH private key file is present"
+    if ! command -v npx >/dev/null 2>&1; then
+        echo "Error: npx not found"
+        echo "Please install Node.js to run wrangler"
         exit 1
     fi
 
-    echo "Files found: tactical_dashboard.html and deploy.pem"
+    echo "Files found: tactical_dashboard.html"
 }
 
 # Function to deploy dashboard
 deploy_dashboard() {
     echo "Deploying tactical_dashboard.html..."
-    echo "Command: scp -i deploy.pem tactical_dashboard.html ${DEPLOY_URL}/tactical_dashboard.html"
+    echo "Command: wrangler r2 object put ${R2_BUCKET}/${OBJECT_KEY} --file tactical_dashboard.html --remote"
 
-    if scp -i deploy.pem tactical_dashboard.html "${DEPLOY_URL}/tactical_dashboard.html"; then
+    if $WRANGLER r2 object put "${R2_BUCKET}/${OBJECT_KEY}" \
+        --file tactical_dashboard.html \
+        --content-type "text/html; charset=utf-8" \
+        --cache-control "no-cache" \
+        --remote; then
         echo "✅ Dashboard deployed successfully!"
-        echo "Deployed to: ${DEPLOY_URL}/tactical_dashboard.html"
+        echo "Deployed to: r2://${R2_BUCKET}/${OBJECT_KEY} (https://gefunkt.dev/travel)"
     else
         echo "❌ Deployment failed!"
+        echo "If you are not logged in, run: npx wrangler@4.137.0 login"
         exit 1
     fi
 }
@@ -64,7 +73,6 @@ main() {
     echo
 
     load_env
-    validate_env
     check_files
     echo
     deploy_dashboard
