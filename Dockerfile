@@ -1,5 +1,7 @@
 # Build stage - Use latest 1.26.10 Alpine image
-FROM golang:1.26.10-alpine AS builder
+# Runs on the build machine's own platform and cross-compiles for the target,
+# so multi-platform builds don't run the Go toolchain under QEMU emulation
+FROM --platform=$BUILDPLATFORM golang:1.26.10-alpine AS builder
 
 # Docker automatically provides these build args for multi-platform builds
 ARG TARGETOS
@@ -19,8 +21,6 @@ COPY . .
 # Build the application with build info and security flags
 # Use TARGETOS and TARGETARCH instead of hardcoded values
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -a \
-    -installsuffix cgo \
     -ldflags='-w -s -extldflags "-static"' \
     -o torn_rw_stats \
     .
