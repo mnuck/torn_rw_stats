@@ -18,10 +18,9 @@ type Config struct {
 	SpreadsheetID   string
 	CredentialsFile string
 	UpdateInterval  time.Duration
-	DeployURL       string
 
 	// Cloudflare R2 deployment for the Status v2 JSON (all optional; empty
-	// R2AccountID disables R2). Can run alongside DeployURL during migration.
+	// R2AccountID disables the JSON export)
 	R2AccountID       string
 	R2AccessKeyID     string
 	R2SecretAccessKey string
@@ -109,8 +108,6 @@ func LoadConfig() (*Config, error) {
 		credentialsFile = "credentials.json"
 	}
 
-	deployURL := os.Getenv("DEPLOY_URL")
-
 	r2AccountID := os.Getenv("R2_ACCOUNT_ID")
 	r2AccessKeyID := os.Getenv("R2_ACCESS_KEY_ID")
 	r2SecretAccessKey := os.Getenv("R2_SECRET_ACCESS_KEY")
@@ -141,7 +138,6 @@ func LoadConfig() (*Config, error) {
 		TornAPIKey:        apiKey,
 		SpreadsheetID:     spreadsheetID,
 		CredentialsFile:   credentialsFile,
-		DeployURL:         deployURL,
 		R2AccountID:       r2AccountID,
 		R2AccessKeyID:     r2AccessKeyID,
 		R2SecretAccessKey: r2SecretAccessKey,

@@ -20,7 +20,5 @@ var (
 	_ ports.TravelTimeService       = (*travel.TravelTimeService)(nil)
 	_ ports.AttackProcessingService = (*attack.AttackProcessingService)(nil)
 	_ ports.BigQueryClient          = (*bigquery.Client)(nil)
-	_ ports.Deployer                = (*deployment.SSHDeployer)(nil)
 	_ ports.Deployer                = (*deployment.R2Deployer)(nil)
-	_ ports.Deployer                = (*deployment.MultiDeployer)(nil)
 )
