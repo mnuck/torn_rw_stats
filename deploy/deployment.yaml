@@ -51,10 +51,6 @@ spec:
               mountPath: /app/credentials.json
               subPath: credentials.json
               readOnly: true
-            - name: deploy-key
-              mountPath: /app/deploy.pem
-              subPath: deploy.pem
-              readOnly: true
 
           # Security context
           securityContext:
@@ -82,13 +78,6 @@ spec:
             items:
               - key: credentials.json
                 path: credentials.json
-        - name: deploy-key
-          secret:
-            secretName: torn-rw-stats-secrets
-            defaultMode: 0600
-            items:
-              - key: deploy.pem
-                path: deploy.pem
 
       # Image pull secrets for private registry
       imagePullSecrets:

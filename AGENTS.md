@@ -60,7 +60,7 @@ go mod tidy
 
 The application follows a hexagonal (ports and adapters) architecture. Dependencies point inward: adapters depend on ports and domain; the application core never imports an adapter.
 
-**main.go** (+ `compliance.go`): Composition root. Parses CLI flags, constructs the concrete adapters (Torn client, Sheets client, optional BigQuery client and SSH deployer), wires them into the application services, and runs the processing loop. `compliance.go` holds the compile-time checks that each adapter satisfies its port.
+**main.go** (+ `compliance.go`): Composition root. Parses CLI flags, constructs the concrete adapters (Torn client, Sheets client, optional BigQuery client and R2 deployer), wires them into the application services, and runs the processing loop. `compliance.go` holds the compile-time checks that each adapter satisfies its port.
 
 **internal/domain/**: The domain model and pure domain logic. The root `domain` package defines the model types (War, Attack, Faction, StateRecord, StatusV2Record, etc.) and imports nothing. Subpackages hold domain services and functional cores:
 - `war/`: 4-state war lifecycle management (NoWars, PreWar, ActiveWar, PostWar), Tuesday matchmaking calculations
@@ -82,7 +82,7 @@ The application follows a hexagonal (ports and adapters) architecture. Dependenc
 
 **internal/bigquery/**: BigQuery adapter for state record storage and querying.
 
-**internal/deployment/**: SSH/SCP adapter implementing the `Deployer` port for publishing the JSON export.
+**internal/deployment/**: Cloudflare R2 adapter implementing the `Deployer` port for publishing the JSON export to the bucket that serves gefunkt.dev.
 
 **internal/app/**: Configuration only — environment setup and `.env` loading.
 
